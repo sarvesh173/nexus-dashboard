@@ -26,7 +26,9 @@ import {
   Shield,
   Terminal,
   CpuIcon,
-  Code2
+  Code2,
+  ExternalLink,
+  ArrowLeft
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
@@ -162,7 +164,9 @@ export default function App() {
   
   // Selected agent for double-click inspection blank interface modal
   const [activeCliAgent, setActiveCliAgent] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'text' | 'image' | 'video' | 'tts' | 'embedding' | 'decision'
+  const [providersList, setProvidersList] = useState([]);
+  const [selectedProviderId, setSelectedProviderId] = useState(null); // null = Providers list view, 'nvidia' = Provider's models view
+  const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'text' | 'image' | 'video' | 'tts' | 'stt' | 'embedding' | 'decision'
   const [modelTierFilter, setModelTierFilter] = useState('all'); // 'all' | 'paid' | 'free'
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -431,10 +435,27 @@ export default function App() {
     }
   };
 
+  const fetchProviders = async () => {
+    try {
+      const res = await fetch('/api/providers');
+      if (res.ok) {
+        const data = await res.json();
+        setProvidersList(data);
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
   useEffect(() => {
     fetchStats();
+    fetchProviders();
     const interval = setInterval(fetchStats, 7000);
-    return () => clearInterval(interval);
+    const provInterval = setInterval(fetchProviders, 30000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(provInterval);
+    };
   }, []);
 
   const palettes = [
@@ -456,11 +477,15 @@ export default function App() {
   }, []);
 
   // Filter models
-  const filteredModels = modelCatalog.filter((m) => {
+  const currentProvider = providersList.find(p => p.id === selectedProviderId);
+  const activeModelsPool = currentProvider ? currentProvider.models : (providersList.length > 0 ? providersList[0].models : []);
+
+  const filteredModels = activeModelsPool.filter((m) => {
     const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
     const matchesTier = modelTierFilter === 'all' || m.tier === modelTierFilter;
     const matchesSearch = searchQuery === '' || 
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      m.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.provider.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesTier && matchesSearch;
   });
@@ -758,19 +783,19 @@ export default function App() {
                       <div className="my-2 flex items-baseline gap-6">
                         <div>
                           <div className="text-3xl sm:text-4xl font-bold font-mono text-[var(--md-sys-color-on-surface)]">
-                            {modelCatalog.length}
+                            {providersList.length > 0 ? providersList.reduce((acc, p) => acc + p.total_models, 0) : 81}
                           </div>
                           <div className="text-[11px] text-[var(--md-sys-color-primary)] font-semibold uppercase tracking-wider mt-1">
-                            Models
+                            Live Models
                           </div>
                         </div>
                         <div className="h-8 w-[1px] bg-[var(--md-sys-color-outline-variant)]" />
                         <div>
                           <div className="text-3xl sm:text-4xl font-bold font-mono text-[var(--md-sys-color-on-surface)]">
-                            6
+                            {providersList.length > 0 ? providersList.length : 1}
                           </div>
                           <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-semibold uppercase tracking-wider mt-1">
-                            Modalities
+                            Providers
                           </div>
                         </div>
                       </div>
@@ -839,194 +864,331 @@ export default function App() {
             element={
               <div className="w-full space-y-5">
                 
-                {/* 1. Header Toolbar (Title + Search Bar) */}
+                {/* 1. Header Toolbar (Title + Back Button + Search Bar) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
-                      <Boxes size={22} className="text-[var(--md-sys-color-primary)]" />
-                      Model Catalog & Infrastructure
-                    </h1>
+                    <div className="flex items-center gap-3">
+                      {selectedProviderId && (
+                        <button
+                          onClick={() => setSelectedProviderId(null)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs"
+                          title="Back to Providers"
+                        >
+                          <ArrowLeft size={14} />
+                          <span>All Providers</span>
+                        </button>
+                      )}
+                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
+                        <Boxes size={22} className="text-[var(--md-sys-color-primary)]" />
+                        {selectedProviderId ? `${currentProvider?.display_name || 'NVIDIA NIM'} Models` : 'Model Providers & Infrastructure'}
+                      </h1>
+                    </div>
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-                      Explore and configure verified foundation models, multimodalities, and context windows.
+                      {selectedProviderId 
+                        ? `Live models synced directly from ${currentProvider?.display_name || 'Provider'} via Hermes Agent integration.`
+                        : 'Double-tap a provider to inspect live models, token rate limits, and modality allocations.'}
                     </p>
                   </div>
 
                   {/* Search Bar */}
-                  <div className="relative w-full sm:w-72">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-on-surface-variant)]" />
-                    <input
-                      type="text"
-                      placeholder="Search models, providers..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 rounded-full text-xs bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
-                    />
-                  </div>
+                  {selectedProviderId && (
+                    <div className="relative w-full sm:w-72">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-on-surface-variant)]" />
+                      <input
+                        type="text"
+                        placeholder="Search models, architectures..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 rounded-full text-xs bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* 2. Modality Picker Tabs WITH Corner Paid/Free Tier Filter (Side-by-Side in Corner) */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-1">
-                  
-                  {/* Left: Horizontal Modality Tabs with Hover-Wheel Smooth Scroll */}
-                  <div
-                    ref={modalityScrollRef}
-                    onWheel={(e) => {
-                      if (e.deltaY !== 0) {
-                        e.currentTarget.scrollLeft += e.deltaY * 1.5;
-                      }
-                    }}
-                    className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
-                  >
-                    {[
-                      { id: 'all', label: 'All', count: modelCatalog.length, icon: Layers },
-                      { id: 'text', label: 'LLM', count: 3, icon: MessageSquare },
-                      { id: 'image', label: 'Image', count: 2, icon: ImageIcon },
-                      { id: 'video', label: 'Video', count: 1, icon: Video },
-                      { id: 'tts', label: 'TTS', count: 2, icon: Volume2 },
-                      { id: 'stt', label: 'STT', count: 2, icon: Mic },
-                      { id: 'embedding', label: 'Embeddings', count: 1, icon: AudioLines },
-                      { id: 'decision', label: 'Decisions', count: 1, icon: Brain },
-                    ].map((cat) => {
-                      const Icon = cat.icon;
-                      const isActive = activeCategory === cat.id;
-                      return (
+                {/* VIEW 1: PROVIDERS SELECTION GRID (Shown when selectedProviderId is null) */}
+                {!selectedProviderId && (
+                  <div className="space-y-4">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between">
+                      <span>Configured Model Providers (Double-click or tap card to enter)</span>
+                      <span className="font-mono text-[11px] text-[var(--md-sys-color-primary)]">
+                        {providersList.length} Connected
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      {providersList.map((prov) => (
+                        <div
+                          key={prov.id}
+                          onDoubleClick={() => setSelectedProviderId(prov.id)}
+                          onClick={() => setSelectedProviderId(prov.id)}
+                          className="group p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between"
+                        >
+                          <div className="space-y-4">
+                            {/* Provider Header */}
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                              <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-[#141414] border border-[var(--md-sys-color-outline-variant)] p-2.5 flex items-center justify-center shrink-0">
+                                  <img
+                                    src={prov.logo}
+                                    alt={prov.name}
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-lg text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors">
+                                      {prov.display_name}
+                                    </h3>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                                      {prov.status}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 mt-1">
+                                    <a
+                                      href={prov.website_url || "https://build.nvidia.com/models"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--md-sys-color-primary)] hover:underline"
+                                    >
+                                      <span>Catalog Source: {prov.website_url || "https://build.nvidia.com/models"}</span>
+                                      <ExternalLink size={12} />
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedProviderId(prov.id);
+                                }}
+                                className="px-4 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs self-start sm:self-auto"
+                              >
+                                View Models →
+                              </button>
+                            </div>
+
+                            {/* Modalities Chips */}
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
+                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">LLM</span>
+                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.text}</span>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Vision/Img</span>
+                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.image}</span>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Embed</span>
+                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.embedding}</span>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Reasoning</span>
+                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.decision}</span>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">TTS</span>
+                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.tts}</span>
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">STT</span>
+                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.stt}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Footer */}
+                          <div className="pt-3 mt-4 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                            <span className="text-xs text-[var(--md-sys-color-primary)] font-semibold">
+                              {prov.total_models} Total Live NIM Models
+                            </span>
+                            <span className="text-xs bg-[var(--md-sys-color-surface-container-high)] px-3 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)]">
+                              {prov.rate_limit}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* VIEW 2: PROVIDER'S SPECIFIC MODELS LIST (Shown after double-click / selection) */}
+                {selectedProviderId && (
+                  <div className="space-y-4">
+                    {/* Modality Picker Tabs WITH Corner Paid/Free Tier Filter */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-1">
+                      
+                      {/* Left: Horizontal Modality Tabs with Hover-Wheel Smooth Scroll */}
+                      <div
+                        ref={modalityScrollRef}
+                        onWheel={(e) => {
+                          if (e.deltaY !== 0) {
+                            e.currentTarget.scrollLeft += e.deltaY * 1.5;
+                          }
+                        }}
+                        className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
+                      >
+                        {[
+                          { id: 'all', label: 'All', count: activeModelsPool.length, icon: Layers },
+                          { id: 'text', label: 'LLM', count: activeModelsPool.filter(m => m.category === 'text').length, icon: MessageSquare },
+                          { id: 'image', label: 'Image/Vision', count: activeModelsPool.filter(m => m.category === 'image').length, icon: ImageIcon },
+                          { id: 'tts', label: 'TTS', count: activeModelsPool.filter(m => m.category === 'tts').length, icon: Volume2 },
+                          { id: 'stt', label: 'STT', count: activeModelsPool.filter(m => m.category === 'stt').length, icon: Mic },
+                          { id: 'embedding', label: 'Embeddings', count: activeModelsPool.filter(m => m.category === 'embedding').length, icon: AudioLines },
+                          { id: 'decision', label: 'Decisions/Safety', count: activeModelsPool.filter(m => m.category === 'decision').length, icon: Brain },
+                        ].map((cat) => {
+                          const Icon = cat.icon;
+                          const isActive = activeCategory === cat.id;
+                          return (
+                            <button
+                              key={cat.id}
+                              onClick={() => setActiveCategory(cat.id)}
+                              className={`flex items-center gap-1.5 px-3 py-2 font-medium border-b-2 whitespace-nowrap transition-colors ${
+                                isActive
+                                  ? 'border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)] font-bold'
+                                  : 'border-transparent text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                              }`}
+                            >
+                              <Icon size={13} />
+                              <span>{cat.label}</span>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                isActive
+                                  ? 'bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)]'
+                                  : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
+                              }`}>
+                                {cat.count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right Corner: The Paid vs Free Tier Filter Toggle */}
+                      <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] self-start md:self-auto shrink-0 shadow-xs">
                         <button
-                          key={cat.id}
-                          onClick={() => setActiveCategory(cat.id)}
-                          className={`flex items-center gap-1.5 px-3 py-2 font-medium border-b-2 whitespace-nowrap transition-colors ${
-                            isActive
-                              ? 'border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)] font-bold'
-                              : 'border-transparent text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                          onClick={() => setModelTierFilter('all')}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95 ${
+                            modelTierFilter === 'all'
+                              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-bold shadow-xs'
+                              : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
                           }`}
                         >
-                          <Icon size={13} />
-                          <span>{cat.label}</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                            isActive
-                              ? 'bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)]'
-                              : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
-                          }`}>
-                            {cat.count}
-                          </span>
+                          All ({activeModelsPool.length})
                         </button>
-                      );
-                    })}
-                  </div>
+                        <button
+                          onClick={() => setModelTierFilter('free')}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95 ${
+                            modelTierFilter === 'free'
+                              ? 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] font-bold shadow-xs border border-[var(--md-sys-color-outline)]'
+                              : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                          }`}
+                        >
+                          Free Tier (40 RPM)
+                        </button>
+                      </div>
 
-                  {/* Right Corner: The Paid vs Free Tier Filter Toggle (Right beside the model selection) */}
-                  <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] self-start md:self-auto shrink-0 shadow-xs">
-                    <button
-                      onClick={() => setModelTierFilter('all')}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95 ${
-                        modelTierFilter === 'all'
-                          ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-bold shadow-xs'
-                          : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-                      }`}
-                    >
-                      All Tiers
-                    </button>
-                    <button
-                      onClick={() => setModelTierFilter('paid')}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95 ${
-                        modelTierFilter === 'paid'
-                          ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] font-bold shadow-xs border border-[var(--md-sys-color-primary)]'
-                          : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-                      }`}
-                    >
-                      Paid-Tier
-                    </button>
-                    <button
-                      onClick={() => setModelTierFilter('free')}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95 ${
-                        modelTierFilter === 'free'
-                          ? 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] font-bold shadow-xs border border-[var(--md-sys-color-outline)]'
-                          : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-                      }`}
-                    >
-                      Free-Tier
-                    </button>
-                  </div>
+                    </div>
 
-                </div>
+                    {/* Models Count & Back Navigation bar */}
+                    <div className="flex items-center justify-between text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono px-1">
+                      <span>Showing {filteredModels.length} of {activeModelsPool.length} models</span>
+                      <button
+                        onClick={() => setSelectedProviderId(null)}
+                        className="text-[var(--md-sys-color-primary)] hover:underline flex items-center gap-1"
+                      >
+                        <ArrowLeft size={12} />
+                        Back to Providers List
+                      </button>
+                    </div>
 
-                {/* 3. Industry Model List Cards */}
-                <div className="space-y-3">
-                  {filteredModels.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 sm:p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col gap-3 shadow-xs"
-                    >
-                      {/* Row 1: Header (Title, Provider Avatar, Modality Tag & Benchmark) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center font-mono font-bold text-xs text-[var(--md-sys-color-primary)] shrink-0">
-                            {item.provider.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-sm sm:text-base text-[var(--md-sys-color-on-surface)]">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)]">
-                                {item.category_label}
+                    {/* Model List Cards */}
+                    <div className="space-y-3">
+                      {filteredModels.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-4 sm:p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col gap-3 shadow-xs"
+                        >
+                          {/* Row 1: Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center font-mono font-bold text-xs text-[var(--md-sys-color-primary)] shrink-0">
+                                NV
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-sm sm:text-base text-[var(--md-sys-color-on-surface)]">
+                                    {item.name}
+                                  </span>
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)] uppercase font-semibold">
+                                    {item.category}
+                                  </span>
+                                  {item.configured_in_hermes && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] font-mono border border-[var(--md-sys-color-primary)]/30 font-semibold">
+                                      Hermes Active
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">
+                                  {item.id}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Status badge */}
+                            <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs">
+                              <span className="text-[var(--md-sys-color-on-surface-variant)] text-[11px]">SLA:</span>
+                              <span className="px-2 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-emerald-400 font-bold">
+                                {item.status}
                               </span>
                             </div>
-                            <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">
-                              by {item.provider}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Benchmark badge */}
-                        <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs">
-                          <span className="text-[var(--md-sys-color-on-surface-variant)] text-[11px]">Benchmark:</span>
-                          <span className="px-2 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-primary)] font-bold">
-                            {item.benchmark}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Row 2: Description */}
-                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed line-clamp-2">
-                        {item.description}
-                      </p>
-
-                      {/* Row 3: Metadata Footer (Context, Pricing, Status) */}
-                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex flex-wrap items-center justify-between gap-y-2 gap-x-4 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                        
-                        <div className="flex flex-wrap items-center gap-4">
-                          <div>
-                            <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Context Length</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-medium">
-                              {item.context.original} <span className="text-[10px] text-[var(--md-sys-color-primary)]">({item.context.system} cfg)</span>
-                            </span>
                           </div>
 
-                          <div>
-                            <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Input Pricing</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-medium">{item.input_pricing}</span>
+                          {/* Row 2: Description */}
+                          <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                            {item.description}
+                          </p>
+
+                          {/* Row 3: Metadata Footer */}
+                          <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex flex-wrap items-center justify-between gap-y-2 gap-x-4 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                            <div className="flex flex-wrap items-center gap-4">
+                              <div>
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Context Length</span>
+                                <span className="text-[var(--md-sys-color-on-surface)] font-medium">
+                                  {item.context.original}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Rate Limit</span>
+                                <span className="text-emerald-400 font-medium">{item.rate_limit}</span>
+                              </div>
+
+                              <div>
+                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Pricing</span>
+                                <span className="text-[var(--md-sys-color-on-surface)] font-medium">{item.input_pricing}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                                NVIDIA NIM Cloud
+                              </span>
+                              <span className="flex items-center gap-1 text-[var(--md-sys-color-on-surface)] font-semibold text-[11px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
+                                <CheckCircle2 size={12} className="text-[var(--md-sys-color-primary)]" />
+                                Verified API
+                              </span>
+                            </div>
                           </div>
 
-                          <div>
-                            <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Output Pricing</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-medium">{item.output_pricing}</span>
-                          </div>
                         </div>
-
-                        <div className="flex items-center gap-3">
-                          <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-                            {item.sync_cadence}
-                          </span>
-                          <span className="flex items-center gap-1 text-[var(--md-sys-color-on-surface)] font-semibold text-[11px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
-                            <CheckCircle2 size={12} className="text-[var(--md-sys-color-primary)]" />
-                            {item.tier === 'paid' ? 'Paid-Tier Spec' : 'Free-Tier Spec'}
-                          </span>
-                        </div>
-
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
 
               </div>
             }
