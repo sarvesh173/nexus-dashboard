@@ -732,7 +732,7 @@ export default function App() {
                       { id: 'text', label: 'Text', count: 3, icon: MessageSquare },
                       { id: 'image', label: 'Image', count: 2, icon: ImageIcon },
                       { id: 'video', label: 'Video', count: 1, icon: Video },
-                      { id: 'tts', label: 'Audio & Speech', count: 2, icon: Mic },
+                      { id: 'tts', label: 'Text-to-Speech (TTS)', count: 2, icon: Mic },
                       { id: 'embedding', label: 'Embeddings', count: 1, icon: Binary },
                       { id: 'decision', label: 'Decisions', count: 1, icon: Brain },
                     ].map((cat) => {
