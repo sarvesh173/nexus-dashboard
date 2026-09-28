@@ -314,7 +314,7 @@ export default function App() {
     {
       id: 'elevenlabs-custom-tts',
       category: 'tts',
-      category_label: 'TTS Engine',
+      category_label: 'TTS',
       name: 'Voxtral / Fish Audio Ultra',
       provider: 'Naga / Local Gateway',
       tier: 'paid',
@@ -329,7 +329,7 @@ export default function App() {
     {
       id: 'piper-basic-tts',
       category: 'tts',
-      category_label: 'TTS Engine',
+      category_label: 'TTS',
       name: 'Piper CPU Speech',
       provider: 'Local Linux Host',
       tier: 'free',
@@ -342,11 +342,11 @@ export default function App() {
       sync_cadence: '24h sync'
     },
 
-    // 5. STT Models (Speech-to-Text)
+    // 5. STT Models
     {
       id: 'whisper-large-v3-stt',
       category: 'stt',
-      category_label: 'STT Engine',
+      category_label: 'STT',
       name: 'Whisper Large V3 Turbo',
       provider: 'Groq Cloud / Local Fallback',
       tier: 'paid',
@@ -356,20 +356,20 @@ export default function App() {
       benchmark: 'Top Word Error Rate (WER)',
       context: { original: '30s chunking', system: 'Realtime Stream' },
       status: 'Active',
-      sync_cadence: '2h sync'
+      sync_cadence: '6h sync'
     },
     {
-      id: 'vosk-offline-stt',
+      id: 'whisper-base-local-stt',
       category: 'stt',
-      category_label: 'STT Engine',
-      name: 'Vosk Offline Small STT',
-      provider: 'Local Linux Host',
+      category_label: 'STT',
+      name: 'Whisper Small Distil',
+      provider: 'Local CPU Whisper',
       tier: 'free',
-      input_pricing: '$0.00 / offline',
-      output_pricing: '$0.00 / offline',
-      description: 'Lightweight offline acoustic speech recognition engine running completely on-device.',
-      benchmark: 'Low-latency CPU',
-      context: { original: '16kHz mono', system: '16kHz mono' },
+      input_pricing: '$0.00 / 1h audio',
+      output_pricing: '$0.00 / 1h audio',
+      description: 'Lightweight on-device speech-to-text pipeline running locally on host.',
+      benchmark: 'Fast Transcription',
+      context: { original: '30s chunking', system: 'Local Buffer' },
       status: 'Ready',
       sync_cadence: '24h sync'
     },
@@ -868,14 +868,22 @@ export default function App() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-1">
                   
                   {/* Left: Horizontal Modality Tabs with Hover-Wheel Smooth Scroll */}
-                  <div ref={modalityScrollRef} className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1">
+                  <div
+                    ref={modalityScrollRef}
+                    onWheel={(e) => {
+                      if (e.deltaY !== 0) {
+                        e.currentTarget.scrollLeft += e.deltaY * 1.5;
+                      }
+                    }}
+                    className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
+                  >
                     {[
                       { id: 'all', label: 'All', count: modelCatalog.length, icon: Layers },
                       { id: 'text', label: 'Text', count: 3, icon: MessageSquare },
                       { id: 'image', label: 'Image', count: 2, icon: ImageIcon },
                       { id: 'video', label: 'Video', count: 1, icon: Video },
-                      { id: 'tts', label: 'Text-to-Speech (TTS)', count: 2, icon: Volume2 },
-                      { id: 'stt', label: 'Speech-to-Text (STT)', count: 2, icon: Mic },
+                      { id: 'tts', label: 'TTS', count: 2, icon: Volume2 },
+                      { id: 'stt', label: 'STT', count: 2, icon: Mic },
                       { id: 'embedding', label: 'Embeddings', count: 1, icon: AudioLines },
                       { id: 'decision', label: 'Decisions', count: 1, icon: Brain },
                     ].map((cat) => {
