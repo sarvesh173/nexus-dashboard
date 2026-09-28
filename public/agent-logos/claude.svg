@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Official Terracotta Squircle Background -->
+  <rect width="100" height="100" rx="22" fill="#D97452"/>
+  <!-- Official 11-Ray Asymmetric Claude Cutout Spark -->
+  <path d="M50 42
+    L44 14 L50 14 L53 38
+    L66 18 L70 21 L59 41
+    L82 32 L84 36 L64 47
+    L88 50 L87 56 L64 54
+    L78 72 L73 75 L59 58
+    L58 84 L52 84 L52 61
+    L41 82 L36 79 L44 59
+    L22 71 L19 66 L38 52
+    L16 48 L17 42 L38 45
+    L22 28 L27 25 L42 41
+    Z" fill="#FFFFFF"/>
+</svg>

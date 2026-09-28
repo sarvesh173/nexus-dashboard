@@ -13,8 +13,9 @@ import {
   Clock,
   CheckCircle2,
   Image as ImageIcon,
+  AudioLines,
+  Volume2,
   Mic,
-  Binary,
   Brain,
   Video,
   MessageSquare,
@@ -28,9 +29,10 @@ import {
   Code2
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
+import { useHorizontalScroll } from './useHorizontalScroll';
 
-// Custom smooth number tween hook
-function useSmoothCounter(targetValue, duration = 2400) {
+// Custom smooth number tween hook with M3 standard 1.2s deceleration
+function useSmoothCounter(targetValue, duration = 1200) {
   const [displayValue, setDisplayValue] = useState(targetValue);
   const startValRef = useRef(targetValue);
   const targetValRef = useRef(targetValue);
@@ -70,13 +72,15 @@ export default function App() {
   const [palettePickerOpen, setPalettePickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Filtering & Search States
+  // Selected agent for double-click inspection blank interface modal
+  const [activeCliAgent, setActiveCliAgent] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'text' | 'image' | 'video' | 'tts' | 'embedding' | 'decision'
   const [modelTierFilter, setModelTierFilter] = useState('all'); // 'all' | 'paid' | 'free'
   const [searchQuery, setSearchQuery] = useState('');
   
   const navigate = useNavigate();
   const location = useLocation();
+  const modalityScrollRef = useHorizontalScroll();
 
   // Target values polled from backend
   const [telemetry, setTelemetry] = useState({
@@ -200,11 +204,11 @@ export default function App() {
       sync_cadence: '6h sync'
     },
 
-    // TTS & Audio Models
+    // 4. TTS Models
     {
       id: 'elevenlabs-custom-tts',
       category: 'tts',
-      category_label: 'TTS & Audio',
+      category_label: 'TTS Engine',
       name: 'Voxtral / Fish Audio Ultra',
       provider: 'Naga / Local Gateway',
       tier: 'paid',
@@ -219,7 +223,7 @@ export default function App() {
     {
       id: 'piper-basic-tts',
       category: 'tts',
-      category_label: 'TTS & Audio',
+      category_label: 'TTS Engine',
       name: 'Piper CPU Speech',
       provider: 'Local Linux Host',
       tier: 'free',
@@ -228,6 +232,38 @@ export default function App() {
       description: 'Fast local neural text-to-speech engine running on CPU without GPU overhead.',
       benchmark: 'Standard Audio',
       context: { original: '16kHz Audio', system: '16kHz Audio' },
+      status: 'Ready',
+      sync_cadence: '24h sync'
+    },
+
+    // 5. STT Models (Speech-to-Text)
+    {
+      id: 'whisper-large-v3-stt',
+      category: 'stt',
+      category_label: 'STT Engine',
+      name: 'Whisper Large V3 Turbo',
+      provider: 'Groq Cloud / Local Fallback',
+      tier: 'paid',
+      input_pricing: '$0.00 / 1h audio',
+      output_pricing: '$0.00 / 1h audio',
+      description: 'Ultra-fast speech transcription and automatic translation across 99+ languages.',
+      benchmark: 'Top Word Error Rate (WER)',
+      context: { original: '30s chunking', system: 'Realtime Stream' },
+      status: 'Active',
+      sync_cadence: '2h sync'
+    },
+    {
+      id: 'vosk-offline-stt',
+      category: 'stt',
+      category_label: 'STT Engine',
+      name: 'Vosk Offline Small STT',
+      provider: 'Local Linux Host',
+      tier: 'free',
+      input_pricing: '$0.00 / offline',
+      output_pricing: '$0.00 / offline',
+      description: 'Lightweight offline acoustic speech recognition engine running completely on-device.',
+      benchmark: 'Low-latency CPU',
+      context: { original: '16kHz mono', system: '16kHz mono' },
       status: 'Ready',
       sync_cadence: '24h sync'
     },
@@ -346,7 +382,7 @@ export default function App() {
         </div>
 
         {/* Center: M3 Segmented Navigation (Overview, Models, Cost, Settings) */}
-        <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-center sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto">
+        <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-center sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto no-scrollbar">
           
           <button
             onClick={() => navigate('/')}
@@ -406,8 +442,8 @@ export default function App() {
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <span className="inline-flex animate-subtle-spin">
-              <Settings size={14} className="text-[var(--md-sys-color-primary)] group-hover:rotate-45 transition-transform" />
+            <span className="inline-flex group-hover:rotate-45 transition-transform duration-300">
+              <Settings size={14} className="text-[var(--md-sys-color-primary)]" />
             </span>
             <span>Settings</span>
           </button>
@@ -725,15 +761,16 @@ export default function App() {
                 {/* 2. Modality Picker Tabs WITH Corner Paid/Free Tier Filter (Side-by-Side in Corner) */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-1">
                   
-                  {/* Left: Horizontal Modality Tabs */}
-                  <div className="flex items-center gap-1 overflow-x-auto text-xs">
+                  {/* Left: Horizontal Modality Tabs with Hover-Wheel Smooth Scroll */}
+                  <div ref={modalityScrollRef} className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1">
                     {[
                       { id: 'all', label: 'All', count: modelCatalog.length, icon: Layers },
                       { id: 'text', label: 'Text', count: 3, icon: MessageSquare },
                       { id: 'image', label: 'Image', count: 2, icon: ImageIcon },
                       { id: 'video', label: 'Video', count: 1, icon: Video },
-                      { id: 'tts', label: 'Text-to-Speech (TTS)', count: 2, icon: Mic },
-                      { id: 'embedding', label: 'Embeddings', count: 1, icon: Binary },
+                      { id: 'tts', label: 'Text-to-Speech (TTS)', count: 2, icon: Volume2 },
+                      { id: 'stt', label: 'Speech-to-Text (STT)', count: 2, icon: Mic },
+                      { id: 'embedding', label: 'Embeddings', count: 1, icon: AudioLines },
                       { id: 'decision', label: 'Decisions', count: 1, icon: Brain },
                     ].map((cat) => {
                       const Icon = cat.icon;
@@ -908,14 +945,15 @@ export default function App() {
                   {AGENTS_DATA.map((agent) => (
                     <div
                       key={agent.id}
-                      className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col justify-between shadow-xs gap-3 group"
+                      onDoubleClick={() => setActiveCliAgent(agent)}
+                      className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col justify-between shadow-xs gap-3 group cursor-pointer select-none"
                     >
                       <div className="space-y-2">
-                        {/* Title and Badge */}
+                        {/* Title, Official Company Logo & Badge */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center font-mono font-bold text-xs text-[var(--md-sys-color-primary)]">
-                              {agent.name.slice(0, 2).toUpperCase()}
+                            <div className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 overflow-hidden shrink-0">
+                              <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain" />
                             </div>
                             <div>
                               <span className="font-bold text-sm text-[var(--md-sys-color-on-surface)] block leading-snug">
@@ -949,11 +987,14 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Footer Row (View-Only Notice & Status) */}
+                      {/* Footer Row (Double-Click Button & Status) */}
                       <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                        <span className="text-[10px] italic text-[var(--md-sys-color-on-surface-variant)]">
-                          View-Only Showcase
-                        </span>
+                        <button
+                          onClick={() => setActiveCliAgent(agent)}
+                          className="text-[10px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)]"
+                        >
+                          Double-Click to Inspect
+                        </button>
                         <span className="flex items-center gap-1.5 text-[var(--md-sys-color-on-surface)] font-medium">
                           <CheckCircle2 size={13} className="text-[var(--md-sys-color-primary)]" />
                           {agent.status}
@@ -962,6 +1003,63 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+
+                {/* BLANK INTERFACE MODAL (Clean, Non-Chat, Showing Current CLI in top corner) */}
+                {activeCliAgent && (
+                  <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="w-full max-w-4xl h-[560px] rounded-3xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline)] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      
+                      {/* Top Corner Bar Showing CLI Agent Currently in Use */}
+                      <div className="px-5 py-3.5 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg bg-[var(--md-sys-color-surface-container-high)] p-1 border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center">
+                            <img src={activeCliAgent.logo} alt="" className="w-full h-full object-contain" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs sm:text-sm text-[var(--md-sys-color-on-surface)]">
+                                {activeCliAgent.name}
+                              </span>
+                              <span className="text-[10px] px-2 py-0.2 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                Live Session
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-mono text-[var(--md-sys-color-primary)] block">
+                              Currently in use: {activeCliAgent.cli_signature}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Top Right Controls & Close Button */}
+                        <div className="flex items-center gap-2">
+                          <span className="hidden sm:inline-block text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] px-2 py-1 rounded bg-[var(--md-sys-color-surface-container-high)]">
+                            Blank Session Mode
+                          </span>
+                          <button
+                            onClick={() => setActiveCliAgent(null)}
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] transition-all active:scale-95 border border-[var(--md-sys-color-outline-variant)]"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* STRICTLY BLANK INTERFACE (No Chat Input, No Message Stream, Pure Clean View) */}
+                      <div className="flex-1 w-full p-8 flex flex-col items-center justify-center text-center bg-[var(--md-sys-color-background)]">
+                        <div className="w-16 h-16 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-3 mb-4 shadow-sm">
+                          <img src={activeCliAgent.logo} alt="" className="w-full h-full object-contain" />
+                        </div>
+                        <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)] font-mono">
+                          {activeCliAgent.cli_signature}
+                        </h3>
+                        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-md mt-1.5">
+                          Blank inspection interface. Ready for terminal and orchestration binding in future pipeline steps.
+                        </p>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
               </div>
             }
           />

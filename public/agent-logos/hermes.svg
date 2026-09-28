@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Official Nous Research / Hermes Agent Winged Emblem -->
+  <rect width="100" height="100" rx="22" fill="#0B0F19"/>
+  <path d="M50 18C44 32 30 42 18 44C34 50 44 62 48 78C52 62 62 50 78 44C66 42 52 32 50 18Z" fill="#2563EB" stroke="#60A5FA" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="48" cy="46" r="7" fill="#F8FAFC"/>
+  <path d="M48 28L54 44L70 50" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+</svg>
