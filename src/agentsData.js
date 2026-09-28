@@ -23,7 +23,7 @@ export const AGENTS_DATA = [
     engine: 'DeepSeek R1 / V3 Native',
     status: 'Active',
     execution_mode: 'CLI Tool',
-    logo: '/agent-logos/opencode.png',
+    logo: '/agent-logos/opencode.svg',
     cli_signature: 'localhost:5173 / Open Code'
   },
   {
