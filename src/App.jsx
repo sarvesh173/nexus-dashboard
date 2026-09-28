@@ -879,7 +879,7 @@ export default function App() {
                   >
                     {[
                       { id: 'all', label: 'All', count: modelCatalog.length, icon: Layers },
-                      { id: 'text', label: 'Text', count: 3, icon: MessageSquare },
+                      { id: 'text', label: 'LLM', count: 3, icon: MessageSquare },
                       { id: 'image', label: 'Image', count: 2, icon: ImageIcon },
                       { id: 'video', label: 'Video', count: 1, icon: Video },
                       { id: 'tts', label: 'TTS', count: 2, icon: Volume2 },
