@@ -948,11 +948,11 @@ export default function App() {
                       onDoubleClick={() => setActiveCliAgent(agent)}
                       className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col justify-between shadow-xs gap-3 group cursor-pointer select-none"
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {/* Title, Official Company Logo & Badge */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 overflow-hidden shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 overflow-hidden shrink-0">
                               <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain" />
                             </div>
                             <div>
@@ -967,23 +967,6 @@ export default function App() {
                           <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)]">
                             {agent.execution_mode}
                           </span>
-                        </div>
-
-                        {/* Role Description */}
-                        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-                          {agent.role}
-                        </p>
-
-                        {/* Capabilities Chips */}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {agent.capabilities.map((cap, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)]"
-                            >
-                              {cap}
-                            </span>
-                          ))}
                         </div>
                       </div>
 
