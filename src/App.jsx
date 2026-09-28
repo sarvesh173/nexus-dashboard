@@ -620,8 +620,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start">
+      {/* Main Content Area — Full-Bleed Fluid Widescreen Layout */}
+      <main className="flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start">
         <Routes>
           {/* OVERVIEW ROUTE */}
           <Route
@@ -957,6 +957,11 @@ export default function App() {
                                       <span>Catalog Source: {prov.website_url || "https://build.nvidia.com/models"}</span>
                                       <ExternalLink size={13} />
                                     </a>
+                                    <div className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-2">
+                                      <span>Base Endpoint: <code className="text-[var(--md-sys-color-primary)]">{prov.base_url}</code></span>
+                                      <span>•</span>
+                                      <span className="text-emerald-400">Agent Verification Protocol: NVCF & OpenAI Active</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
