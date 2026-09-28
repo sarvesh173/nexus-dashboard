@@ -1,12 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Official Google DeepMind / Gemini AntiGravity Star -->
+  <!-- Official Google Antigravity Brand Card Squircle -->
   <rect width="100" height="100" rx="22" fill="#0F172A"/>
-  <defs>
-    <linearGradient id="gemini_spark" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4285F4"/>
-      <stop offset="40%" stop-color="#9B72CF"/>
-      <stop offset="100%" stop-color="#D96570"/>
-    </linearGradient>
-  </defs>
-  <path d="M50 16C50 34.78 34.78 50 16 50C34.78 50 50 65.22 50 84C50 65.22 65.22 50 84 50C65.22 50 50 34.78 50 16Z" fill="url(#gemini_spark)"/>
+  <g transform="translate(18, 18) scale(2.0)">
+    <mask id="agy_mask" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="33" height="30">
+      <path d="M29.5146 29.3182C31.3328 30.6818 34.0601 29.7727 31.5601 27.2727C24.0601 20 25.651 0 16.3328 0C7.0146 0 8.6055 20 1.1055 27.2727C-1.62177 30 1.33276 30.6818 3.15095 29.3182C10.1964 24.5455 9.74188 16.1364 16.3328 16.1364C22.9237 16.1364 22.4692 24.5455 29.5146 29.3182Z" fill="white"/>
+    </mask>
+    <g mask="url(#agy_mask)">
+      <circle cx="9" cy="0" r="14" fill="#FFE432"/>
+      <circle cx="32" cy="7" r="14" fill="#FC413D"/>
+      <circle cx="2" cy="18" r="14" fill="#00B95C"/>
+      <circle cx="26" cy="24" r="12" fill="#2E7EF7"/>
+    </g>
+  </g>
 </svg>
