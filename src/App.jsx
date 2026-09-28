@@ -30,6 +30,94 @@ import {
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
+import { useParams } from 'react-router-dom';
+
+// Dedicated Fullscreen Agent Session Component (URL-Driven, Non-Chat, Mouse & Keyboard)
+function AgentSessionView({ navigate }) {
+  const { agentId } = useParams();
+  const agent = AGENTS_DATA.find((a) => a.id === agentId) || AGENTS_DATA[0];
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[var(--md-sys-color-background)] flex flex-col w-screen h-screen overflow-hidden select-none animate-in fade-in duration-150">
+      {/* Top Header Bar */}
+      <div className="px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex items-center justify-between gap-4">
+        {/* Top-Left Corner: Active Agent & Session URL */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] p-1.5 border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0">
+            <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm sm:text-base text-[var(--md-sys-color-on-surface)]">
+                {agent.name}
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Fullscreen CLI Session
+              </span>
+            </div>
+            <span className="text-xs font-mono text-[var(--md-sys-color-primary)] block">
+              Session Path: localhost:5173/agents/{agent.id}
+            </span>
+          </div>
+        </div>
+
+        {/* Top-Right Corner: Session Switcher, Fullscreen Badge & Close Button */}
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] text-xs font-mono">
+            {AGENTS_DATA.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => navigate(`/agents/${a.id}`)}
+                className={`px-2.5 py-1 rounded-full transition-all ${
+                  a.id === agent.id
+                    ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-bold shadow-xs'
+                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                {a.name.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => navigate('/agents')}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] text-[var(--md-sys-color-on-surface)] transition-all active:scale-95 border border-[var(--md-sys-color-outline-variant)] shadow-sm"
+            title="Press ESC or Click to Close"
+          >
+            <span>Close (ESC)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Fullscreen Blank Interface Canvas (No Chat, Pure Clean View, Double Tap / Click Ready) */}
+      <div 
+        onDoubleClick={() => navigate('/agents')}
+        className="flex-1 w-full p-12 flex flex-col items-center justify-center text-center bg-[var(--md-sys-color-background)] cursor-default"
+      >
+        <div className="w-24 h-24 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-4 mb-6 shadow-md hover:scale-105 transition-transform">
+          <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain" />
+        </div>
+
+        <h2 className="text-xl sm:text-2xl font-bold text-[var(--md-sys-color-on-surface)] font-mono">
+          {agent.cli_signature}
+        </h2>
+        
+        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)] max-w-lg mt-3 leading-relaxed">
+          Active Fullscreen Workspace. Double-click anywhere on this canvas or click Close / press ESC to return to Agent Core.
+        </p>
+
+        <div className="mt-8 flex items-center gap-3">
+          <span className="text-xs px-3 py-1.5 rounded-xl font-mono bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)]">
+            Mouse: Click / Double-Click to Navigate
+          </span>
+          <span className="text-xs px-3 py-1.5 rounded-xl font-mono bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)]">
+            Keyboard: ESC to Exit • Alt+1..4 Tabs
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Custom smooth number tween hook with M3 standard 1.2s deceleration
 function useSmoothCounter(targetValue, duration = 1200) {
@@ -81,6 +169,24 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const modalityScrollRef = useHorizontalScroll();
+  // Keyboard shortcuts listener for accessibility (mouse + keyboard parity)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // ESC closes active session / modal
+      if (e.key === 'Escape') {
+        if (location.pathname.startsWith('/agents/')) {
+          navigate('/agents');
+        }
+      }
+      // Alt+1 to Alt+5 navigation
+      if (e.altKey && e.key === '1') navigate('/');
+      if (e.altKey && e.key === '2') navigate('/modules');
+      if (e.altKey && e.key === '3') navigate('/agents');
+      if (e.altKey && e.key === '4') navigate('/settings');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [location.pathname, navigate]);
 
   // Target values polled from backend
   const [telemetry, setTelemetry] = useState({
@@ -931,12 +1037,12 @@ export default function App() {
                       Agent Core Dashboard
                     </h1>
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-                      Autonomous Intelligence Cluster • Live Active Daemons • View-Only Architecture
+                      Double-click any agent card to enter fullscreen session interface. Mouse & Keyboard compatible.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-xs bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{AGENTS_DATA.length} Verified Agents</span>
+                    <span>{AGENTS_DATA.length} Verified CLI Tools</span>
                   </div>
                 </div>
 
@@ -945,14 +1051,14 @@ export default function App() {
                   {AGENTS_DATA.map((agent) => (
                     <div
                       key={agent.id}
-                      onDoubleClick={() => setActiveCliAgent(agent)}
-                      className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col justify-between shadow-xs gap-3 group cursor-pointer select-none"
+                      onDoubleClick={() => navigate(`/agents/${agent.id}`)}
+                      className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:shadow-md transition-all flex flex-col justify-between shadow-xs gap-3 group cursor-pointer select-none"
                     >
                       <div className="space-y-3">
                         {/* Title, Official Company Logo & Badge */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 overflow-hidden shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
                               <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain" />
                             </div>
                             <div>
@@ -973,10 +1079,10 @@ export default function App() {
                       {/* Footer Row (Double-Click Button & Status) */}
                       <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
                         <button
-                          onClick={() => setActiveCliAgent(agent)}
-                          className="text-[10px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)]"
+                          onClick={() => navigate(`/agents/${agent.id}`)}
+                          className="text-[10px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] active:scale-95"
                         >
-                          Double-Click to Inspect
+                          Double-Click to Enter
                         </button>
                         <span className="flex items-center gap-1.5 text-[var(--md-sys-color-on-surface)] font-medium">
                           <CheckCircle2 size={13} className="text-[var(--md-sys-color-primary)]" />
@@ -986,65 +1092,14 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-
-                {/* BLANK INTERFACE MODAL (Clean, Non-Chat, Showing Current CLI in top corner) */}
-                {activeCliAgent && (
-                  <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="w-full max-w-4xl h-[560px] rounded-3xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline)] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                      
-                      {/* Top Corner Bar Showing CLI Agent Currently in Use */}
-                      <div className="px-5 py-3.5 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg bg-[var(--md-sys-color-surface-container-high)] p-1 border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center">
-                            <img src={activeCliAgent.logo} alt="" className="w-full h-full object-contain" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs sm:text-sm text-[var(--md-sys-color-on-surface)]">
-                                {activeCliAgent.name}
-                              </span>
-                              <span className="text-[10px] px-2 py-0.2 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                Live Session
-                              </span>
-                            </div>
-                            <span className="text-[11px] font-mono text-[var(--md-sys-color-primary)] block">
-                              Currently in use: {activeCliAgent.cli_signature}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Top Right Controls & Close Button */}
-                        <div className="flex items-center gap-2">
-                          <span className="hidden sm:inline-block text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] px-2 py-1 rounded bg-[var(--md-sys-color-surface-container-high)]">
-                            Blank Session Mode
-                          </span>
-                          <button
-                            onClick={() => setActiveCliAgent(null)}
-                            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface)] transition-all active:scale-95 border border-[var(--md-sys-color-outline-variant)]"
-                          >
-                            Close
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* STRICTLY BLANK INTERFACE (No Chat Input, No Message Stream, Pure Clean View) */}
-                      <div className="flex-1 w-full p-8 flex flex-col items-center justify-center text-center bg-[var(--md-sys-color-background)]">
-                        <div className="w-16 h-16 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-3 mb-4 shadow-sm">
-                          <img src={activeCliAgent.logo} alt="" className="w-full h-full object-contain" />
-                        </div>
-                        <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)] font-mono">
-                          {activeCliAgent.cli_signature}
-                        </h3>
-                        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-md mt-1.5">
-                          Blank inspection interface. Ready for terminal and orchestration binding in future pipeline steps.
-                        </p>
-                      </div>
-
-                    </div>
-                  </div>
-                )}
               </div>
             }
+          />
+
+          {/* DEDICATED FULLSCREEN AGENT CLI SESSION ROUTE (URL-Driven, Non-Chat, URL Switchable, ESC/Mouse Closable) */}
+          <Route
+            path="/agents/:agentId"
+            element={<AgentSessionView navigate={navigate} />}
           />
 
           {/* SETTINGS ROUTE */}
