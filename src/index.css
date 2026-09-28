@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+/* 
+  Material Design 3 (M3) Official System Tokens & Elevation Layers
+  Reference: https://m3.material.io/
+*/
+
+:root, [data-theme="indigo-violet"] {
+  --md-sys-color-background: #0f101d;
+  --md-sys-color-surface: #171829;
+  --md-sys-color-surface-container: #1e1f36;
+  --md-sys-color-surface-container-high: #262844;
+  --md-sys-color-surface-container-highest: #2e3052;
+  --md-sys-color-outline: #42456f;
+  --md-sys-color-outline-variant: #2c2e4e;
+  
+  --md-sys-color-primary: #d0bcff;
+  --md-sys-color-on-primary: #381e72;
+  --md-sys-color-primary-container: #4f378b;
+  --md-sys-color-on-primary-container: #eaddff;
+  
+  --md-sys-color-secondary: #ccc2dc;
+  --md-sys-color-secondary-container: #4a4458;
+  --md-sys-color-on-secondary-container: #e8def8;
+
+  --md-sys-color-tertiary: #efb8c8;
+  --md-sys-color-tertiary-container: #633b48;
+  --md-sys-color-on-tertiary-container: #ffd8e4;
+
+  --md-sys-color-on-surface: #e6e1e5;
+  --md-sys-color-on-surface-variant: #cac4d0;
+  
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+}
+
+[data-theme="obsidian-emerald"] {
+  --md-sys-color-background: #0a110e;
+  --md-sys-color-surface: #121c17;
+  --md-sys-color-surface-container: #182620;
+  --md-sys-color-surface-container-high: #20342b;
+  --md-sys-color-surface-container-highest: #294238;
+  --md-sys-color-outline: #3d5e50;
+  --md-sys-color-outline-variant: #243830;
+  
+  --md-sys-color-primary: #6dd5ad;
+  --md-sys-color-on-primary: #003824;
+  --md-sys-color-primary-container: #005237;
+  --md-sys-color-on-primary-container: #8bf2c9;
+  
+  --md-sys-color-secondary: #b3ccbf;
+  --md-sys-color-secondary-container: #3b4b42;
+  --md-sys-color-on-secondary-container: #cfe8db;
+
+  --md-sys-color-tertiary: #a4cdde;
+  --md-sys-color-tertiary-container: #234b5a;
+  --md-sys-color-on-tertiary-container: #c0e9fa;
+
+  --md-sys-color-on-surface: #e1e3df;
+  --md-sys-color-on-surface-variant: #c0c9c2;
+}
+
+[data-theme="cyberpunk-neon"] {
+  --md-sys-color-background: #0f0b18;
+  --md-sys-color-surface: #171124;
+  --md-sys-color-surface-container: #201732;
+  --md-sys-color-surface-container-high: #2b1f43;
+  --md-sys-color-surface-container-highest: #372856;
+  --md-sys-color-outline: #553e87;
+  --md-sys-color-outline-variant: #32244f;
+  
+  --md-sys-color-primary: #f48fb1;
+  --md-sys-color-on-primary: #5c0032;
+  --md-sys-color-primary-container: #830048;
+  --md-sys-color-on-primary-container: #ffd9e2;
+  
+  --md-sys-color-secondary: #80deea;
+  --md-sys-color-secondary-container: #004f58;
+  --md-sys-color-on-secondary-container: #a6eeff;
+
+  --md-sys-color-tertiary: #ce93d8;
+  --md-sys-color-tertiary-container: #59256a;
+  --md-sys-color-on-tertiary-container: #f6d9ff;
+
+  --md-sys-color-on-surface: #f3eef7;
+  --md-sys-color-on-surface-variant: #d3c4db;
+}
+
+[data-theme="industrial-amber"] {
+  --md-sys-color-background: #14120e;
+  --md-sys-color-surface: #1c1914;
+  --md-sys-color-surface-container: #26221b;
+  --md-sys-color-surface-container-high: #332d24;
+  --md-sys-color-surface-container-highest: #423a2f;
+  --md-sys-color-outline: #5f5443;
+  --md-sys-color-outline-variant: #383126;
+  
+  --md-sys-color-primary: #ffb951;
+  --md-sys-color-on-primary: #452b00;
+  --md-sys-color-primary-container: #633f00;
+  --md-sys-color-on-primary-container: #ffddb3;
+  
+  --md-sys-color-secondary: #dcc3a1;
+  --md-sys-color-secondary-container: #534532;
+  --md-sys-color-on-secondary-container: #f9dfbc;
+
+  --md-sys-color-tertiary: #b7ce96;
+  --md-sys-color-tertiary-container: #374e1d;
+  --md-sys-color-on-tertiary-container: #d3eaa0;
+
+  --md-sys-color-on-surface: #ede0d4;
+  --md-sys-color-on-surface-variant: #d3c4b4;
+}
+
+[data-theme="paper-light"] {
+  --md-sys-color-background: #fdfbff;
+  --md-sys-color-surface: #f5f2fa;
+  --md-sys-color-surface-container: #ede8f2;
+  --md-sys-color-surface-container-high: #e7e2ec;
+  --md-sys-color-surface-container-highest: #e1dce6;
+  --md-sys-color-outline: #79747e;
+  --md-sys-color-outline-variant: #cac4d0;
+  
+  --md-sys-color-primary: #6750a4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #eaddff;
+  --md-sys-color-on-primary-container: #21005d;
+  
+  --md-sys-color-secondary: #625b71;
+  --md-sys-color-secondary-container: #e8def8;
+  --md-sys-color-on-secondary-container: #1d192b;
+
+  --md-sys-color-tertiary: #7d5260;
+  --md-sys-color-tertiary-container: #ffd8e4;
+  --md-sys-color-on-tertiary-container: #31111d;
+
+  --md-sys-color-on-surface: #1d1b20;
+  --md-sys-color-on-surface-variant: #49454f;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-surface);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), color 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* 
+  Material Design 3 (M3) Official Linear Progress Indicator
+  - 4dp active track
+  - 4dp stop indicator
+  - 4dp gap
+  - Fully rounded corner radius
+*/
+
+.m3-linear-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 4px;
+}
+
+.m3-linear-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  background-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  overflow: hidden;
+}
+
+.m3-linear-indicator {
+  height: 100%;
+  background-color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+  /* Slow, graceful 3.2s transition so CPU & RAM progress glides without sudden rush */
+  transition: width 3.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+}
+
+.m3-linear-stop {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  flex-shrink: 0;
+}
+
+/* 
+  Top Bar Slow Indeterminate Line (Material Design 3 Standard Glide)
+  Slowed down from 1.5s to 3.8s for a calm, breathing cadence that doesn't churn CPU.
+*/
+.m3-linear-indeterminate {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  background-color: transparent;
+  overflow: hidden;
+}
+
+.m3-linear-indeterminate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background-color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+  will-change: left, width;
+  animation: m3-indeterminate 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes m3-indeterminate {
+  0% { left: -40%; width: 25%; }
+  50% { left: 40%; width: 55%; }
+  100% { left: 100%; width: 15%; }
+}
+
+/* Micro-animations for Setting and Cost buttons */
+@keyframes subtle-badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px var(--md-sys-color-primary));
+  }
+}
+
+.animate-subtle-glow {
+  animation: subtle-badge-pulse 3.6s ease-in-out infinite;
+}
+
+@keyframes subtle-gear-spin {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(45deg); }
+  50% { transform: rotate(45deg); }
+  75% { transform: rotate(90deg); }
+  100% { transform: rotate(90deg); }
+}
+
+.animate-subtle-spin {
+  animation: subtle-gear-spin 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
