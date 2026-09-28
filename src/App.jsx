@@ -20,8 +20,14 @@ import {
   MessageSquare,
   Search,
   Sparkles,
-  Filter
+  Filter,
+  Bot,
+  Shield,
+  Terminal,
+  CpuIcon,
+  Code2
 } from 'lucide-react';
+import { AGENTS_DATA } from './agentsData';
 
 // Custom smooth number tween hook
 function useSmoothCounter(targetValue, duration = 2400) {
@@ -364,6 +370,18 @@ export default function App() {
           >
             <Boxes size={14} />
             <span>Models</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/agents')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+              location.pathname === '/agents'
+                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+            }`}
+          >
+            <Bot size={14} />
+            <span>Agents</span>
           </button>
 
           <button
@@ -859,6 +877,91 @@ export default function App() {
                   ))}
                 </div>
 
+              </div>
+            }
+          />
+
+          {/* AGENTS DASHBOARD ROUTE (View-Only, Non-Interactive) */}
+          <Route
+            path="/agents"
+            element={
+              <div className="w-full space-y-5">
+                {/* Header Toolbar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
+                      <Bot size={22} className="text-[var(--md-sys-color-primary)]" />
+                      Agent Core Dashboard
+                    </h1>
+                    <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                      Autonomous Intelligence Cluster • Live Active Daemons • View-Only Architecture
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-xs bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{AGENTS_DATA.length} Verified Agents</span>
+                  </div>
+                </div>
+
+                {/* Agents Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {AGENTS_DATA.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col justify-between shadow-xs gap-3 group"
+                    >
+                      <div className="space-y-2">
+                        {/* Title and Badge */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center font-mono font-bold text-xs text-[var(--md-sys-color-primary)]">
+                              {agent.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="font-bold text-sm text-[var(--md-sys-color-on-surface)] block leading-snug">
+                                {agent.name}
+                              </span>
+                              <span className="text-[11px] font-mono text-[var(--md-sys-color-primary)]">
+                                {agent.engine}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)]">
+                            {agent.execution_mode}
+                          </span>
+                        </div>
+
+                        {/* Role Description */}
+                        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                          {agent.role}
+                        </p>
+
+                        {/* Capabilities Chips */}
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {agent.capabilities.map((cap, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)]"
+                            >
+                              {cap}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Footer Row (View-Only Notice & Status) */}
+                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                        <span className="text-[10px] italic text-[var(--md-sys-color-on-surface-variant)]">
+                          View-Only Showcase
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[var(--md-sys-color-on-surface)] font-medium">
+                          <CheckCircle2 size={13} className="text-[var(--md-sys-color-primary)]" />
+                          {agent.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             }
           />
