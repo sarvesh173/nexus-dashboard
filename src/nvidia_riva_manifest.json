@@ -1,0 +1,122 @@
+{
+  "nvidia/parakeet-ctc-0.6b-asr": {
+    "model_id": "nvidia/parakeet-ctc-0.6b-asr",
+    "name": "Parakeet CTC 0.6B ASR",
+    "category": "stt",
+    "protocol": "gRPC over TLS",
+    "grpc_server": "grpc.nvcf.nvidia.com:443",
+    "nvcf_function_id": "d8dd4e9b-fbf5-4fb0-9dba-8cf436c8d965",
+    "auth_header": "metadata: authorization = Bearer $NVIDIA_API_KEY",
+    "metadata_args": {
+      "function-id": "d8dd4e9b-fbf5-4fb0-9dba-8cf436c8d965",
+      "authorization": "Bearer $NVIDIA_API_KEY"
+    },
+    "client_library": "nvidia-riva-client",
+    "pip_install": "pip install nvidia-riva-client",
+    "git_repo": "https://github.com/nvidia-riva/python-clients.git",
+    "input_spec": {
+      "format": "16-bit Mono Linear PCM WAV / OGG / OPUS",
+      "sample_rate_hz": 16000,
+      "channels": 1
+    },
+    "cli_execution_example": "python python-clients/scripts/asr/transcribe_file.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id \"d8dd4e9b-fbf5-4fb0-9dba-8cf436c8d965\" --metadata \"authorization\" \"Bearer $NVIDIA_API_KEY\"",
+    "official_docs_url": "https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-asr",
+    "try_api_url": "https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-asr/api"
+  },
+  "nvidia/parakeet-tdt-0.6b-v2": {
+    "model_id": "nvidia/parakeet-tdt-0.6b-v2",
+    "name": "Parakeet TDT 0.6B v2",
+    "category": "stt",
+    "protocol": "gRPC over TLS",
+    "grpc_server": "grpc.nvcf.nvidia.com:443",
+    "nvcf_function_id": "d3fe9151-442b-4204-a70d-5fcc597fd610",
+    "auth_header": "metadata: authorization = Bearer $NVIDIA_API_KEY",
+    "metadata_args": {
+      "function-id": "d3fe9151-442b-4204-a70d-5fcc597fd610",
+      "authorization": "Bearer $NVIDIA_API_KEY"
+    },
+    "client_library": "nvidia-riva-client",
+    "pip_install": "pip install nvidia-riva-client",
+    "git_repo": "https://github.com/nvidia-riva/python-clients.git",
+    "input_spec": {
+      "format": "16-bit Mono Linear PCM WAV / OGG / OPUS",
+      "sample_rate_hz": 16000,
+      "channels": 1
+    },
+    "cli_execution_example": "python python-clients/scripts/asr/transcribe_file.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id \"d3fe9151-442b-4204-a70d-5fcc597fd610\" --metadata \"authorization\" \"Bearer $NVIDIA_API_KEY\"",
+    "official_docs_url": "https://build.nvidia.com/nvidia/parakeet-tdt-0_6b-v2",
+    "try_api_url": "https://build.nvidia.com/nvidia/parakeet-tdt-0_6b-v2/api"
+  },
+  "nvidia/canary-1b-asr": {
+    "model_id": "nvidia/canary-1b-asr",
+    "name": "Canary 1B Multilingual ASR",
+    "category": "stt",
+    "protocol": "gRPC over TLS",
+    "grpc_server": "grpc.nvcf.nvidia.com:443",
+    "nvcf_function_id": "b0e8b4a5-217c-40b7-9b96-17d84e666317",
+    "auth_header": "metadata: authorization = Bearer $NVIDIA_API_KEY",
+    "metadata_args": {
+      "function-id": "b0e8b4a5-217c-40b7-9b96-17d84e666317",
+      "authorization": "Bearer $NVIDIA_API_KEY"
+    },
+    "client_library": "nvidia-riva-client",
+    "pip_install": "pip install nvidia-riva-client",
+    "git_repo": "https://github.com/nvidia-riva/python-clients.git",
+    "input_spec": {
+      "format": "16-bit Mono Linear PCM WAV / OGG / OPUS",
+      "sample_rate_hz": 16000,
+      "channels": 1
+    },
+    "cli_execution_example": "python python-clients/scripts/asr/transcribe_file.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id \"b0e8b4a5-217c-40b7-9b96-17d84e666317\" --metadata \"authorization\" \"Bearer $NVIDIA_API_KEY\"",
+    "official_docs_url": "https://build.nvidia.com/nvidia/canary-1b-asr",
+    "try_api_url": "https://build.nvidia.com/nvidia/canary-1b-asr/api"
+  },
+  "nvidia/magpie-tts-multilingual": {
+    "model_id": "nvidia/magpie-tts-multilingual",
+    "name": "Magpie TTS Multilingual",
+    "category": "tts",
+    "protocol": "gRPC over TLS",
+    "grpc_server": "grpc.nvcf.nvidia.com:443",
+    "nvcf_function_id": "877104f7-e885-42b9-8de8-f6e4c6303969",
+    "auth_header": "metadata: authorization = Bearer $NVIDIA_API_KEY",
+    "metadata_args": {
+      "function-id": "877104f7-e885-42b9-8de8-f6e4c6303969",
+      "authorization": "Bearer $NVIDIA_API_KEY"
+    },
+    "client_library": "nvidia-riva-client",
+    "pip_install": "pip install nvidia-riva-client",
+    "git_repo": "https://github.com/nvidia-riva/python-clients.git",
+    "input_spec": {
+      "format": "16-bit Mono Linear PCM WAV / OGG / OPUS",
+      "sample_rate_hz": 16000,
+      "channels": 1
+    },
+    "cli_execution_example": "python python-clients/scripts/tts/talk.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id \"877104f7-e885-42b9-8de8-f6e4c6303969\" --metadata \"authorization\" \"Bearer $NVIDIA_API_KEY\"",
+    "official_docs_url": "https://build.nvidia.com/nvidia/magpie-tts-multilingual",
+    "try_api_url": "https://build.nvidia.com/nvidia/magpie-tts-multilingual/api"
+  },
+  "nvidia/chatterbox-multilingual-tts": {
+    "model_id": "nvidia/chatterbox-multilingual-tts",
+    "name": "Chatterbox Multilingual TTS",
+    "category": "tts",
+    "protocol": "gRPC over TLS",
+    "grpc_server": "grpc.nvcf.nvidia.com:443",
+    "nvcf_function_id": "ddacc747-1269-4fab-bfd9-8f593dead106",
+    "auth_header": "metadata: authorization = Bearer $NVIDIA_API_KEY",
+    "metadata_args": {
+      "function-id": "ddacc747-1269-4fab-bfd9-8f593dead106",
+      "authorization": "Bearer $NVIDIA_API_KEY"
+    },
+    "client_library": "nvidia-riva-client",
+    "pip_install": "pip install nvidia-riva-client",
+    "git_repo": "https://github.com/nvidia-riva/python-clients.git",
+    "input_spec": {
+      "format": "16-bit Mono Linear PCM WAV / OGG / OPUS",
+      "sample_rate_hz": 16000,
+      "channels": 1
+    },
+    "cli_execution_example": "python python-clients/scripts/tts/talk.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id \"ddacc747-1269-4fab-bfd9-8f593dead106\" --metadata \"authorization\" \"Bearer $NVIDIA_API_KEY\"",
+    "official_docs_url": "https://build.nvidia.com/nvidia/chatterbox-multilingual-tts",
+    "try_api_url": "https://build.nvidia.com/nvidia/chatterbox-multilingual-tts/api"
+  }
+}

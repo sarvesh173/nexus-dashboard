@@ -862,7 +862,7 @@ export default function App() {
           <Route
             path="/modules"
             element={
-              <div className="w-full space-y-5">
+              <div className="w-full space-y-6">
                 
                 {/* 1. Header Toolbar (Title + Back Button + Search Bar) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -886,7 +886,7 @@ export default function App() {
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
                       {selectedProviderId 
                         ? `Live models synced directly from ${currentProvider?.display_name || 'Provider'} via Hermes Agent integration.`
-                        : 'Double-tap a provider to inspect live models, token rate limits, and modality allocations.'}
+                        : 'Double-tap or click a provider to inspect live models, token rate limits, and modality allocations.'}
                     </p>
                   </div>
 
@@ -915,19 +915,19 @@ export default function App() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="w-full">
                       {providersList.map((prov) => (
                         <div
                           key={prov.id}
                           onDoubleClick={() => setSelectedProviderId(prov.id)}
                           onClick={() => setSelectedProviderId(prov.id)}
-                          className="group p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-md relative overflow-hidden flex flex-col justify-between"
+                          className="group p-6 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg relative overflow-hidden flex flex-col justify-between w-full"
                         >
-                          <div className="space-y-4">
+                          <div className="space-y-5">
                             {/* Provider Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                               <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-[#141414] border border-[var(--md-sys-color-outline-variant)] p-2.5 flex items-center justify-center shrink-0">
+                                <div className="w-16 h-16 rounded-2xl bg-[#141414] border border-[var(--md-sys-color-outline-variant)] p-3 flex items-center justify-center shrink-0">
                                   <img
                                     src={prov.logo}
                                     alt={prov.name}
@@ -938,15 +938,15 @@ export default function App() {
                                   />
                                 </div>
                                 <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-lg text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors">
+                                  <div className="flex items-center gap-2.5">
+                                    <h3 className="font-bold text-xl text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors">
                                       {prov.display_name}
                                     </h3>
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                                    <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
                                       {prov.status}
                                     </span>
                                   </div>
-                                  <div className="space-y-1 mt-1">
+                                  <div className="space-y-1 mt-1.5">
                                     <a
                                       href={prov.website_url || "https://build.nvidia.com/models"}
                                       target="_blank"
@@ -955,7 +955,7 @@ export default function App() {
                                       className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--md-sys-color-primary)] hover:underline"
                                     >
                                       <span>Catalog Source: {prov.website_url || "https://build.nvidia.com/models"}</span>
-                                      <ExternalLink size={12} />
+                                      <ExternalLink size={13} />
                                     </a>
                                   </div>
                                 </div>
@@ -966,47 +966,47 @@ export default function App() {
                                   e.stopPropagation();
                                   setSelectedProviderId(prov.id);
                                 }}
-                                className="px-4 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs self-start sm:self-auto"
+                                className="px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs self-start sm:self-auto"
                               >
                                 View Models →
                               </button>
                             </div>
 
-                            {/* Modalities Chips */}
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2">
-                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                            {/* Modalities Chips - 6 columns edge to edge */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
+                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">LLM</span>
-                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.text}</span>
+                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.text}</span>
                               </div>
-                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Vision/Img</span>
-                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.image}</span>
+                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.image}</span>
                               </div>
-                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Embed</span>
-                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.embedding}</span>
+                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.embedding}</span>
                               </div>
-                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Reasoning</span>
-                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.decision}</span>
+                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.decision}</span>
                               </div>
-                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">TTS</span>
-                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.tts}</span>
+                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.tts}</span>
                               </div>
-                              <div className="p-2.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
+                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">STT</span>
-                                <span className="text-base font-bold font-mono text-[var(--md-sys-color-on-surface)]">{prov.categories.stt}</span>
+                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.stt}</span>
                               </div>
                             </div>
                           </div>
 
                           {/* Footer */}
-                          <div className="pt-3 mt-4 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                          <div className="pt-4 mt-5 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
                             <span className="text-xs text-[var(--md-sys-color-primary)] font-semibold">
-                              {prov.total_models} Total Live NIM Models
+                              {prov.total_models} Total Live NIM Foundation Models
                             </span>
-                            <span className="text-xs bg-[var(--md-sys-color-surface-container-high)] px-3 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)]">
+                            <span className="text-xs bg-[var(--md-sys-color-surface-container-high)] px-3.5 py-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]">
                               {prov.rate_limit}
                             </span>
                           </div>
@@ -1033,13 +1033,14 @@ export default function App() {
                         className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
                       >
                         {[
-                          { id: 'all', label: 'All', count: activeModelsPool.length, icon: Layers },
+                          { id: 'all', label: 'All Daily', count: activeModelsPool.filter(m => m.scope !== 'specialized').length, icon: Layers },
                           { id: 'text', label: 'LLM', count: activeModelsPool.filter(m => m.category === 'text').length, icon: MessageSquare },
                           { id: 'image', label: 'Image/Vision', count: activeModelsPool.filter(m => m.category === 'image').length, icon: ImageIcon },
                           { id: 'tts', label: 'TTS', count: activeModelsPool.filter(m => m.category === 'tts').length, icon: Volume2 },
                           { id: 'stt', label: 'STT', count: activeModelsPool.filter(m => m.category === 'stt').length, icon: Mic },
                           { id: 'embedding', label: 'Embeddings', count: activeModelsPool.filter(m => m.category === 'embedding').length, icon: AudioLines },
-                          { id: 'decision', label: 'Decisions/Safety', count: activeModelsPool.filter(m => m.category === 'decision').length, icon: Brain },
+                          { id: 'decision', label: 'Reasoning', count: activeModelsPool.filter(m => m.category === 'decision').length, icon: Brain },
+                          { id: 'specialized', label: 'Lab/Robotics', count: activeModelsPool.filter(m => m.scope === 'specialized').length, icon: Sparkles },
                         ].map((cat) => {
                           const Icon = cat.icon;
                           const isActive = activeCategory === cat.id;

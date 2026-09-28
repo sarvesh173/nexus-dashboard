@@ -90,29 +90,88 @@ def get_hermes_config_providers():
                 for item in data:
                     mid = item.get('id', '')
                     mname = mid.split('/')[-1].replace('-', ' ').title() if '/' in mid else mid
-                    
-                    # Classify category
                     mid_lower = mid.lower()
+
+                    # Filter: Daily Use vs Specialized Non-Daily
+                    scope = 'daily'
+                    specialized_tag = None
+                    host_type = 'Cloud API'
+
+                    # Detect specific modal execution endpoints for backend repair/agent inspection
                     if any(k in mid_lower for k in ['embed', 'retriever', 'clip']):
                         cat = 'embedding'
-                    elif any(k in mid_lower for k in ['tts', 'voice', 'speech', 'audio', 'sound', 'bark']):
+                        endpoint_route = '/v1/embeddings'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['diffusion', 'sdxl', 'flux']):
+                        cat = 'image'
+                        endpoint_route = '/v1/genai/image/generations'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['vision', 'fuyu', 'kosmos', 'neva', 'vila', 'image']):
+                        cat = 'image'
+                        endpoint_route = '/v1/chat/completions'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['tts', 'voice', 'speech', 'audio']):
                         cat = 'tts'
+                        endpoint_route = '/v1/audio/speech'
+                        request_method = 'POST'
                     elif any(k in mid_lower for k in ['stt', 'whisper', 'transcribe', 'asr', 'riva-translate', 'translate']):
                         cat = 'stt'
-                    elif any(k in mid_lower for k in ['diffusion', 'image', 'video', 'cosmos', 'sdxl', 'flux', 'synthetic-video', 'fuyu', 'kosmos', 'neva', 'vila']):
-                        cat = 'image'
-                    elif any(k in mid_lower for k in ['reason', 'guard', 'reward', 'safety', 'parse', 'calibration', 'dbrx']):
+                        endpoint_route = '/v1/audio/transcriptions'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['med', 'drug', 'bio', 'molecule']):
+                        scope = 'specialized'
+                        cat = 'specialized'
+                        specialized_tag = 'Biomedical / Healthcare'
+                        endpoint_route = '/v1/chat/completions'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['synthetic-video', 'detector']):
+                        scope = 'specialized'
+                        cat = 'specialized'
+                        specialized_tag = 'Forensics / Detection'
+                        endpoint_route = '/v1/cv/synthetic-video-detection'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['route', 'weather', 'simulation', 'calibration']):
+                        scope = 'specialized'
+                        cat = 'specialized'
+                        specialized_tag = 'Physics & Simulation'
+                        endpoint_route = '/v1/physics/simulation'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['robot', 'isaac', 'arm', 'spatial']):
+                        scope = 'specialized'
+                        cat = 'specialized'
+                        specialized_tag = 'Robotics & Embodied AI'
+                        endpoint_route = '/v1/robotics/spatial-action'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['guard', 'safety', 'reward']):
+                        scope = 'specialized'
+                        cat = 'specialized'
+                        specialized_tag = 'Safety Guardrail'
+                        endpoint_route = '/v1/chat/completions'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['parse', 'ocr', 'deplot']):
+                        scope = 'specialized'
+                        cat = 'specialized'
+                        specialized_tag = 'Doc / OCR Parsing'
+                        endpoint_route = '/v1/chat/completions'
+                        request_method = 'POST'
+                    elif any(k in mid_lower for k in ['reason', 'dbrx', 'thinking']):
                         cat = 'decision'
+                        endpoint_route = '/v1/chat/completions'
+                        request_method = 'POST'
                     else:
-                        cat = 'text' # LLM
+                        cat = 'text' # Core LLM
+                        endpoint_route = '/v1/chat/completions'
+                        request_method = 'POST'
 
-                    # Check configured status
                     is_active = mid in configured_models or len(configured_models) == 0
 
                     models_list.append({
                         'id': mid,
                         'name': mname,
                         'category': cat,
+                        'scope': scope,
+                        'specialized_tag': specialized_tag,
+                        'host_type': host_type,
                         'provider': 'NVIDIA NIM',
                         'tier': 'free',
                         'input_pricing': '$0.00 / Free',
@@ -124,28 +183,178 @@ def get_hermes_config_providers():
                             'original': 'Up to 128k',
                             'system': 'NVIDIA NIM Hosted'
                         },
-                        'description': f'Official NVIDIA NIM accelerated model: {mid}'
+                        'description': f'Official NVIDIA NIM model: {mid}',
+                        # Hidden technical metadata for autonomous agents / backend diagnostic scripts
+                        '__technical_agent_manifest__': {
+                            'full_endpoint_url': f'{base_url.rstrip("/")}{endpoint_route}',
+                            'route': endpoint_route,
+                            'method': request_method,
+                            'auth_type': 'Bearer API Key',
+                            'headers': {'Authorization': 'Bearer [HERMES_ENV_NVIDIA_API_KEY]'},
+                            'upstream_provider': 'NVIDIA Cloud Functions (NVCF)',
+                            'cli_compatible': True,
+                            'payload_schema': 'openai_compatible_json'
+                        }
                     })
+
+                # Speech Models from NVIDIA Riva NIM catalog with verified local vs cloud host types & exact NVCF gRPC IDs
+                speech_models = [
+                    {
+                        'id': 'nvidia/magpie-tts-multilingual',
+                        'name': 'Magpie TTS Multilingual',
+                        'category': 'tts',
+                        'scope': 'daily',
+                        'specialized_tag': None,
+                        'host_type': 'Cloud API & Local NGC NIM',
+                        'provider': 'NVIDIA Riva NIM',
+                        'tier': 'free',
+                        'input_pricing': '$0.00 / Free',
+                        'output_pricing': '$0.00 / Free',
+                        'rate_limit': '40 RPM',
+                        'status': 'Active',
+                        'configured_in_hermes': True,
+                        'context': {'original': 'Native Audio', 'system': 'Riva Streaming'},
+                        'description': 'Real-time neural speech synthesis pipeline optimized for natural conversational agents.',
+                        '__technical_agent_manifest__': {
+                            'protocol': 'gRPC over TLS',
+                            'grpc_server': 'grpc.nvcf.nvidia.com:443',
+                            'nvcf_function_id': '877104f7-e885-42b9-8de8-f6e4c6303969',
+                            'client_library': 'nvidia-riva-client',
+                            'pip_install': 'pip install nvidia-riva-client',
+                            'git_repo': 'https://github.com/nvidia-riva/python-clients.git',
+                            'cli_command': 'python python-clients/scripts/tts/talk.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id "877104f7-e885-42b9-8de8-f6e4c6303969" --metadata "authorization" "Bearer $NVIDIA_API_KEY" --text "Hello from Alya"',
+                            'upstream_provider': 'NVIDIA Riva NVCF',
+                            'cli_compatible': True,
+                            'documentation_url': 'https://build.nvidia.com/nvidia/magpie-tts-multilingual/api'
+                        }
+                    },
+                    {
+                        'id': 'nvidia/chatterbox-multilingual-tts',
+                        'name': 'Chatterbox Multilingual TTS',
+                        'category': 'tts',
+                        'scope': 'daily',
+                        'specialized_tag': None,
+                        'host_type': 'Local NGC Container (Local Run Required)',
+                        'provider': 'NVIDIA Riva NIM',
+                        'tier': 'free',
+                        'input_pricing': '$0.00 / Local',
+                        'output_pricing': '$0.00 / Local',
+                        'rate_limit': 'Local Hardware',
+                        'status': 'Downloadable / Local',
+                        'configured_in_hermes': False,
+                        'context': {'original': 'Local GPU/CPU', 'system': 'NGC Container'},
+                        'description': 'High-fidelity multilingual speech synthesis designed for on-premise local Docker/NIM deployment.',
+                        '__technical_agent_manifest__': {
+                            'protocol': 'gRPC / Docker Container',
+                            'grpc_server': 'grpc.nvcf.nvidia.com:443 (or localhost:50051)',
+                            'nvcf_function_id': 'ddacc747-1269-4fab-bfd9-8f593dead106',
+                            'client_library': 'nvidia-riva-client',
+                            'pip_install': 'pip install nvidia-riva-client',
+                            'git_repo': 'https://github.com/nvidia-riva/python-clients.git',
+                            'cli_command': 'python python-clients/scripts/tts/talk.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id "ddacc747-1269-4fab-bfd9-8f593dead106" --metadata "authorization" "Bearer $NVIDIA_API_KEY"',
+                            'upstream_provider': 'NGC Docker Container / NVCF',
+                            'cli_compatible': True,
+                            'documentation_url': 'https://build.nvidia.com/nvidia/chatterbox-multilingual-tts/api'
+                        }
+                    },
+                    {
+                        'id': 'nvidia/parakeet-ctc-0.6b-asr',
+                        'name': 'Parakeet CTC 0.6B ASR',
+                        'category': 'stt',
+                        'scope': 'daily',
+                        'specialized_tag': None,
+                        'host_type': 'Cloud API & Local NGC NIM',
+                        'provider': 'NVIDIA Riva NIM',
+                        'tier': 'free',
+                        'input_pricing': '$0.00 / Free',
+                        'output_pricing': '$0.00 / Free',
+                        'rate_limit': '40 RPM',
+                        'status': 'Active',
+                        'configured_in_hermes': True,
+                        'context': {'original': '16-bit Mono WAV', 'system': 'Riva Conformer'},
+                        'description': 'State-of-the-art accuracy and speed for English transcriptions with timestamped output.',
+                        '__technical_agent_manifest__': {
+                            'protocol': 'gRPC over TLS',
+                            'grpc_server': 'grpc.nvcf.nvidia.com:443',
+                            'nvcf_function_id': 'd8dd4e9b-fbf5-4fb0-9dba-8cf436c8d965',
+                            'client_library': 'nvidia-riva-client',
+                            'pip_install': 'pip install nvidia-riva-client',
+                            'git_repo': 'https://github.com/nvidia-riva/python-clients.git',
+                            'cli_command': 'python python-clients/scripts/asr/transcribe_file.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id "d8dd4e9b-fbf5-4fb0-9dba-8cf436c8d965" --metadata "authorization" "Bearer $NVIDIA_API_KEY" --language-code en-US --input-file <audio.wav>',
+                            'upstream_provider': 'NVIDIA Riva NVCF',
+                            'cli_compatible': True,
+                            'documentation_url': 'https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-asr/api'
+                        }
+                    },
+                    {
+                        'id': 'nvidia/parakeet-tdt-0.6b-v2',
+                        'name': 'Parakeet TDT 0.6B v2',
+                        'category': 'stt',
+                        'scope': 'daily',
+                        'specialized_tag': None,
+                        'host_type': 'Cloud API & Local NGC NIM',
+                        'provider': 'NVIDIA Riva NIM',
+                        'tier': 'free',
+                        'input_pricing': '$0.00 / Free',
+                        'output_pricing': '$0.00 / Free',
+                        'rate_limit': '40 RPM',
+                        'status': 'Active',
+                        'configured_in_hermes': True,
+                        'context': {'original': '30s chunking', 'system': '6.05% WER'},
+                        'description': 'State-of-the-art fast conformer automatic speech recognition with 3386x real-time factor.',
+                        '__technical_agent_manifest__': {
+                            'protocol': 'gRPC over TLS',
+                            'grpc_server': 'grpc.nvcf.nvidia.com:443',
+                            'nvcf_function_id': 'd3fe9151-442b-4204-a70d-5fcc597fd610',
+                            'client_library': 'nvidia-riva-client',
+                            'pip_install': 'pip install nvidia-riva-client',
+                            'git_repo': 'https://github.com/nvidia-riva/python-clients.git',
+                            'cli_command': 'python python-clients/scripts/asr/transcribe_file.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id "d3fe9151-442b-4204-a70d-5fcc597fd610" --metadata "authorization" "Bearer $NVIDIA_API_KEY" --language-code en-US --input-file <audio.wav>',
+                            'upstream_provider': 'NVIDIA Riva NVCF',
+                            'cli_compatible': True,
+                            'documentation_url': 'https://build.nvidia.com/nvidia/parakeet-tdt-0_6b-v2/api'
+                        }
+                    },
+                    {
+                        'id': 'nvidia/canary-1b-asr',
+                        'name': 'Canary 1B Multilingual ASR',
+                        'category': 'stt',
+                        'scope': 'daily',
+                        'specialized_tag': None,
+                        'host_type': 'Cloud API & Local NGC NIM',
+                        'provider': 'NVIDIA Riva NIM',
+                        'tier': 'free',
+                        'input_pricing': '$0.00 / Free',
+                        'output_pricing': '$0.00 / Free',
+                        'rate_limit': '40 RPM',
+                        'status': 'Active',
+                        'configured_in_hermes': True,
+                        'context': {'original': '30s chunking', 'system': 'Multilingual ASR'},
+                        'description': 'Top-tier multi-lingual speech-to-text recognition and real-time audio translation.',
+                        '__technical_agent_manifest__': {
+                            'protocol': 'gRPC over TLS',
+                            'grpc_server': 'grpc.nvcf.nvidia.com:443',
+                            'nvcf_function_id': 'b0e8b4a5-217c-40b7-9b96-17d84e666317',
+                            'client_library': 'nvidia-riva-client',
+                            'pip_install': 'pip install nvidia-riva-client',
+                            'git_repo': 'https://github.com/nvidia-riva/python-clients.git',
+                            'cli_command': 'python python-clients/scripts/asr/transcribe_file.py --server grpc.nvcf.nvidia.com:443 --use-ssl --metadata function-id "b0e8b4a5-217c-40b7-9b96-17d84e666317" --metadata "authorization" "Bearer $NVIDIA_API_KEY" --language-code en-US --input-file <audio.wav>',
+                            'upstream_provider': 'NVIDIA Riva NVCF',
+                            'cli_compatible': True,
+                            'documentation_url': 'https://build.nvidia.com/nvidia/canary-1b-asr/api'
+                        }
+                    }
+                ]
+                for sm in speech_models:
+                    if not any(m['id'] == sm['id'] for m in models_list):
+                        models_list.append(sm)
             else:
                 api_status = f'HTTP {resp.status_code}'
         except Exception as e:
             api_status = 'Unavailable'
-            # Fallback to configured models in config.yaml
-            for mid in configured_models:
-                models_list.append({
-                    'id': mid,
-                    'name': mid.split('/')[-1].title(),
-                    'category': 'text',
-                    'provider': 'NVIDIA NIM',
-                    'tier': 'free',
-                    'input_pricing': '$0.00 / Free',
-                    'output_pricing': '$0.00 / Free',
-                    'rate_limit': '40 RPM',
-                    'status': 'Configured',
-                    'configured_in_hermes': True,
-                    'context': {'original': '128k', 'system': 'Hermes Link'},
-                    'description': f'Configured model: {mid}'
-                })
+
+        daily_models = [m for m in models_list if m.get('scope') == 'daily']
+        spec_models = [m for m in models_list if m.get('scope') == 'specialized']
 
         result_providers.append({
             'id': 'nvidia',
@@ -158,15 +367,18 @@ def get_hermes_config_providers():
             'base_url': base_url,
             'website_url': 'https://build.nvidia.com/models',
             'total_models': len(models_list),
+            'daily_count': len(daily_models),
+            'specialized_count': len(spec_models),
             'models': models_list,
             'categories': {
-                'text': len([m for m in models_list if m['category'] == 'text']),
-                'image': len([m for m in models_list if m['category'] == 'image']),
-                'video': len([m for m in models_list if m['category'] == 'video']),
-                'tts': len([m for m in models_list if m['category'] == 'tts']),
-                'stt': len([m for m in models_list if m['category'] == 'stt']),
-                'embedding': len([m for m in models_list if m['category'] == 'embedding']),
-                'decision': len([m for m in models_list if m['category'] == 'decision'])
+                'text': len([m for m in daily_models if m['category'] == 'text']),
+                'image': len([m for m in daily_models if m['category'] == 'image']),
+                'video': len([m for m in daily_models if m['category'] == 'video']),
+                'tts': len([m for m in daily_models if m['category'] == 'tts']),
+                'stt': len([m for m in daily_models if m['category'] == 'stt']),
+                'embedding': len([m for m in daily_models if m['category'] == 'embedding']),
+                'decision': len([m for m in daily_models if m['category'] == 'decision']),
+                'specialized': len(spec_models)
             }
         })
 
