@@ -206,20 +206,18 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// HOVER ANATOMY (Zero-Glitch, Instant Geometric Anchor, Pure Opacity Transition):
+// HOVER ANATOMY: M3 Theme-Aware Dynamic Colors (Zero hardcoded cyan, matches dashboard palette perfectly):
 function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = null }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
   
-  // Resolve align synchronously
   const currentAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
 
   const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
   const exactFormatted = Number(numVal).toLocaleString('en-US');
 
-  // Compute geometry deterministically
   const getGeometry = (goRight) => {
-    const dotX = 12; // center of stat value container
+    const dotX = 12;
     const dotY = 1;
     const vertX = dotX;
     const vertY = dotY - 32;
@@ -239,14 +237,11 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     } else if (currentAlign === 'right') {
       goRight = true;
     } else {
-      // Auto: detect edge
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         goRight = (window.innerWidth - rect.right) > 220;
       }
     }
-    
-    // Set exact coords immediately BEFORE showing
     setCoords(getGeometry(goRight));
     setIsHovered(true);
   };
@@ -264,7 +259,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     >
       {/* 1. PILL HIGHLIGHT */}
       <span
-        className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-white/10 pointer-events-none transition-opacity duration-150 ease-out ${
+        className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-[var(--md-sys-color-primary)]/15 pointer-events-none transition-opacity duration-150 ease-out ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -272,7 +267,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       {/* Value Text */}
       <span className={`relative z-10 ${colorClass}`}>{displayValue ?? rawValue}</span>
 
-      {/* 2 & 3. OVERLAY LAYER (Absolute inset-0, pointer-events-none, high z-index) */}
+      {/* 2 & 3. OVERLAY LAYER (M3 Theme-Linked Colors) */}
       <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible'}`}>
         {/* LEADER LINE + ANCHOR DOT */}
         <svg
@@ -282,11 +277,11 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 140ms ease-out',
           }}
         >
-          {/* Continuous Badi Dandi */}
+          {/* Continuous Badi Dandi (Themed to Dashboard Primary Tone) */}
           <path
             d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.85)"
+            stroke="var(--md-sys-color-primary)"
             strokeWidth="1.5"
             strokeDasharray="140"
             strokeDashoffset={isHovered ? '0' : '140'}
@@ -295,12 +290,12 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             }}
           />
 
-          {/* Solid White Anchor Dot at the value */}
+          {/* Anchor Dot matches Primary Tone */}
           <circle
             cx={coords.dotX}
             cy={coords.dotY}
             r="3"
-            fill="#ffffff"
+            fill="var(--md-sys-color-primary)"
             style={{
               transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
@@ -308,12 +303,12 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             }}
           />
 
-          {/* Connection Dot that anchors firmly into the Tooltip Corner */}
+          {/* Connection Dot linked directly to the Tooltip Corner */}
           <circle
             cx={coords.diagX}
             cy={coords.diagY}
             r="2.5"
-            fill="#ffffff"
+            fill="var(--md-sys-color-primary)"
             style={{
               transformOrigin: `${coords.diagX}px ${coords.diagY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
@@ -322,7 +317,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
           />
         </svg>
 
-        {/* TOOLTIP WITH EXACT NUMBER (Instant static position, only opacity & scale animate, NO sliding glitch!) */}
+        {/* TOOLTIP WITH EXACT NUMBER (M3 Surface Container + Outline Variant + Primary Accents) */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -335,12 +330,13 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          <div className="px-3.5 py-1.5 rounded-lg bg-[#0e1017] border border-white/25 shadow-[0_16px_40px_rgba(0,0,0,0.8)] flex items-center gap-2 whitespace-nowrap">
-            <span className="text-[13px] font-semibold text-white tracking-tight font-mono">
+          <div className="px-3.5 py-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex items-center gap-2 whitespace-nowrap text-[var(--md-sys-color-on-surface)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)]" />
+            <span className="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] tracking-tight font-mono">
               {exactFormatted}
             </span>
             {label && (
-              <span className="text-[10.5px] text-zinc-400 font-mono border-l border-white/15 pl-2">
+              <span className="text-[10.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono border-l border-[var(--md-sys-color-outline-variant)] pl-2">
                 {label}
               </span>
             )}
@@ -358,8 +354,6 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
   const currentAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
 
   const getPillGeometry = (goRight) => {
-    // When right: anchor dot on right edge (110px approx)
-    // When left: anchor dot on left edge (0px)
     const dotX = goRight ? 110 : 0;
     const dotY = 14;
     const midX = goRight ? dotX + 28 : dotX - 28;
@@ -411,18 +405,18 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
       }}
       className="relative select-none cursor-pointer group/pill"
     >
-      {/* Pill Capsule */}
+      {/* Pill Capsule (M3 Theme-Aware) */}
       <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium border transition-colors duration-150 truncate text-center block w-full shadow-2xs ${
         isHovered
-          ? 'bg-[#1e2029] border-white/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.5)]'
-          : 'bg-[#13141b] border-white/10 text-zinc-300 hover:border-white/20'
+          ? 'bg-[var(--md-sys-color-surface-container-highest)] border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-surface)] shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
+          : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:border-[var(--md-sys-color-outline)]'
       }`}>
         <span className="truncate">{model.name || model.id}</span>
       </div>
 
       {/* Overlay: Dot + Line (Badi Dandi) + Context Box */}
       <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible'}`}>
-        {/* SVG Drawing Line */}
+        {/* SVG Drawing Line (Themed to Dashboard Primary) */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
@@ -434,7 +428,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
           <path
             d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.85)"
+            stroke="var(--md-sys-color-primary)"
             strokeWidth="1.5"
             strokeDasharray="90"
             strokeDashoffset={isHovered ? '0' : '90'}
@@ -442,12 +436,12 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
               transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
-          {/* Solid White Anchor Dot (6px) at the pill edge */}
+          {/* Solid Anchor Dot at the pill edge */}
           <circle
             cx={coords.dotX}
             cy={coords.dotY}
             r="3"
-            fill="#ffffff"
+            fill="var(--md-sys-color-primary)"
             style={{
               transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
@@ -459,7 +453,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             cx={coords.boxX}
             cy={coords.boxY}
             r="2.5"
-            fill="#ffffff"
+            fill="var(--md-sys-color-primary)"
             style={{
               transformOrigin: `${coords.boxX}px ${coords.boxY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
@@ -468,7 +462,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
           />
         </svg>
 
-        {/* Context Menu Box Rendered flush at the end of the dandi (NO position sliding glitch!) */}
+        {/* Context Menu Box (Theme-Matched with Dashboard System: Surface Container + Outline Variant) */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -481,33 +475,33 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          <div className="w-60 p-3 rounded-xl bg-[#14161f] border border-[#30363d] shadow-[0_16px_40px_rgba(0,0,0,0.8)] font-mono text-[10.5px] space-y-2 text-zinc-200">
+          <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_16px_40px_rgba(0,0,0,0.7)] font-mono text-[10.5px] space-y-2 text-[var(--md-sys-color-on-surface)]">
             {/* Context Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-              <span className="font-bold text-white truncate max-w-[140px]" title={model.name || model.id}>
+            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5">
+              <span className="font-bold text-[var(--md-sys-color-on-surface)] truncate max-w-[140px]" title={model.name || model.id}>
                 {model.name || model.id}
               </span>
-              <span className="text-[9px] uppercase font-semibold text-zinc-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/15">
+              <span className="text-[9px] uppercase font-semibold text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/10 px-1.5 py-0.5 rounded-full border border-[var(--md-sys-color-primary)]/20">
                 Live
               </span>
             </div>
 
             {/* Token Usage */}
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Tokens Used:</span>
-              <span className="font-semibold text-white tracking-wide">{telemetry.tokensUsed}</span>
+              <span className="text-[var(--md-sys-color-on-surface-variant)]">Tokens Used:</span>
+              <span className="font-semibold text-[var(--md-sys-color-on-surface)] tracking-wide">{telemetry.tokensUsed}</span>
             </div>
 
             {/* Context Window */}
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Context Window:</span>
-              <span className="font-semibold text-zinc-300">{telemetry.contextWindow}</span>
+              <span className="text-[var(--md-sys-color-on-surface-variant)]">Context Window:</span>
+              <span className="font-semibold text-[var(--md-sys-color-primary)]">{telemetry.contextWindow}</span>
             </div>
 
             {/* Real Compute Value */}
-            <div className="flex items-center justify-between pt-1.5 border-t border-white/10">
-              <span className="text-zinc-400">Compute Value:</span>
-              <span className="font-bold text-emerald-400">{telemetry.cost}</span>
+            <div className="flex items-center justify-between pt-1.5 border-t border-[var(--md-sys-color-outline-variant)]">
+              <span className="text-[var(--md-sys-color-on-surface-variant)]">Compute Value:</span>
+              <span className="font-bold text-[var(--md-sys-color-primary)]">{telemetry.cost}</span>
             </div>
           </div>
         </div>
@@ -516,13 +510,11 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
   );
 }
 
-
-// Interactive '{count} active' badge: On hover shows alphabetical (A-Z) models preview (3-4 models) + 'See more →' button
+// Interactive '{count} active' badge: M3 Theme-Aware Popover
 function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
   const [isHovered, setIsHovered] = useState(false);
   const badgeRef = useRef(null);
 
-  // Sort models alphabetically A to Z, take first 4 models
   const rawModels = provider.models && provider.models.length > 0 ? provider.models : [];
   const sortedModels = [...rawModels].sort((a, b) => {
     const nameA = (a.name || a.id || '').toLowerCase();
@@ -546,26 +538,26 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
           e.stopPropagation();
           onSelect?.();
         }}
-        className="text-[10px] font-mono text-[var(--md-sys-color-primary)] hover:text-white transition-colors cursor-pointer flex items-center gap-1 group/active"
+        className="text-[10px] font-mono text-[var(--md-sys-color-primary)] hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1 group/active"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] group-hover/active:scale-125 transition-transform" />
-        <span className="font-semibold underline decoration-white/20 underline-offset-2 hover:decoration-white/60">
+        <span className="font-semibold underline decoration-[var(--md-sys-color-primary)]/40 underline-offset-2 hover:decoration-[var(--md-sys-color-primary)]">
           {displayCount} active
         </span>
       </button>
 
       {/* Floating A-to-Z Preview Popover with 'See more →' */}
       <div
-        className={`absolute right-0 top-[calc(100%+6px)] w-56 p-2.5 rounded-xl bg-[#14161f] border border-[#30363d] shadow-[0_16px_36px_rgba(0,0,0,0.85)] z-50 text-left font-mono transition-all duration-150 pointer-events-auto ${
+        className={`absolute right-0 top-[calc(100%+6px)] w-56 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_16px_36px_rgba(0,0,0,0.7)] z-50 text-left font-mono transition-all duration-150 pointer-events-auto ${
           isHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1.5">
-          <span className="text-[9.5px] uppercase font-bold text-zinc-400 tracking-wider">
+        <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-1.5">
+          <span className="text-[9.5px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] tracking-wider">
             Models (A–Z)
           </span>
-          <span className="text-[9px] text-zinc-500 font-medium">
+          <span className="text-[9px] text-[var(--md-sys-color-primary)] font-medium">
             {displayCount} total
           </span>
         </div>
@@ -576,28 +568,28 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
             sortedModels.map((m, i) => (
               <div
                 key={i}
-                className="flex items-center gap-1.5 px-1.5 py-1 rounded bg-white/[0.04] text-[10px] text-zinc-200 truncate hover:bg-white/[0.08]"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[var(--md-sys-color-surface-container)] text-[10px] text-[var(--md-sys-color-on-surface)] truncate hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)]/50"
                 title={m.name || m.id}
               >
-                <span className="w-1 h-1 rounded-full bg-zinc-400 shrink-0" />
+                <span className="w-1 h-1 rounded-full bg-[var(--md-sys-color-primary)] shrink-0" />
                 <span className="truncate">{m.name || m.id}</span>
               </div>
             ))
           ) : (
-            <div className="text-[10px] text-zinc-500 py-1 px-1">
+            <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] py-1 px-1">
               Standard provider models
             </div>
           )}
         </div>
 
-        {/* See more → Button */}
+        {/* See more → Button (Themed) */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onSelect?.();
           }}
-          className="w-full py-1 px-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-white text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/10"
+          className="w-full py-1.5 px-2.5 rounded-xl bg-[var(--md-sys-color-primary)] hover:opacity-90 active:scale-95 text-[var(--md-sys-color-on-primary)] text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
         >
           <span>See more</span>
           <span>→</span>
