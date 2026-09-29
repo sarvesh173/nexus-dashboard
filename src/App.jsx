@@ -1602,60 +1602,62 @@ export default function App() {
                                                 setSelectedProviderId(prov.id);
                                               }}
                                             >
-                                              {/* Interactive Pill with Glowing Highlight on Hover */}
+                                              {/* Interactive Pill with Video-Accurate Magnetic Hover & Glowing Crosshair */}
                                               <div
-                                                className="px-2 py-1 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover/pill:border-[var(--md-sys-color-primary)] group-hover/pill:bg-[var(--md-sys-color-primary)]/10 group-hover/pill:text-[var(--md-sys-color-primary)] transition-all truncate text-center block w-full cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+                                                className="relative px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium bg-[#12131a] text-zinc-200 border border-white/10 hover:border-cyan-400 hover:bg-[#1a1b26] hover:shadow-[0_0_20px_rgba(34,211,238,0.25)] transition-all duration-300 truncate text-center block w-full cursor-pointer flex items-center justify-center gap-1.5"
                                               >
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 group-hover/pill:animate-ping shrink-0" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 group-hover/pill:scale-125 transition-transform shadow-[0_0_6px_#22d3ee]" />
                                                 <span className="truncate">{m.name || m.id}</span>
                                               </div>
 
-                                              {/* Professional Telemetry HUD Popover Card */}
-                                              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-[var(--md-sys-color-primary)]/30 text-[var(--md-sys-color-on-surface)] shadow-[0_12px_40px_rgba(0,0,0,0.45)] opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-90 translate-y-2 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-white/15">
+                                              {/* Video-Accurate Floating Telemetry Card (Exact Replica of Video Hover Card) */}
+                                              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-[#0e1017]/95 backdrop-blur-3xl border border-white/15 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-90 translate-y-2 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-cyan-500/30">
                                                 
-                                                {/* Arrow pointer with matching primary glow */}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[var(--md-sys-color-surface-container-highest)]" />
-                                                
-                                                <div className="space-y-2.5 font-mono">
-                                                  {/* Header: Model Name + Live Active Status */}
-                                                  <div className="flex items-center justify-between gap-1.5 border-b border-[var(--md-sys-color-outline-variant)]/60 pb-2">
-                                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                                                      <span className="font-bold text-[11.5px] text-[var(--md-sys-color-on-surface)] truncate" title={m.name || m.id}>
-                                                        {m.name || m.id}
+                                                {/* Laser Tracker Line (Exactly from Video) */}
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-2.5 bg-gradient-to-b from-cyan-400 via-teal-400 to-transparent" />
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+
+                                                <div className="space-y-2 font-mono">
+                                                  {/* Big Token Number (Direct Video Match: '308,768 tokens used') */}
+                                                  <div className="flex items-baseline justify-between border-b border-white/10 pb-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]" />
+                                                      <span className="text-sm font-bold text-white tracking-tight">
+                                                        {telemetry.tokensUsed}
                                                       </span>
                                                     </div>
-                                                    <span className={`text-[8.5px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${telemetry.isFreeTier ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'}`}>
-                                                      {telemetry.isFreeTier ? 'Free Quota' : 'Paid Tier'}
+                                                    <span className="text-[9px] uppercase tracking-wider text-cyan-400 font-semibold bg-cyan-950/70 px-2 py-0.5 rounded-full border border-cyan-800/40">
+                                                      Standard
                                                     </span>
                                                   </div>
-                                                  
-                                                  {/* Quota & Token Meter (Matches Screenshot Design) */}
+
+                                                  {/* Quota Progress Bar (Matching Video Spec) */}
                                                   <div className="space-y-1">
-                                                    <div className="flex items-center justify-between text-[10px]">
-                                                      <span className="text-[var(--md-sys-color-on-surface-variant)]">Token Consumption:</span>
-                                                      <span className="font-bold text-amber-400">{telemetry.tokensUsed}</span>
+                                                    <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                                                      <span>Standard Quota:</span>
+                                                      <span className="font-semibold text-zinc-200">29.7M / 30M</span>
                                                     </div>
-                                                    <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                                      <div className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full w-[65%]" />
+                                                    <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                                      <div className="h-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 rounded-full w-[82%]" />
                                                     </div>
                                                   </div>
 
-                                                  {/* Context Capacity */}
+                                                  {/* Context Window Capacity */}
                                                   <div className="flex items-center justify-between text-[10.5px]">
-                                                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Context Window:</span>
-                                                    <span className="font-bold text-indigo-400">{telemetry.contextWindow}</span>
+                                                    <span className="text-zinc-400">Context Window:</span>
+                                                    <span className="font-semibold text-indigo-300">{telemetry.contextWindow}</span>
                                                   </div>
 
                                                   {/* Commercial Compute Value */}
-                                                  <div className="flex items-center justify-between text-[10.5px] pt-1.5 border-t border-[var(--md-sys-color-outline-variant)]/40">
-                                                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Compute Value:</span>
+                                                  <div className="flex items-center justify-between text-[10.5px] pt-1.5 border-t border-white/10">
+                                                    <span className="text-zinc-400" title="Market cost equivalent for tokens consumed">Compute Value:</span>
                                                     <span className="font-bold text-emerald-400 text-xs">{telemetry.cost}</span>
                                                   </div>
 
-                                                  {/* Action Hint */}
-                                                  <div className="text-[9px] text-center text-[var(--md-sys-color-on-surface-variant)] pt-1 opacity-70">
-                                                    Click pill to inspect full model spec
+                                                  {/* Model Identity Footer */}
+                                                  <div className="pt-1 text-[9px] text-zinc-500 truncate flex items-center justify-between border-t border-white/5">
+                                                    <span className="truncate">{m.id || m.name}</span>
+                                                    <span className="text-cyan-400/80 font-semibold uppercase text-[8.5px]">Live Telemetry</span>
                                                   </div>
                                                 </div>
                                               </div>
