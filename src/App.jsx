@@ -206,11 +206,23 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// Interactive Stat Value: Anchor dot on stat, line draws to the LEFT, and context box appears on the left
-function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '' }) {
+// HOVER ANATOMY (Exact Implementation):
+// Line = 2 segments: vertical (^) from anchor dot + diagonal (/) to tooltip
+// Anchor dot (5-6px) at the value -> Pill highlight behind value
+// Tooltip with unabbreviated number at the top
+// Left/right mirroring based on layout space
+function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = 'auto' }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
-  const [coords, setCoords] = useState({ boxX: -60, boxY: 8, midX: -20, midY: 8, anchorX: 0, anchorY: 8 });
+  const [coords, setCoords] = useState({
+    dotX: 0,
+    dotY: 0,
+    vertX: 0,
+    vertY: -16,
+    diagX: 24,
+    diagY: -38,
+    isRightAligned: false
+  });
 
   const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
   const exactFormatted = Number(numVal).toLocaleString('en-US');
@@ -218,20 +230,24 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
   const handleMouseEnter = () => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
+    const spaceOnRight = window.innerWidth - rect.right;
     
-    // Dot anchors at the left edge of the stat value
-    const anchorX = 0;
-    const anchorY = rect.height / 2;
-    
-    // Line extends straight to the LEFT with a slight mechanical step
-    const midX = -18;
-    const midY = anchorY;
-    
-    // Context box sits on the left side
-    const boxX = -32;
-    const boxY = anchorY;
+    // Left/right mirror kar lena layout ke hisaab se
+    const goRight = align === 'right' ? true : align === 'left' ? false : (spaceOnRight > 160);
 
-    setCoords({ boxX, boxY, midX, midY, anchorX, anchorY });
+    // Anchor dot (5-6px) at the value
+    const dotX = rect.width / 2;
+    const dotY = 1;
+    
+    // Vertical segment (^) straight up
+    const vertX = dotX;
+    const vertY = dotY - 16;
+    
+    // Diagonal segment (/) branching up towards tooltip
+    const diagX = goRight ? vertX + 26 : vertX - 26;
+    const diagY = vertY - 20;
+
+    setCoords({ dotX, dotY, vertX, vertY, diagX, diagY, isRightAligned: goRight });
     setIsHovered(true);
   };
 
@@ -246,9 +262,9 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       onMouseLeave={handleMouseLeave}
       className="relative inline-flex items-center justify-center cursor-default select-none"
     >
-      {/* 1. PILL HIGHLIGHT - Subtle, elegant neutral capsule */}
+      {/* 1. PILL HIGHLIGHT - ( 12K ) Soft capsule highlight behind value, zero layout shift */}
       <span
-        className={`absolute inset-x-[-6px] inset-y-[-2px] rounded-full bg-white/[0.08] pointer-events-none transition-all duration-200 ease-out ${
+        className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-white/10 pointer-events-none transition-all duration-200 ease-out ${
           isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
         }`}
       />
@@ -266,50 +282,52 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out',
           }}
         >
-          {/* Animated Leader Line Drawing to the LEFT (starts at anchor dot, shoots left to the box) */}
+          {/* 2 Segments: Vertical (^) then Diagonal (/) - draws in ~200ms */}
           <path
-            d={`M ${coords.anchorX} ${coords.anchorY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
+            d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.6)"
-            strokeWidth="1"
+            stroke="rgba(255, 255, 255, 0.65)"
+            strokeWidth="1.2"
             strokeDasharray="60"
             strokeDashoffset={isHovered ? '0' : '60'}
             style={{
               transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
             }}
           />
-          {/* Anchor Dot (5px Solid White anchored directly at the value) */}
+
+          {/* Anchor Dot (5-6px solid white) at the value */}
           <circle
-            cx={coords.anchorX}
-            cy={coords.anchorY}
+            cx={coords.dotX}
+            cy={coords.dotY}
             r="2.5"
             fill="#ffffff"
             style={{
-              transformOrigin: `${coords.anchorX}px ${coords.anchorY}px`,
+              transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
               transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
         </svg>
 
-        {/* CONTEXT BOX ON THE LEFT (Constructed on the left side of the line) */}
+        {/* TOOLTIP WITH EXACT NUMBER ( 12,000 ) */}
         <div
           className="absolute pointer-events-none"
           style={{
-            left: `${coords.boxX}px`,
-            top: `${coords.boxY}px`,
-            transform: `translate(-100%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.9)'}`,
+            left: `${coords.diagX}px`,
+            top: `${coords.diagY}px`,
+            transform: `${coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)'} ${
+              isHovered ? 'scale(1)' : 'scale(0.88)'
+            }`,
             opacity: isHovered ? 1 : 0,
             transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
           }}
         >
-          <div className="px-3 py-1.5 rounded-lg bg-[#14161d]/95 backdrop-blur-md border border-[#30363d] shadow-[0_10px_30px_rgba(0,0,0,0.6)] flex items-center gap-2 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-            <span className="text-[12.5px] font-semibold text-[#f0f6fc] tracking-tight font-mono">
+          <div className="px-3 py-1.5 rounded-lg bg-[#0e1017]/95 backdrop-blur-md border border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.65)] flex items-center gap-2 whitespace-nowrap mb-1">
+            <span className="text-[13px] font-semibold text-white tracking-tight font-mono">
               {exactFormatted}
             </span>
             {label && (
-              <span className="text-[10px] text-[#8b949e] font-mono border-l border-white/10 pl-1.5">
+              <span className="text-[10px] text-zinc-400 font-mono border-l border-white/10 pl-1.5">
                 {label}
               </span>
             )}
@@ -320,8 +338,6 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
   );
 }
 
-
-// Interactive Model Pill: Dot anchors on hover, line draws to the LEFT, and a sleek context box renders on the left
 function InteractiveModelPill({ model, telemetry, onSelect }) {
   const [isHovered, setIsHovered] = useState(false);
   const pillRef = useRef(null);
