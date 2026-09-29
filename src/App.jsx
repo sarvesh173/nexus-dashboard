@@ -1835,22 +1835,7 @@ export default function App() {
                               <line x1="11" y1="10" x2="10" y2="11" />
                             </svg>
                           </div>
-                          <button
-                            title={hidden.providers.includes(prov.id)
-                              ? 'Restore this provider'
-                              : 'Hide this provider'}
-                            aria-label={hidden.providers.includes(prov.id)
-                              ? 'Restore ' + prov.id : 'Hide ' + prov.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setVisibility('providers', prov.id,
-                                !hidden.providers.includes(prov.id));
-                            }}
-                            className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-[13px] leading-none bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:border-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-error)]"
-                          >
-                            {hidden.providers.includes(prov.id) ? '↺' : '✕'}
-                          </button>
+
                           {(() => {
                             const isUltraCompact = (cardHeightPx < 210) || (cardWidthPx > 0 && cardWidthPx < 280);
                             const isTall = (cardHeightPx >= 280) && (cardWidthPx > 0 && cardWidthPx < 360);
@@ -1928,15 +1913,31 @@ export default function App() {
                                       </div>
                                     </div>
 
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedProviderId(prov.id);
-                                      }}
-                                      className={`${isUltraCompact ? 'px-2.5 py-1 text-[10px]' : isCompact ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs shrink-0 self-start`}
-                                    >
-                                      View →
-                                    </button>
+                                    <div className="flex items-center gap-1.5 shrink-0 self-start z-10">
+                                      {/* Hide/Restore button placed cleanly next to View → with zero overlap */}
+                                      <button
+                                        title={hidden.providers.includes(prov.id) ? 'Restore this provider' : 'Hide this provider'}
+                                        aria-label={hidden.providers.includes(prov.id) ? 'Restore ' + prov.id : 'Hide ' + prov.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setVisibility('providers', prov.id, !hidden.providers.includes(prov.id));
+                                        }}
+                                        className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] leading-none bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:border-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)]/10"
+                                      >
+                                        {hidden.providers.includes(prov.id) ? '↺' : '✕'}
+                                      </button>
+
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedProviderId(prov.id);
+                                        }}
+                                        className={`${isUltraCompact ? 'px-2.5 py-1 text-[10px]' : isCompact ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs shrink-0`}
+                                      >
+                                        View →
+                                      </button>
+                                    </div>
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
