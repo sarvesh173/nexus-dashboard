@@ -600,76 +600,69 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 }
 
 
-// Apple Fluid Action: View Button Keeps Exact Original Size & Shifts to make Gap for X (Emil Kowalski Apple Design Spec)
+// Apple Fluid Action: Anti-Loop Hysteresis Envelope & Static Bounding Box (Emil Kowalski Apple Design Spec)
 function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact, isCardHovered }) {
-  const [isViewHovered, setIsViewHovered] = useState(false);
+  const [hoverTarget, setHoverTarget] = useState('none'); // 'none' | 'view' | 'x'
+  const clusterRef = useRef(null);
 
-  // When hovering elsewhere on card (outside view button):
-  // - View button stays in SAME EXACT FULL SIZE (no font/padding reduction)!
-  // - View button shifts smoothly creating the perfect gap for X!
-  // - Baju mein Apple Liquid Glass '✕' cut button slides in!
-  // When hovering directly on View button or resting:
-  // - View button is in its exact original resting position!
-  // - '✕' button stays 100% hidden!
-  const isElsewhereHovered = isCardHovered && !isViewHovered;
+  // If hovering the 'X' button or hovering card outside View button -> show X!
+  // If hovering directly over View button -> hide X and keep View button resting!
+  const isXVisible = isCardHovered && (hoverTarget === 'x' || hoverTarget !== 'view');
 
   return (
-    <div className="relative flex items-center justify-end gap-2 h-8 z-20 overflow-visible">
-      {/* 1. View Button with Minecraft OG Hitbox (Generously padded +16px top buffer for zero-flicker slow approach) */}
-      <div
-        className="relative pt-4 pb-3 px-2 -mt-4 -mb-3 -mx-2"
-        onMouseEnter={() => setIsViewHovered(true)}
-        onMouseLeave={() => setIsViewHovered(false)}
-      >
+    <div
+      ref={clusterRef}
+      onMouseLeave={() => setHoverTarget('none')}
+      className="relative flex items-center justify-end h-8 z-20 overflow-visible py-3 -my-3 px-3 -mx-3"
+    >
+      <div className="flex items-center gap-2">
+        {/* 1. View Button (Hitbox is static; no movement jitter that triggers infinite loop) */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onSelect(prov.id);
           }}
-          className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-transform duration-200 select-none ${
-            isElsewhereHovered ? '-translate-x-1' : 'translate-x-0'
+          onMouseEnter={() => setHoverTarget('view')}
+          className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 select-none`}
+        >
+          View →
+        </button>
+
+        {/* 2. Apple Liquid Metallic Glass '✕' Cut with Generous Aura Envelope */}
+        <div
+          onMouseEnter={() => setHoverTarget('x')}
+          className={`flex items-center transition-all duration-200 ${
+            isXVisible
+              ? 'w-7 opacity-100 scale-100 pointer-events-auto translate-x-0'
+              : 'w-0 opacity-0 scale-75 pointer-events-none translate-x-1 overflow-hidden'
           }`}
           style={{
             transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
           }}
         >
-          View →
-        </button>
-      </div>
-
-      {/* 2. Apple Liquid Metallic Glass '✕' Cut (Smoothly enters in the created gap on the right) */}
-      <div
-        className={`flex items-center transition-all duration-200 ${
-          isElsewhereHovered
-            ? 'w-7 opacity-100 scale-100 pointer-events-auto translate-x-0'
-            : 'w-0 opacity-0 scale-75 pointer-events-none translate-x-2 overflow-hidden'
-        }`}
-        style={{
-          transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
-        }}
-      >
-        <button
-          title={hidden.providers.includes(prov.id) ? 'Restore this provider' : 'Hide this provider'}
-          aria-label={hidden.providers.includes(prov.id) ? 'Restore ' + prov.id : 'Hide ' + prov.id}
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            setVisibility('providers', prov.id, !hidden.providers.includes(prov.id));
-          }}
-          className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center bg-white/[0.08] hover:bg-white/[0.18] active:bg-white/[0.25] backdrop-blur-xl border border-white/25 hover:border-white/45 shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_1.5px_rgba(255,255,255,0.45)] text-[var(--md-sys-color-on-surface)] transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ring-1 ring-white/10"
-        >
-          {hidden.providers.includes(prov.id) ? (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-          ) : (
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-              <line x1="2.5" y1="2.5" x2="9.5" y2="9.5" />
-              <line x1="9.5" y1="2.5" x2="2.5" y2="9.5" />
-            </svg>
-          )}
-        </button>
+          <button
+            title={hidden.providers.includes(prov.id) ? 'Restore this provider' : 'Hide this provider'}
+            aria-label={hidden.providers.includes(prov.id) ? 'Restore ' + prov.id : 'Hide ' + prov.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setVisibility('providers', prov.id, !hidden.providers.includes(prov.id));
+            }}
+            className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center bg-white/[0.08] hover:bg-white/[0.18] active:bg-white/[0.25] backdrop-blur-xl border border-white/25 hover:border-white/45 shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_1.5px_rgba(255,255,255,0.45)] text-[var(--md-sys-color-on-surface)] transition-all duration-150 hover:scale-110 active:scale-95 cursor-pointer ring-1 ring-white/10"
+          >
+            {hidden.providers.includes(prov.id) ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            ) : (
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                <line x1="2.5" y1="2.5" x2="9.5" y2="9.5" />
+                <line x1="9.5" y1="2.5" x2="2.5" y2="9.5" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
