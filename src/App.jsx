@@ -206,11 +206,11 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// Interactive Stat Value with Pill Highlight, Drawn Leader Line, Anchor Dot & Exact Number Tooltip
+// Interactive Stat Value with Video-Accurate Pill Highlight, Leader Line, Anchor Dot & Dark Spec Tooltip
 function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '' }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
-  const [coords, setCoords] = useState({ tipX: -28, tipY: -28, midX: -14, midY: -14, anchorX: 12, anchorY: 0 });
+  const [coords, setCoords] = useState({ tipX: -26, tipY: -28, midX: -10, midY: -14, anchorX: 12, anchorY: 0 });
 
   const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
   const exactFormatted = Number(numVal).toLocaleString('en-US');
@@ -219,17 +219,17 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     
-    // Coordinates relative to this stat container
+    // Exact anchor coordinates on top center of number
     const anchorX = rect.width / 2;
-    const anchorY = 1; // Top edge of the number
+    const anchorY = 1;
     
-    // Tooltip position floating to top-left
-    const tipX = anchorX - 28;
+    // Top-left floating tooltip offset
+    const tipX = anchorX - 26;
     const tipY = -28;
     
-    // Elbow point
-    const midX = tipX + 12;
-    const midY = (tipY + anchorY) / 2;
+    // Clean mechanical elbow
+    const midX = tipX + 8;
+    const midY = -8;
 
     setCoords({ tipX, tipY, midX, midY, anchorX, anchorY });
     setIsHovered(true);
@@ -246,9 +246,9 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       onMouseLeave={handleMouseLeave}
       className="relative inline-flex items-center justify-center cursor-default select-none"
     >
-      {/* 1. PILL HIGHLIGHT - Soft capsule highlight behind value, zero layout shift */}
+      {/* 1. PILL HIGHLIGHT - Subtle, elegant neutral capsule (fade/scale in over ~180ms ease-out) */}
       <span
-        className={`absolute inset-x-[-6px] inset-y-[-2px] rounded-full bg-white/10 pointer-events-none transition-all duration-200 ease-out ${
+        className={`absolute inset-x-[-6px] inset-y-[-2px] rounded-full bg-white/[0.08] pointer-events-none transition-all duration-200 ease-out ${
           isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
         }`}
       />
@@ -258,7 +258,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
 
       {/* 2 & 3. OVERLAY LAYER (Absolute inset-0, pointer-events-none, high z-index) */}
       <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
-        {/* LEADER LINE + ANCHOR DOT */}
+        {/* LEADER LINE + ANCHOR DOT (Pure neutral monochromatic palette matching video) */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
@@ -266,49 +266,49 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out',
           }}
         >
-          {/* Animated 2-Segment Polyline Leader Line */}
+          {/* Animated 2-Segment Polyline Leader Line (Neutral white/50, 1px) */}
           <path
-            d={`M ${coords.tipX + 18} ${coords.tipY + 16} L ${coords.midX} ${coords.midY} L ${coords.anchorX} ${coords.anchorY}`}
+            d={`M ${coords.tipX + 16} ${coords.tipY + 12} L ${coords.midX} ${coords.midY} L ${coords.anchorX} ${coords.anchorY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.65)"
+            stroke="rgba(255, 255, 255, 0.5)"
             strokeWidth="1"
-            strokeDasharray="70"
-            strokeDashoffset={isHovered ? '0' : '70'}
+            strokeDasharray="60"
+            strokeDashoffset={isHovered ? '0' : '60'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 220ms ease-out' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
             }}
           />
-          {/* Anchor Dot (5-6px) Scaling in at the Anchor Point */}
+          {/* Anchor Dot (5px Solid White / Subtle Neutral Glow) */}
           <circle
             cx={coords.anchorX}
             cy={coords.anchorY}
             r="2.5"
-            fill="#38bdf8"
+            fill="#ffffff"
             style={{
               transformOrigin: `${coords.anchorX}px ${coords.anchorY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: 'transform 200ms ease-out',
+              transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
         </svg>
 
-        {/* TOOLTIP WITH EXACT NUMBER (Top-left, near-black, 1px white/10 border, rounded-lg, ~14px semibold) */}
+        {/* TOOLTIP WITH EXACT NUMBER (Clean charcoal dark theme matching frame 70 of video) */}
         <div
           className="absolute pointer-events-none"
           style={{
             left: `${coords.tipX}px`,
             top: `${coords.tipY}px`,
-            transform: `translate(-50%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.85)'}`,
+            transform: `translate(-50%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.88)'}`,
             opacity: isHovered ? 1 : 0,
             transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
           }}
         >
-          <div className="px-2.5 py-1 rounded-lg bg-[#0a0a0f]/95 backdrop-blur-md border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.6)] flex items-center gap-1.5 whitespace-nowrap">
-            <span className="text-[13px] font-semibold text-white tracking-tight font-mono">
+          <div className="px-2.5 py-1 rounded-lg bg-[#16181d]/95 backdrop-blur-md border border-[#30363d] shadow-[0_10px_25px_rgba(0,0,0,0.5)] flex items-center gap-1.5 whitespace-nowrap">
+            <span className="text-[12.5px] font-semibold text-[#f0f6fc] tracking-tight font-mono">
               {exactFormatted}
             </span>
             {label && (
-              <span className="text-[10px] text-zinc-400 font-mono font-normal">
+              <span className="text-[10px] text-[#8b949e] font-mono font-normal">
                 {label}
               </span>
             )}
@@ -1670,7 +1670,7 @@ export default function App() {
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Embed</span>
-                                      <InteractiveStatValue rawValue={embeddingCount} label="Embeddings" colorClass="text-xs font-bold font-mono text-cyan-400 block leading-none" />
+                                      <InteractiveStatValue rawValue={embeddingCount} label="Embeddings" colorClass="text-xs font-bold font-mono text-zinc-200 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">STT</span>
@@ -1718,29 +1718,29 @@ export default function App() {
                                             >
                                               {/* Interactive Pill with Video-Accurate Magnetic Hover & Glowing Crosshair */}
                                               <div
-                                                className="relative px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium bg-[#12131a] text-zinc-200 border border-white/10 hover:border-cyan-400 hover:bg-[#1a1b26] hover:shadow-[0_0_20px_rgba(34,211,238,0.25)] transition-all duration-300 truncate text-center block w-full cursor-pointer flex items-center justify-center gap-1.5"
+                                                className="relative px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium bg-[#12131a] text-zinc-200 border border-white/10 hover:border-white/20 hover:bg-[#1a1b26] hover:shadow-[0_0_20px_rgba(34,211,238,0.25)] transition-all duration-300 truncate text-center block w-full cursor-pointer flex items-center justify-center gap-1.5"
                                               >
-                                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 group-hover/pill:scale-125 transition-transform shadow-[0_0_6px_#22d3ee]" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white group-hover/pill:scale-125 transition-transform shadow-none" />
                                                 <span className="truncate">{m.name || m.id}</span>
                                               </div>
 
                                               {/* Video-Accurate Floating Telemetry Card (Exact Replica of Video Hover Card) */}
-                                              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-[#0e1017]/95 backdrop-blur-3xl border border-white/15 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-90 translate-y-2 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-cyan-500/30">
+                                              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-[#0e1017]/95 backdrop-blur-3xl border border-white/15 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-90 translate-y-2 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-white/10">
                                                 
                                                 {/* Laser Tracker Line (Exactly from Video) */}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-2.5 bg-gradient-to-b from-cyan-400 via-teal-400 to-transparent" />
-                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-2.5 bg-gradient-to-b from-white/60 to-transparent" />
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
 
                                                 <div className="space-y-2 font-mono">
                                                   {/* Big Token Number (Direct Video Match: '308,768 tokens used') */}
                                                   <div className="flex items-baseline justify-between border-b border-white/10 pb-1.5">
                                                     <div className="flex items-center gap-2">
-                                                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]" />
+                                                      <span className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                                                       <span className="text-sm font-bold text-white tracking-tight">
                                                         {telemetry.tokensUsed}
                                                       </span>
                                                     </div>
-                                                    <span className="text-[9px] uppercase tracking-wider text-cyan-400 font-semibold bg-cyan-950/70 px-2 py-0.5 rounded-full border border-cyan-800/40">
+                                                    <span className="text-[9px] uppercase tracking-wider text-zinc-200 font-semibold bg-cyan-950/70 px-2 py-0.5 rounded-full border border-cyan-800/40">
                                                       Standard
                                                     </span>
                                                   </div>
@@ -1752,7 +1752,7 @@ export default function App() {
                                                       <span className="font-semibold text-zinc-200">29.7M / 30M</span>
                                                     </div>
                                                     <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                                      <div className="h-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 rounded-full w-[82%]" />
+                                                      <div className="h-full bg-gradient-to-r from-zinc-200 via-zinc-400 to-zinc-600 rounded-full w-[82%]" />
                                                     </div>
                                                   </div>
 
@@ -1771,7 +1771,7 @@ export default function App() {
                                                   {/* Model Identity Footer */}
                                                   <div className="pt-1 text-[9px] text-zinc-500 truncate flex items-center justify-between border-t border-white/5">
                                                     <span className="truncate">{m.id || m.name}</span>
-                                                    <span className="text-cyan-400/80 font-semibold uppercase text-[8.5px]">Live Telemetry</span>
+                                                    <span className="text-zinc-200/80 font-semibold uppercase text-[8.5px]">Live Telemetry</span>
                                                   </div>
                                                 </div>
                                               </div>
