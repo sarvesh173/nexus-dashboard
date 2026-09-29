@@ -206,11 +206,11 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// Interactive Stat Value with Video-Accurate Pill Highlight, Leader Line, Anchor Dot & Dark Spec Tooltip
+// Interactive Stat Value: Anchor dot on stat, line draws to the LEFT, and context box appears on the left
 function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '' }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
-  const [coords, setCoords] = useState({ tipX: -26, tipY: -28, midX: -10, midY: -14, anchorX: 12, anchorY: 0 });
+  const [coords, setCoords] = useState({ boxX: -60, boxY: 8, midX: -20, midY: 8, anchorX: 0, anchorY: 8 });
 
   const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
   const exactFormatted = Number(numVal).toLocaleString('en-US');
@@ -219,19 +219,19 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     
-    // Exact anchor coordinates on top center of number
-    const anchorX = rect.width / 2;
-    const anchorY = 1;
+    // Dot anchors at the left edge of the stat value
+    const anchorX = 0;
+    const anchorY = rect.height / 2;
     
-    // Top-left floating tooltip offset
-    const tipX = anchorX - 26;
-    const tipY = -28;
+    // Line extends straight to the LEFT with a slight mechanical step
+    const midX = -18;
+    const midY = anchorY;
     
-    // Clean mechanical elbow
-    const midX = tipX + 8;
-    const midY = -8;
+    // Context box sits on the left side
+    const boxX = -32;
+    const boxY = anchorY;
 
-    setCoords({ tipX, tipY, midX, midY, anchorX, anchorY });
+    setCoords({ boxX, boxY, midX, midY, anchorX, anchorY });
     setIsHovered(true);
   };
 
@@ -246,7 +246,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       onMouseLeave={handleMouseLeave}
       className="relative inline-flex items-center justify-center cursor-default select-none"
     >
-      {/* 1. PILL HIGHLIGHT - Subtle, elegant neutral capsule (fade/scale in over ~180ms ease-out) */}
+      {/* 1. PILL HIGHLIGHT - Subtle, elegant neutral capsule */}
       <span
         className={`absolute inset-x-[-6px] inset-y-[-2px] rounded-full bg-white/[0.08] pointer-events-none transition-all duration-200 ease-out ${
           isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
@@ -258,7 +258,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
 
       {/* 2 & 3. OVERLAY LAYER (Absolute inset-0, pointer-events-none, high z-index) */}
       <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
-        {/* LEADER LINE + ANCHOR DOT (Pure neutral monochromatic palette matching video) */}
+        {/* LEADER LINE + ANCHOR DOT */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
@@ -266,19 +266,19 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out',
           }}
         >
-          {/* Animated 2-Segment Polyline Leader Line (Neutral white/50, 1px) */}
+          {/* Animated Leader Line Drawing to the LEFT (starts at anchor dot, shoots left to the box) */}
           <path
-            d={`M ${coords.tipX + 16} ${coords.tipY + 12} L ${coords.midX} ${coords.midY} L ${coords.anchorX} ${coords.anchorY}`}
+            d={`M ${coords.anchorX} ${coords.anchorY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.5)"
+            stroke="rgba(255, 255, 255, 0.6)"
             strokeWidth="1"
             strokeDasharray="60"
             strokeDashoffset={isHovered ? '0' : '60'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
             }}
           />
-          {/* Anchor Dot (5px Solid White / Subtle Neutral Glow) */}
+          {/* Anchor Dot (5px Solid White anchored directly at the value) */}
           <circle
             cx={coords.anchorX}
             cy={coords.anchorY}
@@ -287,28 +287,29 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             style={{
               transformOrigin: `${coords.anchorX}px ${coords.anchorY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
         </svg>
 
-        {/* TOOLTIP WITH EXACT NUMBER (Clean charcoal dark theme matching frame 70 of video) */}
+        {/* CONTEXT BOX ON THE LEFT (Constructed on the left side of the line) */}
         <div
           className="absolute pointer-events-none"
           style={{
-            left: `${coords.tipX}px`,
-            top: `${coords.tipY}px`,
-            transform: `translate(-50%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.88)'}`,
+            left: `${coords.boxX}px`,
+            top: `${coords.boxY}px`,
+            transform: `translate(-100%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.9)'}`,
             opacity: isHovered ? 1 : 0,
             transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
           }}
         >
-          <div className="px-2.5 py-1 rounded-lg bg-[#16181d]/95 backdrop-blur-md border border-[#30363d] shadow-[0_10px_25px_rgba(0,0,0,0.5)] flex items-center gap-1.5 whitespace-nowrap">
+          <div className="px-3 py-1.5 rounded-lg bg-[#14161d]/95 backdrop-blur-md border border-[#30363d] shadow-[0_10px_30px_rgba(0,0,0,0.6)] flex items-center gap-2 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
             <span className="text-[12.5px] font-semibold text-[#f0f6fc] tracking-tight font-mono">
               {exactFormatted}
             </span>
             {label && (
-              <span className="text-[10px] text-[#8b949e] font-mono font-normal">
+              <span className="text-[10px] text-[#8b949e] font-mono border-l border-white/10 pl-1.5">
                 {label}
               </span>
             )}
