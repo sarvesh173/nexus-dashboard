@@ -600,21 +600,22 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 }
 
 
-// Apple Fluid Morph Action (Emil Kowalski Apple Design Spec)
+// Apple Fluid Action: View Button Keeps Exact Original Size & Shifts to make Gap for X (Emil Kowalski Apple Design Spec)
 function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact, isCardHovered }) {
   const [isViewHovered, setIsViewHovered] = useState(false);
 
   // When hovering elsewhere on card (outside view button):
-  // - View button shrinks to compact size
-  // - Baju mein Apple Liquid Glass '✕' cut button appears!
+  // - View button stays in SAME EXACT FULL SIZE (no font/padding reduction)!
+  // - View button shifts smoothly creating the perfect gap for X!
+  // - Baju mein Apple Liquid Glass '✕' cut button slides in!
   // When hovering directly on View button or resting:
-  // - View button stays BIG / original full size!
-  // - '✕' button stays completely hidden!
+  // - View button is in its exact original resting position!
+  // - '✕' button stays 100% hidden!
   const isElsewhereHovered = isCardHovered && !isViewHovered;
 
   return (
-    <div className="relative flex items-center justify-end gap-1.5 h-8 min-w-[76px] z-20 overflow-visible">
-      {/* 1. View Button (Big original size at rest / direct hover; smoothly shrinks to compact when hovering elsewhere) */}
+    <div className="relative flex items-center justify-end gap-2 h-8 z-20 overflow-visible">
+      {/* 1. View Button (ALWAYS SAME EXACT ORIGINAL FULL SIZE - Shifts smoothly with Emil's curve) */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -622,10 +623,8 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
         }}
         onMouseEnter={() => setIsViewHovered(true)}
         onMouseLeave={() => setIsViewHovered(false)}
-        className={`rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-all duration-200 select-none ${
-          isElsewhereHovered
-            ? 'px-2.5 py-1 text-[10.5px] scale-95'
-            : isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs scale-100'
+        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-transform duration-200 select-none ${
+          isElsewhereHovered ? '-translate-x-1' : 'translate-x-0'
         }`}
         style={{
           transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
@@ -634,7 +633,7 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
         View →
       </button>
 
-      {/* 2. Apple Liquid Metallic Glass '✕' Cut (Smoothly slides in baju mein when hovering elsewhere on card) */}
+      {/* 2. Apple Liquid Metallic Glass '✕' Cut (Smoothly enters in the created gap on the right) */}
       <div
         className={`flex items-center transition-all duration-200 ${
           isElsewhereHovered
