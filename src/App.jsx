@@ -1393,22 +1393,7 @@ export default function App() {
                               <line x1="11" y1="10" x2="10" y2="11" />
                             </svg>
                           </div>
-                          <button
-                            title={hidden.providers.includes(prov.id)
-                              ? 'Restore this provider'
-                              : 'Hide this provider'}
-                            aria-label={hidden.providers.includes(prov.id)
-                              ? 'Restore ' + prov.id : 'Hide ' + prov.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setVisibility('providers', prov.id,
-                                !hidden.providers.includes(prov.id));
-                            }}
-                            className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-[13px] leading-none bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:border-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-error)]"
-                          >
-                            {hidden.providers.includes(prov.id) ? '↺' : '✕'}
-                          </button>
+
                           {(() => {
                             const isUltraCompact = (cardHeightPx < 210) || (cardWidthPx > 0 && cardWidthPx < 280);
                             const isTall = (cardHeightPx >= 280) && (cardWidthPx > 0 && cardWidthPx < 360);
@@ -1431,10 +1416,10 @@ export default function App() {
                             return (
                               <>
                                 <div className="flex flex-col gap-2.5 min-w-0">
-                                  {/* Provider Header */}
-                                  <div className="flex items-start justify-between gap-2.5 min-w-0">
+                                  {/* Provider Header with Apple Liquid Glass X & Full View Button */}
+                                  <div className="flex items-start justify-between gap-2 min-w-0 relative">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                      <div className={`${isUltraCompact ? 'w-8 h-8 p-1 rounded-lg' : isCompact ? 'w-9 h-9 p-1 rounded-xl' : 'w-12 h-12 p-2 rounded-2xl'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all`}>
+                                      <div className={`${isUltraCompact ? 'w-8 h-8 p-1 rounded-lg' : isCompact ? 'w-9 h-9 p-1 rounded-xl' : 'w-12 h-12 p-2 rounded-2xl'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all shadow-xs`}>
                                         {prov.logo ? (
                                           <img
                                             src={prov.logo}
@@ -1466,7 +1451,7 @@ export default function App() {
                                           )}
                                         </div>
 
-                                        {/* Source Link (Hidden on Ultra-Compact) */}
+                                        {/* Source Link */}
                                         {!isUltraCompact && (
                                           <div className="mt-1 min-w-0">
                                             <a
@@ -1486,15 +1471,43 @@ export default function App() {
                                       </div>
                                     </div>
 
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedProviderId(prov.id);
-                                      }}
-                                      className={`${isUltraCompact ? 'px-2.5 py-1 text-[10px]' : isCompact ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs shrink-0 self-start`}
-                                    >
-                                      View →
-                                    </button>
+                                    {/* Action Group: View button + Apple Liquid Glass X Button (Emil Kowalski Apple Design Spec) */}
+                                    <div className="flex items-center gap-2 shrink-0 self-start z-20">
+                                      {/* Full View → Button */}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedProviderId(prov.id);
+                                        }}
+                                        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all duration-200 shadow-xs cursor-pointer active:scale-95`}
+                                      >
+                                        View →
+                                      </button>
+
+                                      {/* Apple Liquid Glass '✕' (WWDC Fluid Spec: Specular top reflection, Frosted blur, Spring tap) */}
+                                      <button
+                                        title={hidden.providers.includes(prov.id) ? 'Restore this provider' : 'Hide this provider'}
+                                        aria-label={hidden.providers.includes(prov.id) ? 'Restore ' + prov.id : 'Hide ' + prov.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setVisibility('providers', prov.id, !hidden.providers.includes(prov.id));
+                                        }}
+                                        className="w-7 h-7 rounded-full flex items-center justify-center bg-white/[0.08] hover:bg-white/[0.18] active:bg-white/[0.25] backdrop-blur-xl border border-white/25 hover:border-white/45 shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_1.5px_rgba(255,255,255,0.45)] text-[var(--md-sys-color-on-surface)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ring-1 ring-white/10"
+                                      >
+                                        {hidden.providers.includes(prov.id) ? (
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                            <path d="M3 3v5h5" />
+                                          </svg>
+                                        ) : (
+                                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                                            <line x1="2.5" y1="2.5" x2="9.5" y2="9.5" />
+                                            <line x1="9.5" y1="2.5" x2="2.5" y2="9.5" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
