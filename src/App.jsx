@@ -330,13 +330,13 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          <div className="px-3.5 py-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex items-center gap-2 whitespace-nowrap text-[var(--md-sys-color-on-surface)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)]" />
+          <div className="px-3.5 py-1.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 flex items-center gap-2 whitespace-nowrap text-[var(--md-sys-color-on-surface)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] shadow-[0_0_8px_var(--md-sys-color-primary)]" />
             <span className="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] tracking-tight font-mono">
               {exactFormatted}
             </span>
             {label && (
-              <span className="text-[10.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono border-l border-[var(--md-sys-color-outline-variant)] pl-2">
+              <span className="text-[10.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono border-l border-white/10 pl-2">
                 {label}
               </span>
             )}
@@ -475,13 +475,13 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_16px_40px_rgba(0,0,0,0.7)] font-mono text-[10.5px] space-y-2 text-[var(--md-sys-color-on-surface)]">
+          <div className="w-64 p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_60px_rgba(0,0,0,0.7)] ring-1 ring-white/10 font-mono text-[10.5px] space-y-2.5 text-[var(--md-sys-color-on-surface)]">
             {/* Context Header */}
-            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
               <span className="font-bold text-[var(--md-sys-color-on-surface)] truncate max-w-[140px]" title={model.name || model.id}>
                 {model.name || model.id}
               </span>
-              <span className="text-[9px] uppercase font-semibold text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/10 px-1.5 py-0.5 rounded-full border border-[var(--md-sys-color-primary)]/20">
+              <span className="text-[9px] uppercase font-semibold text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 px-2 py-0.5 rounded-full border border-[var(--md-sys-color-primary)]/30">
                 Live
               </span>
             </div>
@@ -499,7 +499,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             </div>
 
             {/* Real Compute Value */}
-            <div className="flex items-center justify-between pt-1.5 border-t border-[var(--md-sys-color-outline-variant)]">
+            <div className="flex items-center justify-between pt-1.5 border-t border-white/10">
               <span className="text-[var(--md-sys-color-on-surface-variant)]">Compute Value:</span>
               <span className="font-bold text-[var(--md-sys-color-primary)]">{telemetry.cost}</span>
             </div>
@@ -548,7 +548,7 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 
       {/* Floating A-to-Z Preview Popover with 'See more →' */}
       <div
-        className={`absolute right-0 top-[calc(100%+6px)] w-56 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_16px_36px_rgba(0,0,0,0.7)] z-50 text-left font-mono transition-all duration-150 pointer-events-auto ${
+        className={`absolute right-0 top-[calc(100%+6px)] w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 z-50 text-left font-mono transition-all duration-150 pointer-events-auto ${
           isHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
         }`}
         onClick={(e) => e.stopPropagation()}
