@@ -1,16 +1,62 @@
-# React + Vite
+# Nexus Agent Telemetry & Model Engine (Nexus-Dashboard)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> **Status:** Staging / Active Development  
+> **Target:** High-performance, low-overhead agentic telemetry runtime and multi-provider model routing dashboard.
 
-Currently, two official plugins are available:
+Nexus Dashboard is an agentic telemetry and observability cockpit engineered to track live inference, multi-provider model catalogs (74+ providers, 700+ live models), cost intelligence, and hardware health metrics in real-time.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## ⚡ Core Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Dynamic Fluid Model Grid:** Proportional auto-fill grid layout with responsive zero-gap card architecture, native bidirectional resizing, and compact modality tiering.
+- **5-Modality Breakdown Engine:** Instant categorization across `LLM`, `Vision`, `Embedding`, `STT` (Speech-to-Text), and `TTS` (Text-to-Speech) for all connected providers.
+- **Provider & Model Catalog (`/model` & `/model/:providerId`):** Deep inspection interface with model-level hide/restore rails, active modality filters, and capability telemetry.
+- **Price & Cost Scanner (`/cost`):** Live model cost scanner tracking input/output token pricing across foundational providers.
+- **Hardware & Telemetry Overview (`/`):** Real-time monitoring of CPU, RAM, active agent sessions, and routing latency.
 
-## Expanding the Oxlint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## 🛠️ Tech Stack
+
+- **Frontend:** React 19, Tailwind CSS v4, Vite, Lucide Icons, React Router v7.
+- **Backend Telemetry:** Lightweight Python async server streaming live provider catalogs and hardware telemetry.
+- **Design System:** Material Design 3 (M3) tokenized themes with persistent palette switching.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v20+)
+- Python 3.10+
+
+### Setup & Run
+```bash
+# Clone the repository
+git clone git@github.com:sarvesh173/nexus-dashboard.git
+cd nexus-dashboard
+
+# Install frontend dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+---
+
+## 📌 Development Roadmap
+
+- [x] Zero-gap proportional card grid layout with 2-column live model stream.
+- [x] Full-bleed widescreen canvas with dynamic column balancing.
+- [x] Client-side auto-derivation of modalities across 74+ providers.
+- [ ] Real-time WebSocket sync for live inference sessions and token streaming.
+- [ ] Autonomous model health and failover metrics.
+
+---
+
+*Engineered by [@sarvesh173](https://github.com/sarvesh173).*
