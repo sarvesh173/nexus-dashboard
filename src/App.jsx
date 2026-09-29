@@ -615,9 +615,9 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
 
   return (
     <div className="relative flex items-center justify-end gap-2 h-8 z-20 overflow-visible">
-      {/* 1. View Button with Apple Extended Hitbox & Hysteresis Margin (Prevents edge flicker on slow cursor movement) */}
+      {/* 1. View Button with Minecraft OG Hitbox (Generously padded +16px top buffer for zero-flicker slow approach) */}
       <div
-        className="relative py-2.5 px-1 -my-2.5 -mx-1"
+        className="relative pt-4 pb-3 px-2 -mt-4 -mb-3 -mx-2"
         onMouseEnter={() => setIsViewHovered(true)}
         onMouseLeave={() => setIsViewHovered(false)}
       >
