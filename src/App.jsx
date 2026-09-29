@@ -206,58 +206,48 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// HOVER ANATOMY (Badi Dandi, 100% Box-Linked, Direct State Alignment):
+// HOVER ANATOMY (Zero-Glitch, Instant Geometric Anchor, Pure Opacity Transition):
 function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = null }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
   
-  // Extra-long, prominent mechanical dandi (Vertical: 32px, Diagonal: 64px)
-  const [coords, setCoords] = useState({
-    dotX: 0,
-    dotY: 0,
-    vertX: 0,
-    vertY: -32,
-    diagX: 60,
-    diagY: -72,
-    isRightAligned: true
-  });
+  // Resolve align synchronously
+  const currentAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
 
   const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
   const exactFormatted = Number(numVal).toLocaleString('en-US');
 
-  const handleMouseEnter = () => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    
-    // Direct lookup: prop OR localStorage
-    const savedAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
-    let goRight = true;
-    if (savedAlign === 'left') {
-      goRight = false;
-    } else if (savedAlign === 'right') {
-      goRight = true;
-    } else {
-      // Dynamic auto: flip if close to viewport edge
-      const spaceOnRight = window.innerWidth - rect.right;
-      goRight = spaceOnRight > 220;
-    }
-
-    // Anchor dot at the top center of the value
-    const dotX = rect.width / 2;
+  // Compute geometry deterministically
+  const getGeometry = (goRight) => {
+    const dotX = 12; // center of stat value container
     const dotY = 1;
-    
-    // BADI DANDI:
-    // Vertical segment (^) shoots straight up by 32px
     const vertX = dotX;
     const vertY = dotY - 32;
-    
-    // Diagonal segment (/) shoots out by 64px width and 40px height
     const diagSpanX = 64;
     const diagSpanY = 40;
     const diagX = goRight ? vertX + diagSpanX : vertX - diagSpanX;
     const diagY = vertY - diagSpanY;
+    return { dotX, dotY, vertX, vertY, diagX, diagY, isRightAligned: goRight };
+  };
 
-    setCoords({ dotX, dotY, vertX, vertY, diagX, diagY, isRightAligned: goRight });
+  const [coords, setCoords] = useState(() => getGeometry(currentAlign !== 'left'));
+
+  const handleMouseEnter = () => {
+    let goRight = true;
+    if (currentAlign === 'left') {
+      goRight = false;
+    } else if (currentAlign === 'right') {
+      goRight = true;
+    } else {
+      // Auto: detect edge
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        goRight = (window.innerWidth - rect.right) > 220;
+      }
+    }
+    
+    // Set exact coords immediately BEFORE showing
+    setCoords(getGeometry(goRight));
     setIsHovered(true);
   };
 
@@ -274,8 +264,8 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     >
       {/* 1. PILL HIGHLIGHT */}
       <span
-        className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-white/10 pointer-events-none transition-all duration-200 ease-out ${
-          isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+        className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-white/10 pointer-events-none transition-opacity duration-150 ease-out ${
+          isHovered ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
@@ -283,16 +273,16 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       <span className={`relative z-10 ${colorClass}`}>{displayValue ?? rawValue}</span>
 
       {/* 2 & 3. OVERLAY LAYER (Absolute inset-0, pointer-events-none, high z-index) */}
-      <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
+      <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible'}`}>
         {/* LEADER LINE + ANCHOR DOT */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
             opacity: isHovered ? 1 : 0,
-            transition: 'opacity 150ms ease-out',
+            transition: 'opacity 140ms ease-out',
           }}
         >
-          {/* Continuous Badi Dandi (Vertical then Diagonal) that firmly links both boxes */}
+          {/* Continuous Badi Dandi */}
           <path
             d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
             fill="none"
@@ -301,7 +291,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             strokeDasharray="140"
             strokeDashoffset={isHovered ? '0' : '140'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 240ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
 
@@ -314,7 +304,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             style={{
               transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
 
@@ -327,24 +317,22 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             style={{
               transformOrigin: `${coords.diagX}px ${coords.diagY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
         </svg>
 
-        {/* TOOLTIP WITH EXACT NUMBER - Connected directly to the dandi endpoint */}
+        {/* TOOLTIP WITH EXACT NUMBER (Instant static position, only opacity & scale animate, NO sliding glitch!) */}
         <div
           className="absolute pointer-events-none"
           style={{
             left: `${coords.diagX}px`,
             top: `${coords.diagY}px`,
-            // When right: line hits bottom-left corner of tooltip
-            // When left: line hits bottom-right corner of tooltip
             transform: `${coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)'} ${
-              isHovered ? 'scale(1)' : 'scale(0.85)'
+              isHovered ? 'scale(1)' : 'scale(0.92)'
             }`,
             opacity: isHovered ? 1 : 0,
-            transition: isHovered ? 'all 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
+            transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
           <div className="px-3.5 py-1.5 rounded-lg bg-[#0e1017] border border-white/25 shadow-[0_16px_40px_rgba(0,0,0,0.8)] flex items-center gap-2 whitespace-nowrap">
@@ -366,47 +354,49 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
 function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
   const [isHovered, setIsHovered] = useState(false);
   const pillRef = useRef(null);
-  const [coords, setCoords] = useState({
-    dotX: 0,
-    dotY: 14,
-    midX: -28,
-    midY: 14,
-    boxX: -48,
-    boxY: -10,
-    isRightAligned: false
-  });
 
-  const handleMouseEnter = () => {
-    if (!pillRef.current) return;
-    const rect = pillRef.current.getBoundingClientRect();
-    
-    // Check setting: 'left' | 'right' | 'auto'
-    const savedAlign = align || localStorage.getItem('nexus_leader_align') || 'left';
-    let goRight = false;
-    if (savedAlign === 'right') {
-      goRight = true;
-    } else if (savedAlign === 'left') {
-      goRight = false;
-    } else {
-      // Dynamic auto
-      const spaceOnLeft = rect.left;
-      goRight = spaceOnLeft < 260;
-    }
+  const currentAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
 
-    // Anchor dot on the side of the pill
-    const dotX = goRight ? rect.width : 0;
+  const getPillGeometry = (goRight) => {
+    // When right: anchor dot on right edge (110px approx)
+    // When left: anchor dot on left edge (0px)
+    const dotX = goRight ? 110 : 0;
     const dotY = 14;
-    
-    // BADI DANDI:
-    // First segment shoots horizontally by 28px
     const midX = goRight ? dotX + 28 : dotX - 28;
     const midY = dotY;
-    
-    // Second segment goes up diagonally into the box corner (total span 52px)
     const boxX = goRight ? midX + 24 : midX - 24;
     const boxY = midY - 26;
+    return { dotX, dotY, midX, midY, boxX, boxY, isRightAligned: goRight };
+  };
 
-    setCoords({ dotX, dotY, midX, midY, boxX, boxY, isRightAligned: goRight });
+  const [coords, setCoords] = useState(() => getPillGeometry(currentAlign !== 'left'));
+
+  const handleMouseEnter = () => {
+    let goRight = true;
+    if (currentAlign === 'left') {
+      goRight = false;
+    } else if (currentAlign === 'right') {
+      goRight = true;
+    } else {
+      if (pillRef.current) {
+        const rect = pillRef.current.getBoundingClientRect();
+        goRight = rect.left < 260;
+      }
+    }
+
+    if (pillRef.current) {
+      const rect = pillRef.current.getBoundingClientRect();
+      const dotX = goRight ? rect.width : 0;
+      const dotY = rect.height / 2;
+      const midX = goRight ? dotX + 28 : dotX - 28;
+      const midY = dotY;
+      const boxX = goRight ? midX + 24 : midX - 24;
+      const boxY = midY - 26;
+      setCoords({ dotX, dotY, midX, midY, boxX, boxY, isRightAligned: goRight });
+    } else {
+      setCoords(getPillGeometry(goRight));
+    }
+    
     setIsHovered(true);
   };
 
@@ -421,8 +411,8 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
       }}
       className="relative select-none cursor-pointer group/pill"
     >
-      {/* Pill Capsule (Normal Neutral Theme - ZERO Cyan) */}
-      <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium border transition-all duration-200 truncate text-center block w-full shadow-2xs ${
+      {/* Pill Capsule */}
+      <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium border transition-colors duration-150 truncate text-center block w-full shadow-2xs ${
         isHovered
           ? 'bg-[#1e2029] border-white/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.5)]'
           : 'bg-[#13141b] border-white/10 text-zinc-300 hover:border-white/20'
@@ -430,17 +420,17 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
         <span className="truncate">{model.name || model.id}</span>
       </div>
 
-      {/* Overlay: Dot + Line (Badi Dandi) + Context Box completely linked */}
-      <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
+      {/* Overlay: Dot + Line (Badi Dandi) + Context Box */}
+      <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible'}`}>
         {/* SVG Drawing Line */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
             opacity: isHovered ? 1 : 0,
-            transition: 'opacity 150ms ease-out',
+            transition: 'opacity 140ms ease-out',
           }}
         >
-          {/* Continuous Badi Dandi (Horizontal then Diagonal) touching box flush */}
+          {/* Continuous Badi Dandi (Horizontal then Diagonal) */}
           <path
             d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
             fill="none"
@@ -449,7 +439,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             strokeDasharray="90"
             strokeDashoffset={isHovered ? '0' : '90'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
           {/* Solid White Anchor Dot (6px) at the pill edge */}
@@ -461,7 +451,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             style={{
               transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
           {/* Connection Dot linked directly to the Context Box corner */}
@@ -473,22 +463,22 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
             style={{
               transformOrigin: `${coords.boxX}px ${coords.boxY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
             }}
           />
         </svg>
 
-        {/* Context Menu Box Rendered flush at the end of the dandi */}
+        {/* Context Menu Box Rendered flush at the end of the dandi (NO position sliding glitch!) */}
         <div
           className="absolute pointer-events-none"
           style={{
             left: `${coords.boxX}px`,
             top: `${coords.boxY}px`,
             transform: `${coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${
-              isHovered ? 'scale(1)' : 'scale(0.88)'
+              isHovered ? 'scale(1)' : 'scale(0.92)'
             }`,
             opacity: isHovered ? 1 : 0,
-            transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
+            transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
           <div className="w-60 p-3 rounded-xl bg-[#14161f] border border-[#30363d] shadow-[0_16px_40px_rgba(0,0,0,0.8)] font-mono text-[10.5px] space-y-2 text-zinc-200">
