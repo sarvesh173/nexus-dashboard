@@ -4,3 +4,9 @@ dist
 .env.local
 .DS_Store
 *.log
+__pycache__/
+*.pyc
+hidden_store.json
+model_health.json
+.vscode/
+.idea/
