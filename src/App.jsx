@@ -516,6 +516,97 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
   );
 }
 
+
+// Interactive '{count} active' badge: On hover shows alphabetical (A-Z) models preview (3-4 models) + 'See more →' button
+function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const badgeRef = useRef(null);
+
+  // Sort models alphabetically A to Z, take first 4 models
+  const rawModels = provider.models && provider.models.length > 0 ? provider.models : [];
+  const sortedModels = [...rawModels].sort((a, b) => {
+    const nameA = (a.name || a.id || '').toLowerCase();
+    const nameB = (b.name || b.id || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  }).slice(0, 4);
+
+  const displayCount = rawModels.length || totalCount;
+
+  return (
+    <div
+      ref={badgeRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative select-none"
+    >
+      {/* Badge Button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect?.();
+        }}
+        className="text-[10px] font-mono text-[var(--md-sys-color-primary)] hover:text-white transition-colors cursor-pointer flex items-center gap-1 group/active"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] group-hover/active:scale-125 transition-transform" />
+        <span className="font-semibold underline decoration-white/20 underline-offset-2 hover:decoration-white/60">
+          {displayCount} active
+        </span>
+      </button>
+
+      {/* Floating A-to-Z Preview Popover with 'See more →' */}
+      <div
+        className={`absolute right-0 top-[calc(100%+6px)] w-56 p-2.5 rounded-xl bg-[#14161f] border border-[#30363d] shadow-[0_16px_36px_rgba(0,0,0,0.85)] z-50 text-left font-mono transition-all duration-150 pointer-events-auto ${
+          isHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1.5">
+          <span className="text-[9.5px] uppercase font-bold text-zinc-400 tracking-wider">
+            Models (A–Z)
+          </span>
+          <span className="text-[9px] text-zinc-500 font-medium">
+            {displayCount} total
+          </span>
+        </div>
+
+        {/* 3-4 Sorted Models List */}
+        <div className="space-y-1 mb-2">
+          {sortedModels.length > 0 ? (
+            sortedModels.map((m, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 px-1.5 py-1 rounded bg-white/[0.04] text-[10px] text-zinc-200 truncate hover:bg-white/[0.08]"
+                title={m.name || m.id}
+              >
+                <span className="w-1 h-1 rounded-full bg-zinc-400 shrink-0" />
+                <span className="truncate">{m.name || m.id}</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-[10px] text-zinc-500 py-1 px-1">
+              Standard provider models
+            </div>
+          )}
+        </div>
+
+        {/* See more → Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect?.();
+          }}
+          className="w-full py-1 px-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-white text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/10"
+        >
+          <span>See more</span>
+          <span>→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // Persisted like the card size controls are, otherwise every reload
   // silently snapped the whole UI back to indigo-violet.
@@ -1873,7 +1964,7 @@ export default function App() {
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">STT</span>
-                                      <InteractiveStatValue align={leaderAlign} rawValue={sttCount} label="STT models" colorClass="text-xs font-bold font-mono text-teal-400 block leading-none" />
+                                      <InteractiveStatValue align={leaderAlign} rawValue={sttCount} label="STT models" colorClass="text-xs font-bold font-mono text-emerald-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">TTS</span>
@@ -1897,9 +1988,11 @@ export default function App() {
                                         <span className="text-[10px] font-mono uppercase font-bold text-[var(--md-sys-color-on-surface-variant)]">
                                           Live Models
                                         </span>
-                                        <span className="text-[10px] font-mono text-[var(--md-sys-color-primary)]">
-                                          {prov.models?.length || totalCount} active
-                                        </span>
+                                        <InteractiveActiveModelsBadge
+                                          provider={prov}
+                                          totalCount={totalCount}
+                                          onSelect={() => setSelectedProviderId(prov.id)}
+                                        />
                                       </div>
                                       <div className="grid grid-cols-2 gap-1.5 w-full">
                                         {((prov.models && prov.models.length > 0) ? prov.models : [
