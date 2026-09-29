@@ -1597,52 +1597,65 @@ export default function App() {
                                             <div
                                               key={idx}
                                               className="relative group/pill"
-                                              onClick={(e) => e.stopPropagation()}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedProviderId(prov.id);
+                                              }}
                                             >
-                                              <span
-                                                className="px-2 py-1 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover/pill:border-[var(--md-sys-color-primary)] group-hover/pill:text-[var(--md-sys-color-primary)] transition-all truncate text-center block w-full cursor-pointer shadow-2xs"
+                                              {/* Interactive Pill with Glowing Highlight on Hover */}
+                                              <div
+                                                className="px-2 py-1 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover/pill:border-[var(--md-sys-color-primary)] group-hover/pill:bg-[var(--md-sys-color-primary)]/10 group-hover/pill:text-[var(--md-sys-color-primary)] transition-all truncate text-center block w-full cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
                                               >
-                                                {m.name || m.id}
-                                              </span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 group-hover/pill:animate-ping shrink-0" />
+                                                <span className="truncate">{m.name || m.id}</span>
+                                              </div>
 
-                                              {/* Custom Glassmorphism Animated Tooltip (Context Window, Tokens, Cost, Market Value) */}
-                                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-xl border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-2xl opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-95 translate-y-1.5 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-white/10">
-                                                {/* Arrow pointer */}
+                                              {/* Professional Telemetry HUD Popover Card */}
+                                              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-[var(--md-sys-color-primary)]/30 text-[var(--md-sys-color-on-surface)] shadow-[0_12px_40px_rgba(0,0,0,0.45)] opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-90 translate-y-2 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-white/15">
+                                                
+                                                {/* Arrow pointer with matching primary glow */}
                                                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[var(--md-sys-color-surface-container-highest)]" />
                                                 
-                                                <div className="space-y-2 font-mono text-[10.5px]">
-                                                  {/* Model Header & Tier Badge */}
-                                                  <div className="flex items-center justify-between gap-1.5 border-b border-[var(--md-sys-color-outline-variant)]/60 pb-1.5">
-                                                    <div className="font-bold text-[11px] text-[var(--md-sys-color-on-surface)] truncate flex-1" title={m.name || m.id}>
-                                                      {m.name || m.id}
+                                                <div className="space-y-2.5 font-mono">
+                                                  {/* Header: Model Name + Live Active Status */}
+                                                  <div className="flex items-center justify-between gap-1.5 border-b border-[var(--md-sys-color-outline-variant)]/60 pb-2">
+                                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                                                      <span className="font-bold text-[11.5px] text-[var(--md-sys-color-on-surface)] truncate" title={m.name || m.id}>
+                                                        {m.name || m.id}
+                                                      </span>
                                                     </div>
-                                                    <span className={`text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full ${telemetry.isFreeTier ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'}`}>
-                                                      {telemetry.isFreeTier ? 'Free Tier' : 'Standard'}
+                                                    <span className={`text-[8.5px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${telemetry.isFreeTier ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'}`}>
+                                                      {telemetry.isFreeTier ? 'Free Quota' : 'Paid Tier'}
                                                     </span>
                                                   </div>
                                                   
-                                                  {/* Context Window */}
-                                                  <div className="flex items-center justify-between text-[10.5px]">
-                                                    <span className="text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1">
-                                                      <span>Context:</span>
-                                                    </span>
-                                                    <span className="font-semibold text-indigo-400">{telemetry.contextWindow}</span>
+                                                  {/* Quota & Token Meter (Matches Screenshot Design) */}
+                                                  <div className="space-y-1">
+                                                    <div className="flex items-center justify-between text-[10px]">
+                                                      <span className="text-[var(--md-sys-color-on-surface-variant)]">Token Consumption:</span>
+                                                      <span className="font-bold text-amber-400">{telemetry.tokensUsed}</span>
+                                                    </div>
+                                                    <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                                      <div className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full w-[65%]" />
+                                                    </div>
                                                   </div>
 
-                                                  {/* Token Usage */}
+                                                  {/* Context Capacity */}
                                                   <div className="flex items-center justify-between text-[10.5px]">
-                                                    <span className="text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1">
-                                                      <span>Usage:</span>
-                                                    </span>
-                                                    <span className="font-semibold text-amber-400">{telemetry.tokensUsed}</span>
+                                                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Context Window:</span>
+                                                    <span className="font-bold text-indigo-400">{telemetry.contextWindow}</span>
                                                   </div>
 
-                                                  {/* Total Value / Actual Worth of Used Tokens */}
-                                                  <div className="flex items-center justify-between text-[10.5px] pt-0.5 border-t border-[var(--md-sys-color-outline-variant)]/40">
-                                                    <span className="text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1" title="Real compute cost incurred based on token volume">
-                                                      <span>Compute Value:</span>
-                                                    </span>
-                                                    <span className="font-bold text-emerald-400">{telemetry.cost}</span>
+                                                  {/* Commercial Compute Value */}
+                                                  <div className="flex items-center justify-between text-[10.5px] pt-1.5 border-t border-[var(--md-sys-color-outline-variant)]/40">
+                                                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Compute Value:</span>
+                                                    <span className="font-bold text-emerald-400 text-xs">{telemetry.cost}</span>
+                                                  </div>
+
+                                                  {/* Action Hint */}
+                                                  <div className="text-[9px] text-center text-[var(--md-sys-color-on-surface-variant)] pt-1 opacity-70">
+                                                    Click pill to inspect full model spec
                                                   </div>
                                                 </div>
                                               </div>
