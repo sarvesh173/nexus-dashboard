@@ -615,23 +615,27 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
 
   return (
     <div className="relative flex items-center justify-end gap-2 h-8 z-20 overflow-visible">
-      {/* 1. View Button (ALWAYS SAME EXACT ORIGINAL FULL SIZE - Shifts smoothly with Emil's curve) */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(prov.id);
-        }}
+      {/* 1. View Button with Apple Extended Hitbox & Hysteresis Margin (Prevents edge flicker on slow cursor movement) */}
+      <div
+        className="relative py-2.5 px-1 -my-2.5 -mx-1"
         onMouseEnter={() => setIsViewHovered(true)}
         onMouseLeave={() => setIsViewHovered(false)}
-        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-transform duration-200 select-none ${
-          isElsewhereHovered ? '-translate-x-1' : 'translate-x-0'
-        }`}
-        style={{
-          transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
-        }}
       >
-        View →
-      </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(prov.id);
+          }}
+          className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-transform duration-200 select-none ${
+            isElsewhereHovered ? '-translate-x-1' : 'translate-x-0'
+          }`}
+          style={{
+            transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
+          }}
+        >
+          View →
+        </button>
+      </div>
 
       {/* 2. Apple Liquid Metallic Glass '✕' Cut (Smoothly enters in the created gap on the right) */}
       <div
