@@ -17,6 +17,7 @@ import {
   Volume2,
   Mic,
   Brain,
+  Eye,
   Video,
   MessageSquare,
   Search,
@@ -32,6 +33,7 @@ import {
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
+import { getModelLogo } from './modelLogos';
 import { useParams } from 'react-router-dom';
 
 // Dedicated Fullscreen Agent Session Component (URL-Driven, Non-Chat, Mouse & Keyboard)
@@ -158,21 +160,199 @@ function useSmoothCounter(targetValue, duration = 1200) {
 }
 
 export default function App() {
-  const [theme, setTheme] = useState('indigo-violet');
+  // Persisted like the card size controls are, otherwise every reload
+  // silently snapped the whole UI back to indigo-violet.
+  const [theme, setTheme] = useState(() =>
+    localStorage.getItem('nexus_theme') || 'indigo-violet');
   const [palettePickerOpen, setPalettePickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Selected agent for double-click inspection blank interface modal
   const [activeCliAgent, setActiveCliAgent] = useState(null);
   const [providersList, setProvidersList] = useState([]);
-  const [selectedProviderId, setSelectedProviderId] = useState(null); // null = Providers list view, 'nvidia' = Provider's models view
-  const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'text' | 'image' | 'video' | 'tts' | 'stt' | 'embedding' | 'decision'
-  const [modelTierFilter, setModelTierFilter] = useState('all'); // 'all' | 'paid' | 'free'
-  const [searchQuery, setSearchQuery] = useState('');
-  
+  const [allProviders, setAllProviders] = useState([]);
+  const [showRouters, setShowRouters] = useState(false);
+  const [hidden, setHidden] = useState({ providers: [], models: [] });
+  const [showHidden, setShowHidden] = useState(false);
+  // Distinguishes 'no providers configured' from 'the backend is down'.
+  // Swallowing the fetch error made an outage look like an empty catalog.
+  const [catalogError, setCatalogError] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  // Human labels for the hidden rail, resolved from the live provider list
+  // so a hidden model still shows its real name and not a raw id.
+  const hiddenItems = (() => {
+    const out = [];
+    const all = allProviders.length ? allProviders : providersList;
+    for (const pid of hidden.providers) {
+      const p = all.find((x) => x.id === pid);
+      out.push({ kind: 'providers', id: pid,
+                 label: p ? (p.display_name || p.name || pid) : pid });
+    }
+    for (const mid of hidden.models) {
+      // A hidden model is already filtered out of every provider's model
+      // list, so it can never be found there - fall back to prettifying the
+      // id itself: 'nvidia/black-forest-labs/flux.1-dev' -> 'Flux.1 Dev'.
+      let label = null;
+      for (const p of all) {
+        const hit = (p.models || []).find((m) => m.id === mid);
+        if (hit) { label = hit.name || mid; break; }
+      }
+      if (!label) {
+        label = mid.split('/').pop()
+          .replace(/[._-]+/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+          .trim() || mid;
+      }
+      out.push({ kind: 'models', id: mid, label });
+    }
+    return out;
+  })();
+  const hiddenCount = hidden.providers.length + hidden.models.length;
+
+  // Hide/show is applied server-side (upstream OmniRoute has no model-level
+  // enable/disable). The POST returns the new state and the catalog is refetched
+  // so the card disappears from every view at once, not just the current one.
+  // Rapid clicks fire several POSTs whose responses can land out of order,
+  // leaving the grid showing a different set than the server recorded.
+  const visBusy = useRef(false);
+  const setVisibility = async (kind, id, shouldHide) => {
+    if (visBusy.current) return;
+    visBusy.current = true;
+    try {
+      await setVisibilityInner(kind, id, shouldHide);
+    } finally {
+      visBusy.current = false;
+    }
+  };
+
+  const setVisibilityInner = async (kind, id, shouldHide) => {
+    const prev = hidden;
+    // optimistic: apply locally first so the click feels instant
+    setHidden((h) => {
+      const set = new Set(h[kind === 'providers' ? 'providers' : 'models']);
+      shouldHide ? set.add(id) : set.delete(id);
+      return { ...h, [kind === 'providers' ? 'providers' : 'models']:
+               [...set] };
+    });
+    try {
+      const res = await fetch('/api/visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, id, hidden: shouldHide }),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'failed');
+      setToast(`${shouldHide ? 'Hidden' : 'Restored'}: ${id}`);
+      await fetchProviders();
+    } catch (e) {
+      setHidden(prev); // roll back, the server is the source of truth
+      setToast(`Failed: ${e.message}`);
+    }
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/visibility');
+        const j = await r.json();
+        setHidden({ providers: j.providers || [], models: j.models || [] });
+      } catch { /* first load, nothing hidden yet */ }
+    })();
+  }, []);
+
+
+  // Card count is measured from the real grid width so the layout always fills
+  // the viewport exactly: more providers -> more columns, not more scrolling.
+  const [cols, setCols] = useState(5);
+  const gridRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // The URL is the source of truth. Local state made /modules/<id> deep-links render an empty page and left the address bar on /modules,
+  // which broke refresh, back/forward and any shared link.
+  const selectedProviderId =
+    (location.pathname.match(/^\/(?:model|models|modules)\/([^/]+)/) || [])[1] || null;
+  const setSelectedProviderId = (id) =>
+    navigate(id ? '/model/' + id : '/model');
+  const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'text' | 'vision' | 'image-gen' | 'video' | 'tts' | 'stt' | 'embedding' | 'decision'
+  // Card size — corner-resizable with persistence
+  const [cardWidthPx, setCardWidthPx] = useState(() => {
+    const v = parseInt(localStorage.getItem('nexus_card_w'), 10);
+    return isNaN(v) ? 0 : v; // 0 = auto-fit
+  });
+  const [cardHeightPx, setCardHeightPx] = useState(() => {
+    const v = parseInt(localStorage.getItem('nexus_card_h'), 10);
+    return isNaN(v) ? 320 : v;
+  });
+  const [isResizingCard, setIsResizingCard] = useState(false);
+  const [modelTierFilter, setModelTierFilter] = useState('all'); // 'all' | 'paid' | 'free'
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const _baseProviders = allProviders.length ? allProviders : providersList;
+  const _ranked = (
+    showRouters ? _baseProviders
+      : _baseProviders.filter((p) => p.kind !== 'router')
+  ).map((p) => {
+    // Identity matches first. A model-only hit is still useful, but typing
+    // "nvidia" should surface the Nvidia card above every provider that
+    // merely happens to serve one nvidia/* model.
+    if (!searchQuery) return { p, rank: 1 };
+    const q = searchQuery.toLowerCase();
+    const idHit = (p.name || '').toLowerCase().includes(q)
+               || (p.id || '').toLowerCase().includes(q)
+               || (p.display_name || '').toLowerCase().includes(q);
+    return { p, rank: idHit ? 0 : 1 };
+  });
+  const visibleProviders = _ranked.filter(({ p }) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    // Match on identity and model names only. Including `status` pulled in
+    // every "Live (via ...)" card, so searching "glm" or any gateway name
+    // matched unrelated providers through their transport label.
+    return (p.name || '').toLowerCase().includes(q)
+        || (p.id || '').toLowerCase().includes(q)
+        || (p.display_name || '').toLowerCase().includes(q)
+        || (p.models || []).some((m) =>
+             (m.name || '').toLowerCase().includes(q)
+          || (m.id || '').toLowerCase().includes(q));
+  }).sort((a, b) => a.rank - b.rank).map(({ p }) => p);
+  
   const modalityScrollRef = useHorizontalScroll();
+
+  // Recompute cols from gridRef width + cardWidthPx (0 = auto)
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth || window.innerWidth;
+      if (cardWidthPx > 0) {
+        // manual width: fill container without overflow
+        const n = Math.max(1, Math.floor((w + 16) / (cardWidthPx + 16)));
+        setCols(n);
+      } else {
+        // auto: aim ~5 cards per row, but never force 2 columns on a phone -
+        // at 390px two 170px cards clip every name to "Nvi...". One column
+        // below 640px keeps names and the resize sliders legible.
+        const target = Math.max(280, w / 5);
+        const fit = Math.round(w / target);
+        // Phones: 1 column under 520px (two 170px cards clip every name).
+        // 520-640px: 2 columns is comfortable. Above that use the fitted count.
+        setCols(w < 520 ? 1 : Math.max(2, Math.min(9, fit)));
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [cardWidthPx, visibleProviders.length]);
+
   // Keyboard shortcuts listener for accessibility (mouse + keyboard parity)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -181,12 +361,18 @@ export default function App() {
         if (location.pathname.startsWith('/agents/')) {
           navigate('/agents');
         }
+        // A provider detail view is just as modal-feeling: ESC should step
+        // back out of it rather than doing nothing.
+        else if (location.pathname.startsWith('/modules/')) {
+          setSelectedProviderId(null);
+        }
       }
       // Alt+1 to Alt+5 navigation
       if (e.altKey && e.key === '1') navigate('/');
       if (e.altKey && e.key === '2') navigate('/modules');
       if (e.altKey && e.key === '3') navigate('/agents');
       if (e.altKey && e.key === '4') navigate('/settings');
+      if (e.altKey && e.key === '5') navigate('/cost');
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -436,22 +622,67 @@ export default function App() {
   };
 
   const fetchProviders = async () => {
-    try {
-      const res = await fetch('/api/providers');
-      if (res.ok) {
-        const data = await res.json();
-        setProvidersList(data);
-      }
-    } catch {
-      // Fallback
+    // Live source of truth: the Hermes OpenAI-compatible gateway.
+    // If a model is removed/hidden upstream it disappears here automatically.
+    const [liveRes, nvidiaRes] = await Promise.all([
+      fetch('/api/live-providers').catch(() => null),
+      fetch('/api/providers').catch(() => null),
+    ]);
+
+    let live = [];
+    if (liveRes && liveRes.ok) {
+      live = await liveRes.json();
+      setCatalogError(null);
+    } else {
+      setCatalogError(
+        liveRes === null
+          ? 'Cannot reach the Nexus backend (5174).'
+          : 'The provider catalog returned HTTP '
+            + liveRes.status + '.');
+    }
+
+    // Overlay the rich NVIDIA detail (categories, per-model metadata)
+    let nvidia = null;
+    if (nvidiaRes && nvidiaRes.ok) {
+      const raw = await nvidiaRes.json();
+      nvidia = (Array.isArray(raw) ? raw : (raw.providers || [])).find(
+        (p) => p.id === 'nvidia',
+      ) || null;
+    }
+
+    if (nvidia) {
+      const rich = {};
+      (nvidia.models || []).forEach((m) => { rich[m.id] = m; });
+      live = live.map((p) => {
+        if (p.id !== 'nvidia') return p;
+        // gateway order, but each model keeps NVIDIA's full metadata
+        const models = (p.models || []).map((m) => ({
+          ...(rich[m.id] || {}),
+          ...m,
+          category: (rich[m.id] || {}).category || 'text',
+        }));
+        return {
+          ...nvidia,
+          ...p,
+          id: 'nvidia',
+          models,
+          total_models: models.length,
+          categories: nvidia.categories || {},
+        };
+      });
+    }
+
+    if (live.length) {
+      setProvidersList(live);
+      setAllProviders(live);
     }
   };
 
   useEffect(() => {
     fetchStats();
     fetchProviders();
-    const interval = setInterval(fetchStats, 7000);
-    const provInterval = setInterval(fetchProviders, 30000);
+    const interval = setInterval(fetchStats, 30000);
+    const provInterval = setInterval(fetchProviders, 90000);
     return () => {
       clearInterval(interval);
       clearInterval(provInterval);
@@ -468,17 +699,18 @@ export default function App() {
 
   const changePalette = (palId) => {
     setTheme(palId);
+    localStorage.setItem('nexus_theme', palId);
     document.documentElement.setAttribute('data-theme', palId);
     setPalettePickerOpen(false);
   };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-  }, []);
+  }, [theme]);
 
-  // Filter models
-  const currentProvider = providersList.find(p => p.id === selectedProviderId);
-  const activeModelsPool = currentProvider ? currentProvider.models : (providersList.length > 0 ? providersList[0].models : []);
+  // Filter models — guard against undefined model arrays (null safety)
+  const currentProvider = providersList.find(p => p.id === selectedProviderId) || null;
+  const activeModelsPool = (currentProvider?.models) || (providersList.length > 0 ? (providersList[0].models || []) : []);
 
   const filteredModels = activeModelsPool.filter((m) => {
     const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
@@ -513,7 +745,7 @@ export default function App() {
         </div>
 
         {/* Center: M3 Segmented Navigation (Overview, Models, Cost, Settings) */}
-        <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-center sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto no-scrollbar">
+        <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto nav-scroll-fade">
           
           <button
             onClick={() => navigate('/')}
@@ -528,9 +760,9 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => navigate('/modules')}
+            onClick={() => navigate('/model')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
-              location.pathname === '/modules'
+              location.pathname.startsWith('/model') || location.pathname.startsWith('/models') || location.pathname.startsWith('/modules')
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
@@ -621,7 +853,61 @@ export default function App() {
       </header>
 
       {/* Main Content Area — Full-Bleed Fluid Widescreen Layout */}
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full text-sm font-medium bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border border-[var(--md-sys-color-outline-variant)] shadow-lg"
+        >
+          {toast}
+        </div>
+      )}
       <main className="flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start">
+
+        {/* ── Breadcrumb / Location Bar ── */}
+        {(() => {
+          const path = location.pathname;
+          const crumbs = [{ label: 'Nexus', onClick: () => navigate('/') }];
+          if (path === '/') {
+            crumbs.push({ label: 'Overview' });
+          } else if (path.startsWith('/model') || path.startsWith('/models') || path.startsWith('/modules')) {
+            crumbs.push({ label: 'Models', onClick: () => { setSelectedProviderId(null); navigate('/model'); } });
+            if (selectedProviderId) {
+              crumbs.push({ label: selectedProviderId });
+            }
+          } else if (path.startsWith('/agents/')) {
+            const aid = path.replace('/agents/', '');
+            crumbs.push({ label: 'Agents', onClick: () => navigate('/agents') });
+            if (aid) crumbs.push({ label: aid });
+          } else if (path === '/agents') {
+            crumbs.push({ label: 'Agents' });
+          } else if (path === '/cost') {
+            crumbs.push({ label: 'Cost' });
+          } else if (path === '/settings') {
+            crumbs.push({ label: 'Settings' });
+          } else {
+            crumbs.push({ label: path });
+          }
+          return (
+            <nav className="flex items-center gap-1.5 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] mb-4 px-0.5 select-none">
+              {crumbs.map((c, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span className="opacity-40">/</span>}
+                  {c.onClick ? (
+                    <button
+                      onClick={c.onClick}
+                      className="hover:text-[var(--md-sys-color-primary)] transition-colors"
+                    >
+                      {c.label}
+                    </button>
+                  ) : (
+                    <span className="text-[var(--md-sys-color-on-surface)] font-semibold">{c.label}</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </nav>
+          );
+        })()}
+
         <Routes>
           {/* OVERVIEW ROUTE */}
           <Route
@@ -658,7 +944,10 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 w-full items-stretch">
                   
                   {/* CARD 1: Total Cost */}
-                  <div className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
+                  <div
+                    className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer"
+                    onClick={() => navigate('/cost')}
+                  >
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
@@ -771,7 +1060,7 @@ export default function App() {
                   </div>
 
                   {/* CARD 4: Models & Providers */}
-                  <div className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer" onClick={() => navigate('/modules')}>
+                  <div className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer" onClick={() => navigate('/model')}>
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
@@ -858,12 +1147,17 @@ export default function App() {
             }
           />
 
-          {/* PROFESSIONAL MODELS CATALOG ROUTE */}
-          <Route
-            path="/modules"
-            element={
+          {/* PROFESSIONAL MODELS CATALOG ROUTE
+              The optional :providerId segment is what makes a provider
+              detail page reachable by URL. Without it every deep link and
+              every browser refresh rendered the header and nothing else. */}
+          {['/model/:providerId?', '/models/:providerId?', '/modules/:providerId?'].map((p) => (
+            <Route
+              key={p}
+              path={p}
+              element={
               <div className="w-full space-y-6">
-                
+
                 {/* 1. Header Toolbar (Title + Back Button + Search Bar) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
                   <div>
@@ -886,17 +1180,20 @@ export default function App() {
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
                       {selectedProviderId 
                         ? `Live models synced directly from ${currentProvider?.display_name || 'Provider'} via Hermes Agent integration.`
-                        : 'Double-tap or click a provider to inspect live models, token rate limits, and modality allocations.'}
+                        : 'Click a provider to inspect live models, token rate limits, and modality allocations.'}
                     </p>
                   </div>
 
-                  {/* Search Bar */}
-                  {selectedProviderId && (
+                  {/* Search Bar - reachable on the grid too, otherwise
+                      74 provider cards have no way to be filtered. */}
+                  {(
                     <div className="relative w-full sm:w-72">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-on-surface-variant)]" />
                       <input
                         type="text"
-                        placeholder="Search models, architectures..."
+                        placeholder={selectedProviderId
+                          ? "Search models, architectures..."
+                          : "Search providers, models..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-3 py-1.5 rounded-full text-xs bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
@@ -908,116 +1205,380 @@ export default function App() {
                 {/* VIEW 1: PROVIDERS SELECTION GRID (Shown when selectedProviderId is null) */}
                 {!selectedProviderId && (
                   <div className="space-y-4">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between">
-                      <span>Configured Model Providers (Double-click or tap card to enter)</span>
-                      <span className="font-mono text-[11px] text-[var(--md-sys-color-primary)]">
-                        {providersList.length} Connected
-                      </span>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between flex-wrap gap-2">
+                      <span>Configured Model Providers (click or tap a card to enter)</span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setShowRouters((v) => !v)}
+                          className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] text-[11px] font-mono normal-case hover:border-[var(--md-sys-color-primary)] transition-colors"
+                        >
+                          {showRouters ? 'Hide routers' : 'Show routers'}
+                        </button>
+                        {/* Hiding a card used to be a one-way door: the card
+                            left the grid and nothing on screen could bring
+                            it back. This rail is the way out. */}
+                        <button
+                          onClick={() => setShowHidden((v) => !v)}
+                          aria-pressed={showHidden}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-colors ${
+                            showHidden || hiddenCount
+                              ? 'border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)]'
+                              : 'border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)]'
+                          }`}
+                        >
+                          {hiddenCount
+                            ? 'Hidden · {hiddenCount}'.replace('{hiddenCount}', String(hiddenCount))
+                            : 'Hidden · 0'}
+                        </button>
+                        <span className="font-mono text-[11px] text-[var(--md-sys-color-primary)]">
+                          {visibleProviders.length} Connected
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="w-full">
-                      {providersList.map((prov) => (
+                    {/* Hidden items rail */}
+                    {showHidden && hiddenCount > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-dashed border-[var(--md-sys-color-outline-variant)]">
+                        <span className="text-[11px] font-mono font-semibold text-[var(--md-sys-color-on-surface)]">
+                          Hidden
+                        </span>
+                        {hiddenItems.map((h) => (
+                          <button
+                            key={h.kind + ':' + h.id}
+                            onClick={() => setVisibility(
+                              h.kind, h.id, false)}
+                            title={'Restore ' + h.label}
+                            className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-mono border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] transition-colors"
+                          >
+                            {h.label}
+                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] text-[10px] leading-none">
+                              ↺
+                            </span>
+                          </button>
+                        ))}
+                        <button
+                          onClick={async () => {
+                            const res = await fetch('/api/visibility/reset', {
+                              method: 'POST' });
+                            if (!res.ok) {
+                              setToast('Failed to restore');
+                              return;
+                            }
+                            setHidden({ providers: [], models: [] });
+                            // The catalog is the thing that decides which
+                            // cards render, so clearing local state alone
+                            // left the grid stuck on the filtered copy.
+                            await fetchProviders();
+                            setToast('Restored all hidden items');
+                          }}
+                          className="ml-auto text-[11px] font-mono px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors"
+                        >
+                          Restore all
+                        </button>
+                      </div>
+                    )}
+
+
+
+                    {/* Failure and empty states. Without these a backend
+                        outage renders as "0 Connected" with a blank page,
+                        which reads as "your providers are gone". */}
+                    {catalogError && (
+                      <div className="flex flex-col items-center justify-center gap-3 py-14 px-6 rounded-3xl border border-[var(--md-sys-color-error)]/40 bg-[var(--md-sys-color-error-container)]/30 text-center">
+                        <span className="text-xs font-mono font-bold tracking-wider uppercase text-[var(--md-sys-color-error)]">
+                          Catalog unavailable
+                        </span>
+                        <p className="text-sm text-[var(--md-sys-color-on-surface)] max-w-md">
+                          {catalogError} Provider cards cannot be listed
+                          until it responds — this is not an empty catalog.
+                        </p>
+                        <button
+                          onClick={() => fetchProviders()}
+                          className="mt-1 text-xs font-mono px-3 py-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
+
+                    {!catalogError && visibleProviders.length === 0 && (
+                      <div className="flex flex-col items-center justify-center gap-2 py-14 px-6 rounded-3xl border border-dashed border-[var(--md-sys-color-outline-variant)] text-center">
+                        <span className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">
+                          {searchQuery
+                            ? 'No providers match "' + searchQuery + '"'
+                            : 'No providers to show'}
+                        </span>
+                        <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                          {hiddenCount
+                            ? hiddenCount + ' item(s) hidden — open the '
+                              + 'Hidden rail to restore them.'
+                            : 'Adjust the filters above.'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Flexible responsive grid — auto-fills row space with zero empty voids */}
+                    {!catalogError && visibleProviders.length > 0 && (
+                    <div
+                      ref={gridRef}
+                      className="grid gap-3.5 items-stretch justify-start w-full"
+                      style={{
+                        gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidthPx > 0 ? `${cardWidthPx}px` : '320px'}, 1fr))`,
+                      }}
+                    >
+                      {visibleProviders.map((prov) => {
+                        const isCompact = (cardHeightPx < 290) || (cardWidthPx > 0 && cardWidthPx < 330);
+                        return (
                         <div
                           key={prov.id}
-                          onDoubleClick={() => setSelectedProviderId(prov.id)}
-                          onClick={() => setSelectedProviderId(prov.id)}
-                          className="group p-6 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg relative overflow-hidden flex flex-col justify-between w-full"
+                          onClick={() => {
+                            if (!isResizingCard) {
+                              setSelectedProviderId(prov.id);
+                            }
+                          }}
+                          className="group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg relative flex flex-col justify-between select-none"
+                          style={{
+                            width: '100%',
+                            height: 'auto',
+                          }}
                         >
-                          <div className="space-y-5">
-                            {/* Provider Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                              <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-[#141414] border border-[var(--md-sys-color-outline-variant)] p-3 flex items-center justify-center shrink-0">
-                                  <img
-                                    src={prov.logo}
-                                    alt={prov.name}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2.5">
-                                    <h3 className="font-bold text-xl text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors">
-                                      {prov.display_name}
-                                    </h3>
-                                    <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-                                      {prov.status}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1 mt-1.5">
-                                    <a
-                                      href={prov.website_url || "https://build.nvidia.com/models"}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--md-sys-color-primary)] hover:underline"
+                          {/* Corner resize handle with LIVE GLOBAL synchronization across all cards */}
+                          <div
+                            title="Drag to resize all cards (Strict min limit enforced)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                            }}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setIsResizingCard(true);
+                              const startX = e.clientX;
+                              const startY = e.clientY;
+                              const startW = cardWidthPx > 0 ? cardWidthPx : 320;
+                              const startH = cardHeightPx > 0 ? cardHeightPx : 320;
+
+                              let rafId = null;
+                              const onMouseMove = (ev) => {
+                                if (rafId) return;
+                                rafId = requestAnimationFrame(() => {
+                                  rafId = null;
+                                  const nextW = Math.max(220, Math.min(650, startW + (ev.clientX - startX)));
+                                  const nextH = Math.max(160, Math.min(480, startH + (ev.clientY - startY)));
+                                  setCardWidthPx(nextW);
+                                  setCardHeightPx(nextH);
+                                });
+                              };
+
+                              const onMouseUp = (ev) => {
+                                window.removeEventListener('mousemove', onMouseMove);
+                                window.removeEventListener('mouseup', onMouseUp);
+                                setTimeout(() => setIsResizingCard(false), 50);
+                                const finalW = Math.max(220, Math.min(650, startW + (ev.clientX - startX)));
+                                const finalH = Math.max(160, Math.min(480, startH + (ev.clientY - startY)));
+                                setCardWidthPx(finalW);
+                                setCardHeightPx(finalH);
+                                localStorage.setItem('nexus_card_w', String(finalW));
+                                localStorage.setItem('nexus_card_h', String(finalH));
+                              };
+
+                              window.addEventListener('mousemove', onMouseMove);
+                              window.addEventListener('mouseup', onMouseUp);
+                            }}
+                            className="absolute bottom-1 right-1 w-6 h-6 flex items-center justify-center cursor-nwse-resize text-[var(--md-sys-color-outline)] hover:text-[var(--md-sys-color-primary)] opacity-40 hover:opacity-100 transition-opacity z-20"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                              <line x1="11" y1="3" x2="3" y2="11" />
+                              <line x1="11" y1="7" x2="7" y2="11" />
+                              <line x1="11" y1="10" x2="10" y2="11" />
+                            </svg>
+                          </div>
+                          <button
+                            title={hidden.providers.includes(prov.id)
+                              ? 'Restore this provider'
+                              : 'Hide this provider'}
+                            aria-label={hidden.providers.includes(prov.id)
+                              ? 'Restore ' + prov.id : 'Hide ' + prov.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setVisibility('providers', prov.id,
+                                !hidden.providers.includes(prov.id));
+                            }}
+                            className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-[13px] leading-none bg-[var(--md-sys-color-surface-container-high)]/80 border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:border-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-error)]"
+                          >
+                            {hidden.providers.includes(prov.id) ? '↺' : '✕'}
+                          </button>
+                          {(() => {
+                            const isUltraCompact = (cardHeightPx < 210) || (cardWidthPx > 0 && cardWidthPx < 280);
+                            const isTall = (cardHeightPx >= 280) && (cardWidthPx > 0 && cardWidthPx < 360);
+                            // Auto-derive categories if backend sent empty object so NO provider ever has empty gap
+                            const cats = (prov.categories && Object.keys(prov.categories).length > 0)
+                              ? prov.categories
+                              : (prov.models || []).reduce((acc, m) => {
+                                  const c = m.category || (m.capabilities?.vision ? 'vision' : (m.capabilities?.audio ? 'tts' : 'text'));
+                                  acc[c] = (acc[c] || 0) + 1;
+                                  return acc;
+                                }, {});
+                            const totalCount = prov.id === 'nvidia' ? (prov.total_models || 0) : (prov.model_count || 0);
+                            const visionCount = (cats.vision ?? cats.image) ?? (cats['image-gen'] ?? 0);
+                            const sttCount = cats.stt ?? cats.audio ?? 0;
+                            const ttsCount = cats.tts ?? 0;
+                            const embeddingCount = cats.embedding ?? cats.embeddings ?? 0;
+                            const textCount = cats.text ?? cats.llm ?? Math.max(0, totalCount - visionCount - sttCount - ttsCount - embeddingCount);
+                            const displayModels = (prov.models || []).slice(0, 8);
+
+                            return (
+                              <>
+                                <div className="flex flex-col gap-2.5 min-w-0">
+                                  {/* Provider Header */}
+                                  <div className="flex items-start justify-between gap-2.5 min-w-0">
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                      <div className={`${isUltraCompact ? 'w-8 h-8 p-1 rounded-lg' : isCompact ? 'w-9 h-9 p-1 rounded-xl' : 'w-12 h-12 p-2 rounded-2xl'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all`}>
+                                        {prov.logo ? (
+                                          <img
+                                            src={prov.logo}
+                                            alt={prov.name || prov.id}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                            }}
+                                          />
+                                        ) : null}
+                                        {!prov.logo && (
+                                          <span className={`${isUltraCompact ? 'text-[10px]' : isCompact ? 'text-[11px]' : 'text-sm'} font-bold font-mono uppercase text-[var(--md-sys-color-primary)]`}>
+                                            {(prov.id || '?').slice(0, 2)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <h3
+                                            title={prov.display_name || prov.name || prov.id}
+                                            className={`font-bold ${isUltraCompact ? 'text-xs' : isCompact ? 'text-sm' : 'text-base'} leading-tight text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors truncate min-w-0 flex-1`}
+                                          >
+                                            {prov.display_name || prov.name || prov.id}
+                                          </h3>
+                                          {prov.kind === 'router' && !isUltraCompact && (
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold uppercase shrink-0">
+                                              router
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* Source Link (Hidden on Ultra-Compact) */}
+                                        {!isUltraCompact && (
+                                          <div className="mt-1 min-w-0">
+                                            <a
+                                              href={prov.website_url || prov.base_url || '#'}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--md-sys-color-primary)] hover:underline truncate max-w-full"
+                                            >
+                                              <span className="truncate block" title={prov.website_url || prov.base_url || 'n/a'}>
+                                                Source: {prov.website_url || prov.base_url || 'n/a'}
+                                              </span>
+                                              <ExternalLink size={11} className="shrink-0" />
+                                            </a>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedProviderId(prov.id);
+                                      }}
+                                      className={`${isUltraCompact ? 'px-2.5 py-1 text-[10px]' : isCompact ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs shrink-0 self-start`}
                                     >
-                                      <span>Catalog Source: {prov.website_url || "https://build.nvidia.com/models"}</span>
-                                      <ExternalLink size={13} />
-                                    </a>
-                                    <div className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-2">
-                                      <span>Base Endpoint: <code className="text-[var(--md-sys-color-primary)]">{prov.base_url}</code></span>
-                                      <span>•</span>
-                                      <span className="text-emerald-400">Agent Verification Protocol: NVCF & OpenAI Active</span>
+                                      View →
+                                    </button>
+                                  </div>
+
+                                  {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
+                                  {!isUltraCompact && (
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1 items-stretch">
+                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
+                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">LLM</span>
+                                      <span className="text-xs font-bold font-mono text-amber-400 block leading-none">{textCount}</span>
+                                    </div>
+                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
+                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Vision</span>
+                                      <span className="text-xs font-bold font-mono text-indigo-400 block leading-none">{visionCount}</span>
+                                    </div>
+                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
+                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Embed</span>
+                                      <span className="text-xs font-bold font-mono text-cyan-400 block leading-none">{embeddingCount}</span>
+                                    </div>
+                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
+                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">STT</span>
+                                      <span className="text-xs font-bold font-mono text-teal-400 block leading-none">{sttCount}</span>
+                                    </div>
+                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
+                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">TTS</span>
+                                      <span className="text-xs font-bold font-mono text-purple-400 block leading-none">{ttsCount}</span>
                                     </div>
                                   </div>
+                                  )}
+
+                                  {/* Center Gap Fill on Ultra-Compact: Prominent Models Count */}
+                                  {isUltraCompact && (
+                                    <div className="py-1 px-2.5 rounded-lg bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)] flex items-center justify-between">
+                                      <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--md-sys-color-on-surface-variant)]">MODELS</span>
+                                      <span className="text-xs font-mono font-bold text-[var(--md-sys-color-primary)]">{totalCount} Live</span>
+                                    </div>
+                                  )}
+
+                                  {/* 2. Models Preview positioned NICHE (Snug 2-Column Grid Fills 100% Width & Height!) */}
+                                  {cardHeightPx >= 230 && (
+                                    <div className="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex flex-col justify-start">
+                                      <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-[10px] font-mono uppercase font-bold text-[var(--md-sys-color-on-surface-variant)]">
+                                          Live Models
+                                        </span>
+                                        <span className="text-[10px] font-mono text-[var(--md-sys-color-primary)]">
+                                          {prov.models?.length || totalCount} active
+                                        </span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-1.5 w-full">
+                                        {((prov.models && prov.models.length > 0) ? prov.models : [
+                                          { id: 'default-model', name: `${prov.name || prov.id} Standard` }
+                                        ]).slice(0, cardHeightPx > 340 ? 8 : 6).map((m, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="px-2 py-1 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors truncate text-center block w-full"
+                                            title={m.id || m.name}
+                                          >
+                                            {m.name || m.id}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
 
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedProviderId(prov.id);
-                                }}
-                                className="px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] group-hover:bg-[var(--md-sys-color-primary)] group-hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs self-start sm:self-auto"
-                              >
-                                View Models →
-                              </button>
-                            </div>
+                                {/* Footer */}
+                                <div className="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] min-w-0">
+                                  <span className="text-xs text-[var(--md-sys-color-primary)] font-semibold truncate mr-2">
+                                    {totalCount} Models
+                                  </span>
+                                  <span className="text-[10px] bg-[var(--md-sys-color-surface-container-high)] px-2 py-0.5 rounded-full border border-[var(--md-sys-color-outline-variant)] shrink-0 font-medium text-emerald-400">
+                                    {prov.enabled === false ? 'Offline' : (prov.status || 'Active')}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
 
-                            {/* Modalities Chips - 6 columns edge to edge */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
-                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
-                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">LLM</span>
-                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.text}</span>
-                              </div>
-                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
-                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Vision/Img</span>
-                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.image}</span>
-                              </div>
-                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
-                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Embed</span>
-                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.embedding}</span>
-                              </div>
-                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
-                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">Reasoning</span>
-                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.decision}</span>
-                              </div>
-                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
-                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">TTS</span>
-                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.tts}</span>
-                              </div>
-                              <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center">
-                                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block">STT</span>
-                                <span className="text-lg font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-0.5 block">{prov.categories.stt}</span>
-                              </div>
-                            </div>
-                          </div>
 
-                          {/* Footer */}
-                          <div className="pt-4 mt-5 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                            <span className="text-xs text-[var(--md-sys-color-primary)] font-semibold">
-                              {prov.total_models} Total Live NIM Foundation Models
-                            </span>
-                            <span className="text-xs bg-[var(--md-sys-color-surface-container-high)] px-3.5 py-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]">
-                              {prov.rate_limit}
-                            </span>
-                          </div>
+
                         </div>
-                      ))}
+                      );
+                      })}
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -1040,7 +1601,8 @@ export default function App() {
                         {[
                           { id: 'all', label: 'All Daily', count: activeModelsPool.filter(m => m.scope !== 'specialized').length, icon: Layers },
                           { id: 'text', label: 'LLM', count: activeModelsPool.filter(m => m.category === 'text').length, icon: MessageSquare },
-                          { id: 'image', label: 'Image/Vision', count: activeModelsPool.filter(m => m.category === 'image').length, icon: ImageIcon },
+                          { id: 'vision', label: 'Vision', count: activeModelsPool.filter(m => m.category === 'vision').length, icon: Eye },
+                          { id: 'image-gen', label: 'Image Gen', count: activeModelsPool.filter(m => m.category === 'image-gen').length, icon: ImageIcon },
                           { id: 'tts', label: 'TTS', count: activeModelsPool.filter(m => m.category === 'tts').length, icon: Volume2 },
                           { id: 'stt', label: 'STT', count: activeModelsPool.filter(m => m.category === 'stt').length, icon: Mic },
                           { id: 'embedding', label: 'Embeddings', count: activeModelsPool.filter(m => m.category === 'embedding').length, icon: AudioLines },
@@ -1115,22 +1677,54 @@ export default function App() {
                     <div className="space-y-3">
                       {filteredModels.map((item) => (
                         <div
-                          key={item.id}
+                          key={item.id ?? '—'}
                           className="p-4 sm:p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col gap-3 shadow-xs"
                         >
                           {/* Row 1: Header */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center font-mono font-bold text-xs text-[var(--md-sys-color-primary)] shrink-0">
-                                NV
+                              <div className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] p-1.5 flex items-center justify-center shrink-0 shadow-xs">
+                                <img
+                                  src={getModelLogo(item.id)}
+                                  alt={item.name ?? '—'}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/logos/nvidia.svg';
+                                  }}
+                                />
                               </div>
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-sm sm:text-base text-[var(--md-sys-color-on-surface)]">
-                                    {item.name}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                  <span
+                                    title={item.id ?? '—'}
+                                    className="font-semibold text-sm sm:text-base text-[var(--md-sys-color-on-surface)] truncate max-w-full"
+                                  >
+                                    {item.name ?? '—'}
                                   </span>
+                                  {/* Model-level hide. The backend and the
+                                      hidden rail both already understand
+                                      models, but only provider cards had a
+                                      control for it. */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                      setVisibility('models', item.id,
+                                        !hidden.models.includes(item.id));
+                                    }}
+                                    title={hidden.models.includes(item.id)
+                                      ? 'Restore ' + (item.name ?? item.id)
+                                      : 'Hide ' + (item.name ?? item.id)}
+                                    aria-label={(hidden.models.includes(item.id)
+                                      ? 'Restore ' : 'Hide ')
+                                      + (item.name ?? item.id)}
+                                    className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] leading-none bg-[var(--md-sys-color-surface-container-highest)]/80 border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:border-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-error)] transition-colors"
+                                  >
+                                    {hidden.models.includes(item.id)
+                                      ? '↺' : '✕'}
+                                  </button>
                                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)] uppercase font-semibold">
-                                    {item.category}
+                                    {item.category || '—'}
                                   </span>
                                   {item.configured_in_hermes && (
                                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] font-mono border border-[var(--md-sys-color-primary)]/30 font-semibold">
@@ -1139,7 +1733,7 @@ export default function App() {
                                   )}
                                 </div>
                                 <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">
-                                  {item.id}
+                                  <span className="break-all">{item.id ?? '—'}</span>
                                 </span>
                               </div>
                             </div>
@@ -1148,14 +1742,14 @@ export default function App() {
                             <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs">
                               <span className="text-[var(--md-sys-color-on-surface-variant)] text-[11px]">SLA:</span>
                               <span className="px-2 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-emerald-400 font-bold">
-                                {item.status}
+                                {item.status ?? '—'}
                               </span>
                             </div>
                           </div>
 
                           {/* Row 2: Description */}
                           <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-                            {item.description}
+                            {item.description || '—'}
                           </p>
 
                           {/* Row 3: Metadata Footer */}
@@ -1164,24 +1758,28 @@ export default function App() {
                               <div>
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Context Length</span>
                                 <span className="text-[var(--md-sys-color-on-surface)] font-medium">
-                                  {item.context.original}
+                                  {item.context?.original || "—"}
                                 </span>
                               </div>
 
                               <div>
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Rate Limit</span>
-                                <span className="text-emerald-400 font-medium">{item.rate_limit}</span>
+                                <span className="text-emerald-400 font-medium">{item.rate_limit ?? '—'}</span>
                               </div>
 
                               <div>
                                 <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">Pricing</span>
-                                <span className="text-[var(--md-sys-color-on-surface)] font-medium">{item.input_pricing}</span>
+                                <span className="text-[var(--md-sys-color-on-surface)] font-medium">{item.input_pricing || '—'}</span>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-3">
                               <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-                                NVIDIA NIM Cloud
+                                {selectedProviderId === 'nvidia'
+                                  ? 'NVIDIA NIM Cloud'
+                                  : (currentProvider?.display_name
+                                     || currentProvider?.name
+                                     || 'Upstream')}
                               </span>
                               <span className="flex items-center gap-1 text-[var(--md-sys-color-on-surface)] font-semibold text-[11px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
                                 <CheckCircle2 size={12} className="text-[var(--md-sys-color-primary)]" />
@@ -1199,6 +1797,7 @@ export default function App() {
               </div>
             }
           />
+          ))}
 
           {/* AGENTS DASHBOARD ROUTE (View-Only, Non-Interactive) */}
           <Route

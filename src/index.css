@@ -189,3 +189,24 @@ body {
   50% { left: 25%; width: 75%; }
   100% { left: 100%; width: 50%; }
 }
+
+/* Mobile nav: the segmented control scrolls horizontally on narrow screens.
+   A fully hidden scrollbar made "Settings" look like "Set" and read as a
+   clipping bug, so keep a thin themed bar and fade the edges to signal
+   there is more to scroll to. */
+.nav-scroll-fade {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px,
+    #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 14px,
+    #000 calc(100% - 26px), transparent 100%);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+}
+
+.nav-scroll-fade::-webkit-scrollbar { height: 3px; }
+.nav-scroll-fade::-webkit-scrollbar-track { background: transparent; }
+.nav-scroll-fade::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
