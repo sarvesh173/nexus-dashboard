@@ -205,6 +205,120 @@ function getModelTelemetry(modelId, modelName = '') {
   return { contextWindow, tokensUsed, cost, ratePerMillion, isFreeTier };
 }
 
+
+// Interactive Stat Value with Pill Highlight, Drawn Leader Line, Anchor Dot & Exact Number Tooltip
+function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '' }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef(null);
+  const [coords, setCoords] = useState({ tipX: -28, tipY: -28, midX: -14, midY: -14, anchorX: 12, anchorY: 0 });
+
+  const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
+  const exactFormatted = Number(numVal).toLocaleString('en-US');
+
+  const handleMouseEnter = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    
+    // Coordinates relative to this stat container
+    const anchorX = rect.width / 2;
+    const anchorY = 1; // Top edge of the number
+    
+    // Tooltip position floating to top-left
+    const tipX = anchorX - 28;
+    const tipY = -28;
+    
+    // Elbow point
+    const midX = tipX + 12;
+    const midY = (tipY + anchorY) / 2;
+
+    setCoords({ tipX, tipY, midX, midY, anchorX, anchorY });
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="relative inline-flex items-center justify-center cursor-default select-none"
+    >
+      {/* 1. PILL HIGHLIGHT - Soft capsule highlight behind value, zero layout shift */}
+      <span
+        className={`absolute inset-x-[-6px] inset-y-[-2px] rounded-full bg-white/10 pointer-events-none transition-all duration-200 ease-out ${
+          isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+        }`}
+      />
+
+      {/* Value Text */}
+      <span className={`relative z-10 ${colorClass}`}>{displayValue ?? rawValue}</span>
+
+      {/* 2 & 3. OVERLAY LAYER (Absolute inset-0, pointer-events-none, high z-index) */}
+      <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
+        {/* LEADER LINE + ANCHOR DOT */}
+        <svg
+          className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+          style={{
+            opacity: isHovered ? 1 : 0,
+            transition: 'opacity 150ms ease-out',
+          }}
+        >
+          {/* Animated 2-Segment Polyline Leader Line */}
+          <path
+            d={`M ${coords.tipX + 18} ${coords.tipY + 16} L ${coords.midX} ${coords.midY} L ${coords.anchorX} ${coords.anchorY}`}
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.65)"
+            strokeWidth="1"
+            strokeDasharray="70"
+            strokeDashoffset={isHovered ? '0' : '70'}
+            style={{
+              transition: isHovered ? 'stroke-dashoffset 220ms ease-out' : 'stroke-dashoffset 120ms ease-in',
+            }}
+          />
+          {/* Anchor Dot (5-6px) Scaling in at the Anchor Point */}
+          <circle
+            cx={coords.anchorX}
+            cy={coords.anchorY}
+            r="2.5"
+            fill="#38bdf8"
+            style={{
+              transformOrigin: `${coords.anchorX}px ${coords.anchorY}px`,
+              transform: isHovered ? 'scale(1)' : 'scale(0)',
+              transition: 'transform 200ms ease-out',
+            }}
+          />
+        </svg>
+
+        {/* TOOLTIP WITH EXACT NUMBER (Top-left, near-black, 1px white/10 border, rounded-lg, ~14px semibold) */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: `${coords.tipX}px`,
+            top: `${coords.tipY}px`,
+            transform: `translate(-50%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.85)'}`,
+            opacity: isHovered ? 1 : 0,
+            transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
+          }}
+        >
+          <div className="px-2.5 py-1 rounded-lg bg-[#0a0a0f]/95 backdrop-blur-md border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.6)] flex items-center gap-1.5 whitespace-nowrap">
+            <span className="text-[13px] font-semibold text-white tracking-tight font-mono">
+              {exactFormatted}
+            </span>
+            {label && (
+              <span className="text-[10px] text-zinc-400 font-mono font-normal">
+                {label}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // Persisted like the card size controls are, otherwise every reload
   // silently snapped the whole UI back to indigo-violet.
@@ -1548,23 +1662,23 @@ export default function App() {
                                   <div className="grid grid-cols-5 gap-1.5 pt-1 items-stretch">
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">LLM</span>
-                                      <span className="text-xs font-bold font-mono text-amber-400 block leading-none">{textCount}</span>
+                                      <InteractiveStatValue rawValue={textCount} label="LLM models" colorClass="text-xs font-bold font-mono text-amber-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Vision</span>
-                                      <span className="text-xs font-bold font-mono text-indigo-400 block leading-none">{visionCount}</span>
+                                      <InteractiveStatValue rawValue={visionCount} label="Vision models" colorClass="text-xs font-bold font-mono text-indigo-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Embed</span>
-                                      <span className="text-xs font-bold font-mono text-cyan-400 block leading-none">{embeddingCount}</span>
+                                      <InteractiveStatValue rawValue={embeddingCount} label="Embeddings" colorClass="text-xs font-bold font-mono text-cyan-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">STT</span>
-                                      <span className="text-xs font-bold font-mono text-teal-400 block leading-none">{sttCount}</span>
+                                      <InteractiveStatValue rawValue={sttCount} label="STT models" colorClass="text-xs font-bold font-mono text-teal-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">TTS</span>
-                                      <span className="text-xs font-bold font-mono text-purple-400 block leading-none">{ttsCount}</span>
+                                      <InteractiveStatValue rawValue={ttsCount} label="TTS models" colorClass="text-xs font-bold font-mono text-purple-400 block leading-none" />
                                     </div>
                                   </div>
                                   )}
@@ -1671,9 +1785,9 @@ export default function App() {
 
                                 {/* Footer */}
                                 <div className="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] min-w-0">
-                                  <span className="text-xs text-[var(--md-sys-color-primary)] font-semibold truncate mr-2">
-                                    {totalCount} Models
-                                  </span>
+                                  <div className="mr-2 truncate">
+                                    <InteractiveStatValue rawValue={totalCount} displayValue={`${totalCount} Models`} label="Active catalog" colorClass="text-xs text-[var(--md-sys-color-primary)] font-semibold" />
+                                  </div>
                                   <span className="text-[10px] bg-[var(--md-sys-color-surface-container-high)] px-2 py-0.5 rounded-full border border-[var(--md-sys-color-outline-variant)] shrink-0 font-medium text-emerald-400">
                                     {prov.enabled === false ? 'Offline' : (prov.status || 'Active')}
                                   </span>
