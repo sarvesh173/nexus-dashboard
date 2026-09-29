@@ -206,22 +206,23 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// HOVER ANATOMY (Exact Implementation):
-// Line = 2 segments: vertical (^) from anchor dot + diagonal (/) to tooltip
-// Anchor dot (5-6px) at the value -> Pill highlight behind value
-// Tooltip with unabbreviated number at the top
-// Left/right mirroring based on layout space
-function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = 'auto' }) {
+// HOVER ANATOMY (Exact Implementation with User-Configurable Alignment & Seamless Linkage):
+// - Line = 2 prominent segments: Vertical (^) + Diagonal (/)
+// - Fully linked: Dot anchors to value, line connects flush to the tooltip box
+// - Configurable side: 'auto', 'left', or 'right' via localStorage ('nexus_leader_align')
+function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = null }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
+  
+  // Longer, prominent, beautifully proportioned mechanical lines
   const [coords, setCoords] = useState({
     dotX: 0,
     dotY: 0,
     vertX: 0,
-    vertY: -16,
-    diagX: 24,
-    diagY: -38,
-    isRightAligned: false
+    vertY: -22,
+    diagX: 36,
+    diagY: -48,
+    isRightAligned: true
   });
 
   const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
@@ -230,22 +231,33 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
   const handleMouseEnter = () => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const spaceOnRight = window.innerWidth - rect.right;
     
-    // Left/right mirror kar lena layout ke hisaab se
-    const goRight = align === 'right' ? true : align === 'left' ? false : (spaceOnRight > 160);
+    // Check saved preference: 'auto' | 'left' | 'right'
+    const savedAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
+    let goRight = true;
+    if (savedAlign === 'left') {
+      goRight = false;
+    } else if (savedAlign === 'right') {
+      goRight = true;
+    } else {
+      // Auto: detect available viewport room
+      const spaceOnRight = window.innerWidth - rect.right;
+      goRight = spaceOnRight > 180;
+    }
 
-    // Anchor dot (5-6px) at the value
+    // Anchor dot right on the top center of the value
     const dotX = rect.width / 2;
     const dotY = 1;
     
-    // Vertical segment (^) straight up
+    // Prominent vertical segment (^) goes straight up by 24px
     const vertX = dotX;
-    const vertY = dotY - 16;
+    const vertY = dotY - 24;
     
-    // Diagonal segment (/) branching up towards tooltip
-    const diagX = goRight ? vertX + 26 : vertX - 26;
-    const diagY = vertY - 20;
+    // Prominent diagonal segment (/) branches up and towards the tooltip (42px span)
+    const diagSpanX = 44;
+    const diagSpanY = 24;
+    const diagX = goRight ? vertX + diagSpanX : vertX - diagSpanX;
+    const diagY = vertY - diagSpanY;
 
     setCoords({ dotX, dotY, vertX, vertY, diagX, diagY, isRightAligned: goRight });
     setIsHovered(true);
@@ -262,7 +274,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       onMouseLeave={handleMouseLeave}
       className="relative inline-flex items-center justify-center cursor-default select-none"
     >
-      {/* 1. PILL HIGHLIGHT - ( 12K ) Soft capsule highlight behind value, zero layout shift */}
+      {/* 1. PILL HIGHLIGHT - Soft capsule highlight behind value, zero layout shift */}
       <span
         className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-white/10 pointer-events-none transition-all duration-200 ease-out ${
           isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
@@ -282,16 +294,16 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out',
           }}
         >
-          {/* 2 Segments: Vertical (^) then Diagonal (/) - draws in ~200ms */}
+          {/* Animated 2-Segment Line: Vertical (^) then Diagonal (/) connecting flush to tooltip */}
           <path
             d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.65)"
+            stroke="rgba(255, 255, 255, 0.75)"
             strokeWidth="1.2"
-            strokeDasharray="60"
-            strokeDashoffset={isHovered ? '0' : '60'}
+            strokeDasharray="90"
+            strokeDashoffset={isHovered ? '0' : '90'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
             }}
           />
 
@@ -307,14 +319,28 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
               transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
+
+          {/* Secondary Connection Dot at the Tooltip Interface for Seamless Flush Linkage */}
+          <circle
+            cx={coords.diagX}
+            cy={coords.diagY}
+            r="2"
+            fill="rgba(255, 255, 255, 0.85)"
+            style={{
+              transformOrigin: `${coords.diagX}px ${coords.diagY}px`,
+              transform: isHovered ? 'scale(1)' : 'scale(0)',
+              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          />
         </svg>
 
-        {/* TOOLTIP WITH EXACT NUMBER ( 12,000 ) */}
+        {/* TOOLTIP WITH EXACT NUMBER (Flush link to the leader line endpoint) */}
         <div
           className="absolute pointer-events-none"
           style={{
             left: `${coords.diagX}px`,
             top: `${coords.diagY}px`,
+            // Flush placement: Line touches the exact bottom corner of the tooltip box
             transform: `${coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)'} ${
               isHovered ? 'scale(1)' : 'scale(0.88)'
             }`,
@@ -322,7 +348,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
           }}
         >
-          <div className="px-3 py-1.5 rounded-lg bg-[#0e1017]/95 backdrop-blur-md border border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.65)] flex items-center gap-2 whitespace-nowrap mb-1">
+          <div className="px-3 py-1.5 rounded-lg bg-[#0e1017]/95 backdrop-blur-md border border-white/20 shadow-[0_12px_32px_rgba(0,0,0,0.7)] flex items-center gap-2 whitespace-nowrap">
             <span className="text-[13px] font-semibold text-white tracking-tight font-mono">
               {exactFormatted}
             </span>
@@ -2169,6 +2195,50 @@ export default function App() {
             path="/settings"
             element={
               <div className="w-full space-y-6">
+                {/* Leader Line & Tooltip Alignment Preference */}
+                <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">Leader Line & Tooltip Alignment</h2>
+                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
+                        Choose the directional trajectory for value telemetry lines (Left side, Right side, or Automatic).
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    {[
+                      { id: 'right', name: 'Right Side (Default)', desc: 'Vertical (^) then diagonal (/) branching right' },
+                      { id: 'left', name: 'Left Side', desc: 'Vertical (^) then diagonal (\) branching left' },
+                      { id: 'auto', name: 'Automatic Mirror', desc: 'Dynamically adapts to available viewport margin' }
+                    ].map(opt => {
+                      const currentPref = localStorage.getItem('nexus_leader_align') || 'right';
+                      const isSelected = currentPref === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            localStorage.setItem('nexus_leader_align', opt.id);
+                            window.dispatchEvent(new Event('storage'));
+                            // Force re-render
+                            setTheme(t => t);
+                          }}
+                          className={`p-4 rounded-2xl border text-left transition-all active:scale-95 ${
+                            isSelected
+                              ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-sm'
+                              : 'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-outline)]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-[var(--md-sys-color-on-surface)]">{opt.name}</span>
+                            {isSelected && <span className="w-2 h-2 rounded-full bg-[var(--md-sys-color-primary)]" />}
+                          </div>
+                          <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] block">{opt.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
                   <h2 className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">Design System Preferences</h2>
                   <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
