@@ -320,6 +320,114 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
   );
 }
 
+
+// Interactive Model Pill: Dot anchors on hover, line draws to the LEFT, and a sleek context box renders on the left
+function InteractiveModelPill({ model, telemetry, onSelect }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const pillRef = useRef(null);
+
+  return (
+    <div
+      ref={pillRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect?.();
+      }}
+      className="relative select-none cursor-pointer group/pill"
+    >
+      {/* Pill Capsule (Normal Neutral Theme - ZERO Cyan) */}
+      <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium border transition-all duration-200 truncate text-center block w-full shadow-2xs ${
+        isHovered
+          ? 'bg-[#1e2029] border-white/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.5)]'
+          : 'bg-[#13141b] border-white/10 text-zinc-300 hover:border-white/20'
+      }`}>
+        <span className="truncate">{model.name || model.id}</span>
+      </div>
+
+      {/* Overlay: Dot + Line to the LEFT + Context Box on the LEFT */}
+      <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
+        {/* SVG Drawing Line to the LEFT */}
+        <svg
+          className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+          style={{
+            opacity: isHovered ? 1 : 0,
+            transition: 'opacity 150ms ease-out',
+          }}
+        >
+          {/* Line starting at dot (x: 0, y: center), shooting left by 28px, then angled elbow */}
+          <path
+            d="M 0 14 L -20 14 L -32 6"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.55)"
+            strokeWidth="1.2"
+            strokeDasharray="60"
+            strokeDashoffset={isHovered ? '0' : '60'}
+            style={{
+              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+            }}
+          />
+          {/* Anchor Dot (5px Pure White, placed right on the left edge of the pill) */}
+          <circle
+            cx="0"
+            cy="14"
+            r="2.5"
+            fill="#ffffff"
+            style={{
+              transformOrigin: '0px 14px',
+              transform: isHovered ? 'scale(1)' : 'scale(0)',
+              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          />
+        </svg>
+
+        {/* Context Menu Box Rendered on the LEFT */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: '-36px',
+            top: '6px',
+            transform: `translate(-100%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.9)'}`,
+            opacity: isHovered ? 1 : 0,
+            transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
+          }}
+        >
+          <div className="w-56 p-2.5 rounded-xl bg-[#14161f]/95 backdrop-blur-xl border border-[#30363d] shadow-[0_12px_32px_rgba(0,0,0,0.65)] font-mono text-[10px] space-y-1.5 text-zinc-200">
+            {/* Context Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-1">
+              <span className="font-bold text-white truncate max-w-[130px]" title={model.name || model.id}>
+                {model.name || model.id}
+              </span>
+              <span className="text-[8.5px] uppercase font-semibold text-zinc-400 bg-white/5 px-1.5 py-0.2 rounded border border-white/10">
+                Live
+              </span>
+            </div>
+
+            {/* Token Usage */}
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">Tokens:</span>
+              <span className="font-semibold text-white">{telemetry.tokensUsed}</span>
+            </div>
+
+            {/* Context Window */}
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">Context:</span>
+              <span className="font-semibold text-zinc-300">{telemetry.contextWindow}</span>
+            </div>
+
+            {/* Real Compute Value */}
+            <div className="flex items-center justify-between pt-1 border-t border-white/5">
+              <span className="text-zinc-400">Value:</span>
+              <span className="font-bold text-emerald-400">{telemetry.cost}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // Persisted like the card size controls are, otherwise every reload
   // silently snapped the whole UI back to indigo-violet.
@@ -1709,74 +1817,12 @@ export default function App() {
                                         ]).slice(0, cardHeightPx > 340 ? 8 : 6).map((m, idx) => {
                                           const telemetry = getModelTelemetry(m.id || '', m.name || '');
                                           return (
-                                            <div
+                                            <InteractiveModelPill
                                               key={idx}
-                                              className="relative group/pill"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedProviderId(prov.id);
-                                              }}
-                                            >
-                                              {/* Interactive Pill with Video-Accurate Magnetic Hover & Glowing Crosshair */}
-                                              <div
-                                                className="relative px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium bg-[#12131a] text-zinc-200 border border-white/10 hover:border-white/20 hover:bg-[#1a1b26] hover:shadow-[0_0_20px_rgba(34,211,238,0.25)] transition-all duration-300 truncate text-center block w-full cursor-pointer flex items-center justify-center gap-1.5"
-                                              >
-                                                <span className="w-1.5 h-1.5 rounded-full bg-white group-hover/pill:scale-125 transition-transform shadow-none" />
-                                                <span className="truncate">{m.name || m.id}</span>
-                                              </div>
-
-                                              {/* Video-Accurate Floating Telemetry Card (Exact Replica of Video Hover Card) */}
-                                              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-[#0e1017]/95 backdrop-blur-3xl border border-white/15 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] opacity-0 pointer-events-none group-hover/pill:opacity-100 group-hover/pill:pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform scale-90 translate-y-2 group-hover/pill:scale-100 group-hover/pill:translate-y-0 z-50 ring-1 ring-white/10">
-                                                
-                                                {/* Laser Tracker Line (Exactly from Video) */}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-2.5 bg-gradient-to-b from-white/60 to-transparent" />
-                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
-
-                                                <div className="space-y-2 font-mono">
-                                                  {/* Big Token Number (Direct Video Match: '308,768 tokens used') */}
-                                                  <div className="flex items-baseline justify-between border-b border-white/10 pb-1.5">
-                                                    <div className="flex items-center gap-2">
-                                                      <span className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
-                                                      <span className="text-sm font-bold text-white tracking-tight">
-                                                        {telemetry.tokensUsed}
-                                                      </span>
-                                                    </div>
-                                                    <span className="text-[9px] uppercase tracking-wider text-zinc-200 font-semibold bg-cyan-950/70 px-2 py-0.5 rounded-full border border-cyan-800/40">
-                                                      Standard
-                                                    </span>
-                                                  </div>
-
-                                                  {/* Quota Progress Bar (Matching Video Spec) */}
-                                                  <div className="space-y-1">
-                                                    <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                                                      <span>Standard Quota:</span>
-                                                      <span className="font-semibold text-zinc-200">29.7M / 30M</span>
-                                                    </div>
-                                                    <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                                      <div className="h-full bg-gradient-to-r from-zinc-200 via-zinc-400 to-zinc-600 rounded-full w-[82%]" />
-                                                    </div>
-                                                  </div>
-
-                                                  {/* Context Window Capacity */}
-                                                  <div className="flex items-center justify-between text-[10.5px]">
-                                                    <span className="text-zinc-400">Context Window:</span>
-                                                    <span className="font-semibold text-indigo-300">{telemetry.contextWindow}</span>
-                                                  </div>
-
-                                                  {/* Commercial Compute Value */}
-                                                  <div className="flex items-center justify-between text-[10.5px] pt-1.5 border-t border-white/10">
-                                                    <span className="text-zinc-400" title="Market cost equivalent for tokens consumed">Compute Value:</span>
-                                                    <span className="font-bold text-emerald-400 text-xs">{telemetry.cost}</span>
-                                                  </div>
-
-                                                  {/* Model Identity Footer */}
-                                                  <div className="pt-1 text-[9px] text-zinc-500 truncate flex items-center justify-between border-t border-white/5">
-                                                    <span className="truncate">{m.id || m.name}</span>
-                                                    <span className="text-zinc-200/80 font-semibold uppercase text-[8.5px]">Live Telemetry</span>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
+                                              model={m}
+                                              telemetry={telemetry}
+                                              onSelect={() => setSelectedProviderId(prov.id)}
+                                            />
                                           );
                                         })}
                                       </div>
