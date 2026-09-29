@@ -206,22 +206,19 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// HOVER ANATOMY (Exact Implementation with User-Configurable Alignment & Seamless Linkage):
-// - Line = 2 prominent segments: Vertical (^) + Diagonal (/)
-// - Fully linked: Dot anchors to value, line connects flush to the tooltip box
-// - Configurable side: 'auto', 'left', or 'right' via localStorage ('nexus_leader_align')
+// HOVER ANATOMY (Badi Dandi, 100% Box-Linked, Direct State Alignment):
 function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = null }) {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef(null);
   
-  // Longer, prominent, beautifully proportioned mechanical lines
+  // Extra-long, prominent mechanical dandi (Vertical: 32px, Diagonal: 64px)
   const [coords, setCoords] = useState({
     dotX: 0,
     dotY: 0,
     vertX: 0,
-    vertY: -22,
-    diagX: 36,
-    diagY: -48,
+    vertY: -32,
+    diagX: 60,
+    diagY: -72,
     isRightAligned: true
   });
 
@@ -232,7 +229,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     
-    // Check saved preference: 'auto' | 'left' | 'right'
+    // Direct lookup: prop OR localStorage
     const savedAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
     let goRight = true;
     if (savedAlign === 'left') {
@@ -240,22 +237,23 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
     } else if (savedAlign === 'right') {
       goRight = true;
     } else {
-      // Auto: detect available viewport room
+      // Dynamic auto: flip if close to viewport edge
       const spaceOnRight = window.innerWidth - rect.right;
-      goRight = spaceOnRight > 180;
+      goRight = spaceOnRight > 220;
     }
 
-    // Anchor dot right on the top center of the value
+    // Anchor dot at the top center of the value
     const dotX = rect.width / 2;
     const dotY = 1;
     
-    // Prominent vertical segment (^) goes straight up by 24px
+    // BADI DANDI:
+    // Vertical segment (^) shoots straight up by 32px
     const vertX = dotX;
-    const vertY = dotY - 24;
+    const vertY = dotY - 32;
     
-    // Prominent diagonal segment (/) branches up and towards the tooltip (42px span)
-    const diagSpanX = 44;
-    const diagSpanY = 24;
+    // Diagonal segment (/) shoots out by 64px width and 40px height
+    const diagSpanX = 64;
+    const diagSpanY = 40;
     const diagX = goRight ? vertX + diagSpanX : vertX - diagSpanX;
     const diagY = vertY - diagSpanY;
 
@@ -274,7 +272,7 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
       onMouseLeave={handleMouseLeave}
       className="relative inline-flex items-center justify-center cursor-default select-none"
     >
-      {/* 1. PILL HIGHLIGHT - Soft capsule highlight behind value, zero layout shift */}
+      {/* 1. PILL HIGHLIGHT */}
       <span
         className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-white/10 pointer-events-none transition-all duration-200 ease-out ${
           isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
@@ -294,24 +292,24 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             transition: 'opacity 150ms ease-out',
           }}
         >
-          {/* Animated 2-Segment Line: Vertical (^) then Diagonal (/) connecting flush to tooltip */}
+          {/* Continuous Badi Dandi (Vertical then Diagonal) that firmly links both boxes */}
           <path
             d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.75)"
-            strokeWidth="1.2"
-            strokeDasharray="90"
-            strokeDashoffset={isHovered ? '0' : '90'}
+            stroke="rgba(255, 255, 255, 0.85)"
+            strokeWidth="1.5"
+            strokeDasharray="140"
+            strokeDashoffset={isHovered ? '0' : '140'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 240ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
             }}
           />
 
-          {/* Anchor Dot (5-6px solid white) at the value */}
+          {/* Solid White Anchor Dot at the value */}
           <circle
             cx={coords.dotX}
             cy={coords.dotY}
-            r="2.5"
+            r="3"
             fill="#ffffff"
             style={{
               transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
@@ -320,12 +318,12 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
             }}
           />
 
-          {/* Secondary Connection Dot at the Tooltip Interface for Seamless Flush Linkage */}
+          {/* Connection Dot that anchors firmly into the Tooltip Corner */}
           <circle
             cx={coords.diagX}
             cy={coords.diagY}
-            r="2"
-            fill="rgba(255, 255, 255, 0.85)"
+            r="2.5"
+            fill="#ffffff"
             style={{
               transformOrigin: `${coords.diagX}px ${coords.diagY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
@@ -334,26 +332,27 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
           />
         </svg>
 
-        {/* TOOLTIP WITH EXACT NUMBER (Flush link to the leader line endpoint) */}
+        {/* TOOLTIP WITH EXACT NUMBER - Connected directly to the dandi endpoint */}
         <div
           className="absolute pointer-events-none"
           style={{
             left: `${coords.diagX}px`,
             top: `${coords.diagY}px`,
-            // Flush placement: Line touches the exact bottom corner of the tooltip box
+            // When right: line hits bottom-left corner of tooltip
+            // When left: line hits bottom-right corner of tooltip
             transform: `${coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)'} ${
-              isHovered ? 'scale(1)' : 'scale(0.88)'
+              isHovered ? 'scale(1)' : 'scale(0.85)'
             }`,
             opacity: isHovered ? 1 : 0,
-            transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
+            transition: isHovered ? 'all 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
           }}
         >
-          <div className="px-3 py-1.5 rounded-lg bg-[#0e1017]/95 backdrop-blur-md border border-white/20 shadow-[0_12px_32px_rgba(0,0,0,0.7)] flex items-center gap-2 whitespace-nowrap">
+          <div className="px-3.5 py-1.5 rounded-lg bg-[#0e1017] border border-white/25 shadow-[0_16px_40px_rgba(0,0,0,0.8)] flex items-center gap-2 whitespace-nowrap">
             <span className="text-[13px] font-semibold text-white tracking-tight font-mono">
               {exactFormatted}
             </span>
             {label && (
-              <span className="text-[10px] text-zinc-400 font-mono border-l border-white/10 pl-1.5">
+              <span className="text-[10.5px] text-zinc-400 font-mono border-l border-white/15 pl-2">
                 {label}
               </span>
             )}
@@ -364,14 +363,57 @@ function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass =
   );
 }
 
-function InteractiveModelPill({ model, telemetry, onSelect }) {
+function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
   const [isHovered, setIsHovered] = useState(false);
   const pillRef = useRef(null);
+  const [coords, setCoords] = useState({
+    dotX: 0,
+    dotY: 14,
+    midX: -28,
+    midY: 14,
+    boxX: -48,
+    boxY: -10,
+    isRightAligned: false
+  });
+
+  const handleMouseEnter = () => {
+    if (!pillRef.current) return;
+    const rect = pillRef.current.getBoundingClientRect();
+    
+    // Check setting: 'left' | 'right' | 'auto'
+    const savedAlign = align || localStorage.getItem('nexus_leader_align') || 'left';
+    let goRight = false;
+    if (savedAlign === 'right') {
+      goRight = true;
+    } else if (savedAlign === 'left') {
+      goRight = false;
+    } else {
+      // Dynamic auto
+      const spaceOnLeft = rect.left;
+      goRight = spaceOnLeft < 260;
+    }
+
+    // Anchor dot on the side of the pill
+    const dotX = goRight ? rect.width : 0;
+    const dotY = 14;
+    
+    // BADI DANDI:
+    // First segment shoots horizontally by 28px
+    const midX = goRight ? dotX + 28 : dotX - 28;
+    const midY = dotY;
+    
+    // Second segment goes up diagonally into the box corner (total span 52px)
+    const boxX = goRight ? midX + 24 : midX - 24;
+    const boxY = midY - 26;
+
+    setCoords({ dotX, dotY, midX, midY, boxX, boxY, isRightAligned: goRight });
+    setIsHovered(true);
+  };
 
   return (
     <div
       ref={pillRef}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         e.stopPropagation();
@@ -388,9 +430,9 @@ function InteractiveModelPill({ model, telemetry, onSelect }) {
         <span className="truncate">{model.name || model.id}</span>
       </div>
 
-      {/* Overlay: Dot + Line to the LEFT + Context Box on the LEFT */}
+      {/* Overlay: Dot + Line (Badi Dandi) + Context Box completely linked */}
       <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
-        {/* SVG Drawing Line to the LEFT */}
+        {/* SVG Drawing Line */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
@@ -398,69 +440,83 @@ function InteractiveModelPill({ model, telemetry, onSelect }) {
             transition: 'opacity 150ms ease-out',
           }}
         >
-          {/* Line starting at dot (x: 0, y: center), shooting left by 28px, then angled elbow */}
+          {/* Continuous Badi Dandi (Horizontal then Diagonal) touching box flush */}
           <path
-            d="M 0 14 L -20 14 L -32 6"
+            d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.55)"
-            strokeWidth="1.2"
-            strokeDasharray="60"
-            strokeDashoffset={isHovered ? '0' : '60'}
+            stroke="rgba(255, 255, 255, 0.85)"
+            strokeWidth="1.5"
+            strokeDasharray="90"
+            strokeDashoffset={isHovered ? '0' : '90'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
+              transition: isHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'stroke-dashoffset 120ms ease-in',
             }}
           />
-          {/* Anchor Dot (5px Pure White, placed right on the left edge of the pill) */}
+          {/* Solid White Anchor Dot (6px) at the pill edge */}
           <circle
-            cx="0"
-            cy="14"
+            cx={coords.dotX}
+            cy={coords.dotY}
+            r="3"
+            fill="#ffffff"
+            style={{
+              transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
+              transform: isHovered ? 'scale(1)' : 'scale(0)',
+              transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          />
+          {/* Connection Dot linked directly to the Context Box corner */}
+          <circle
+            cx={coords.boxX}
+            cy={coords.boxY}
             r="2.5"
             fill="#ffffff"
             style={{
-              transformOrigin: '0px 14px',
+              transformOrigin: `${coords.boxX}px ${coords.boxY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
               transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
         </svg>
 
-        {/* Context Menu Box Rendered on the LEFT */}
+        {/* Context Menu Box Rendered flush at the end of the dandi */}
         <div
           className="absolute pointer-events-none"
           style={{
-            left: '-36px',
-            top: '6px',
-            transform: `translate(-100%, -50%) ${isHovered ? 'scale(1)' : 'scale(0.9)'}`,
+            left: `${coords.boxX}px`,
+            top: `${coords.boxY}px`,
+            transform: `${coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${
+              isHovered ? 'scale(1)' : 'scale(0.88)'
+            }`,
             opacity: isHovered ? 1 : 0,
             transition: isHovered ? 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'all 120ms ease-in',
           }}
         >
-          <div className="w-56 p-2.5 rounded-xl bg-[#14161f]/95 backdrop-blur-xl border border-[#30363d] shadow-[0_12px_32px_rgba(0,0,0,0.65)] font-mono text-[10px] space-y-1.5 text-zinc-200">
+          <div className="w-60 p-3 rounded-xl bg-[#14161f] border border-[#30363d] shadow-[0_16px_40px_rgba(0,0,0,0.8)] font-mono text-[10.5px] space-y-2 text-zinc-200">
             {/* Context Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-1">
-              <span className="font-bold text-white truncate max-w-[130px]" title={model.name || model.id}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+              <span className="font-bold text-white truncate max-w-[140px]" title={model.name || model.id}>
                 {model.name || model.id}
               </span>
-              <span className="text-[8.5px] uppercase font-semibold text-zinc-400 bg-white/5 px-1.5 py-0.2 rounded border border-white/10">
+              <span className="text-[9px] uppercase font-semibold text-zinc-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/15">
                 Live
               </span>
             </div>
 
             {/* Token Usage */}
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Tokens:</span>
-              <span className="font-semibold text-white">{telemetry.tokensUsed}</span>
+              <span className="text-zinc-400">Tokens Used:</span>
+              <span className="font-semibold text-white tracking-wide">{telemetry.tokensUsed}</span>
             </div>
 
             {/* Context Window */}
             <div className="flex items-center justify-between">
-              <span className="text-zinc-400">Context:</span>
+              <span className="text-zinc-400">Context Window:</span>
               <span className="font-semibold text-zinc-300">{telemetry.contextWindow}</span>
             </div>
 
             {/* Real Compute Value */}
-            <div className="flex items-center justify-between pt-1 border-t border-white/5">
-              <span className="text-zinc-400">Value:</span>
+            <div className="flex items-center justify-between pt-1.5 border-t border-white/10">
+              <span className="text-zinc-400">Compute Value:</span>
               <span className="font-bold text-emerald-400">{telemetry.cost}</span>
             </div>
           </div>
@@ -475,6 +531,8 @@ export default function App() {
   // silently snapped the whole UI back to indigo-violet.
   const [theme, setTheme] = useState(() =>
     localStorage.getItem('nexus_theme') || 'indigo-violet');
+  const [leaderAlign, setLeaderAlign] = useState(() =>
+    localStorage.getItem('nexus_leader_align') || 'right');
   const [palettePickerOpen, setPalettePickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -1813,23 +1871,23 @@ export default function App() {
                                   <div className="grid grid-cols-5 gap-1.5 pt-1 items-stretch">
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">LLM</span>
-                                      <InteractiveStatValue rawValue={textCount} label="LLM models" colorClass="text-xs font-bold font-mono text-amber-400 block leading-none" />
+                                      <InteractiveStatValue align={leaderAlign} rawValue={textCount} label="LLM models" colorClass="text-xs font-bold font-mono text-amber-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Vision</span>
-                                      <InteractiveStatValue rawValue={visionCount} label="Vision models" colorClass="text-xs font-bold font-mono text-indigo-400 block leading-none" />
+                                      <InteractiveStatValue align={leaderAlign} rawValue={visionCount} label="Vision models" colorClass="text-xs font-bold font-mono text-indigo-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Embed</span>
-                                      <InteractiveStatValue rawValue={embeddingCount} label="Embeddings" colorClass="text-xs font-bold font-mono text-zinc-200 block leading-none" />
+                                      <InteractiveStatValue align={leaderAlign} rawValue={embeddingCount} label="Embeddings" colorClass="text-xs font-bold font-mono text-zinc-200 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">STT</span>
-                                      <InteractiveStatValue rawValue={sttCount} label="STT models" colorClass="text-xs font-bold font-mono text-teal-400 block leading-none" />
+                                      <InteractiveStatValue align={leaderAlign} rawValue={sttCount} label="STT models" colorClass="text-xs font-bold font-mono text-teal-400 block leading-none" />
                                     </div>
                                     <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
                                       <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">TTS</span>
-                                      <InteractiveStatValue rawValue={ttsCount} label="TTS models" colorClass="text-xs font-bold font-mono text-purple-400 block leading-none" />
+                                      <InteractiveStatValue align={leaderAlign} rawValue={ttsCount} label="TTS models" colorClass="text-xs font-bold font-mono text-purple-400 block leading-none" />
                                     </div>
                                   </div>
                                   )}
@@ -1859,7 +1917,7 @@ export default function App() {
                                         ]).slice(0, cardHeightPx > 340 ? 8 : 6).map((m, idx) => {
                                           const telemetry = getModelTelemetry(m.id || '', m.name || '');
                                           return (
-                                            <InteractiveModelPill
+                                            <InteractiveModelPill align={leaderAlign}
                                               key={idx}
                                               model={m}
                                               telemetry={telemetry}
@@ -1875,7 +1933,7 @@ export default function App() {
                                 {/* Footer */}
                                 <div className="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] min-w-0">
                                   <div className="mr-2 truncate">
-                                    <InteractiveStatValue rawValue={totalCount} displayValue={`${totalCount} Models`} label="Active catalog" colorClass="text-xs text-[var(--md-sys-color-primary)] font-semibold" />
+                                    <InteractiveStatValue align={leaderAlign} rawValue={totalCount} displayValue={`${totalCount} Models`} label="Active catalog" colorClass="text-xs text-[var(--md-sys-color-primary)] font-semibold" />
                                   </div>
                                   <span className="text-[10px] bg-[var(--md-sys-color-surface-container-high)] px-2 py-0.5 rounded-full border border-[var(--md-sys-color-outline-variant)] shrink-0 font-medium text-emerald-400">
                                     {prov.enabled === false ? 'Offline' : (prov.status || 'Active')}
@@ -2211,20 +2269,18 @@ export default function App() {
                       { id: 'left', name: 'Left Side', desc: 'Vertical (^) then diagonal (\) branching left' },
                       { id: 'auto', name: 'Automatic Mirror', desc: 'Dynamically adapts to available viewport margin' }
                     ].map(opt => {
-                      const currentPref = localStorage.getItem('nexus_leader_align') || 'right';
-                      const isSelected = currentPref === opt.id;
+                      const isSelected = leaderAlign === opt.id;
                       return (
                         <button
                           key={opt.id}
+                          id={`btn-align-${opt.id}`}
                           onClick={() => {
                             localStorage.setItem('nexus_leader_align', opt.id);
-                            window.dispatchEvent(new Event('storage'));
-                            // Force re-render
-                            setTheme(t => t);
+                            setLeaderAlign(opt.id);
                           }}
-                          className={`p-4 rounded-2xl border text-left transition-all active:scale-95 ${
+                          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer active:scale-95 ${
                             isSelected
-                              ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-sm'
+                              ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-sm ring-1 ring-[var(--md-sys-color-primary)]'
                               : 'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-outline)]'
                           }`}
                         >
