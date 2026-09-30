@@ -1258,6 +1258,23 @@ export default function App() {
   const [providersList, setProvidersList] = useState([]);
   const [allProviders, setAllProviders] = useState([]);
   const [showRouters, setShowRouters] = useState(false);
+  const [logoBgTheme, setLogoBgTheme] = useState(() => {
+    try {
+      return localStorage.getItem('nexus_logo_bg_theme') || 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  const toggleLogoBgTheme = () => {
+    setLogoBgTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('nexus_logo_bg_theme', next);
+      } catch {}
+      return next;
+    });
+  };
   const [hidden, setHidden] = useState({ providers: [], models: [] });
   const [showHidden, setShowHidden] = useState(false);
   // Distinguishes 'no providers configured' from 'the backend is down'.
@@ -2279,6 +2296,18 @@ export default function App() {
                       <span>Configured Model Providers (click or tap a card to enter)</span>
                       <div className="flex items-center gap-3">
                         <button
+                          onClick={toggleLogoBgTheme}
+                          title="Toggle provider logo backdrop between Dark (#141416) and Light (#FFFFFF)"
+                          className={`px-2.5 py-1 rounded-full border text-[11px] font-mono transition-all flex items-center gap-1.5 shadow-sm ${
+                            logoBgTheme === 'light'
+                              ? 'bg-white text-zinc-900 border-zinc-300 font-semibold'
+                              : 'bg-zinc-900 text-zinc-200 border-zinc-700 font-semibold'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${logoBgTheme === 'light' ? 'bg-amber-500 shadow-sm' : 'bg-indigo-400'}`}></span>
+                          <span>Logo BG: {logoBgTheme === 'light' ? 'White' : 'Black'}</span>
+                        </button>
+                        <button
                           onClick={() => setShowRouters((v) => !v)}
                           className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] text-[11px] font-mono normal-case hover:border-[var(--md-sys-color-primary)] transition-colors"
                         >
@@ -2471,7 +2500,13 @@ export default function App() {
                                   {/* Provider Header */}
                                   <div className="flex items-start justify-between gap-2.5 min-w-0">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                      <div className={`${isUltraCompact ? 'w-8 h-8 rounded-lg' : isCompact ? 'w-9 h-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} ${getProviderLogoUrl(prov) ? 'p-0' : 'p-2'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all shadow-inner`}>
+                                      <div className={`${isUltraCompact ? 'w-8 h-8 rounded-lg' : isCompact ? 'w-9 h-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} ${getProviderLogoUrl(prov) ? 'p-2' : 'p-2'} ${
+                                        getProviderLogoUrl(prov)
+                                          ? (logoBgTheme === 'light'
+                                              ? 'bg-[#FFFFFF] border-zinc-200 shadow-sm'
+                                              : 'bg-[#121316] border-zinc-800 shadow-inner')
+                                          : 'bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)]'
+                                      } border flex items-center justify-center shrink-0 overflow-hidden transition-all shadow-inner`}>
                                         {getProviderLogoUrl(prov) ? (
                                           <img
                                             src={getProviderLogoUrl(prov)}
