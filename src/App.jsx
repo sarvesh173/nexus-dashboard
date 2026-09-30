@@ -2824,7 +2824,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 40 28 L 40 44 L 18 56"
+                                  d="M 10 14 L -20 14 L -40 2"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2835,24 +2835,24 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="40"
-                                  cy="28"
+                                  cx="10"
+                                  cy="14"
                                   r="2.5"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '40px 28px',
+                                    transformOrigin: '10px 14px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                               </svg>
 
-                              {/* Top Active Providers Floating HUD Box */}
+                              {/* Top Active Providers Floating HUD Box docked into horizontal gap */}
                               <div
-                                className="absolute left-[-20px] top-[56px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
+                                className="absolute right-[calc(100%+32px)] top-[-10px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transform: isActiveStatusHovered ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.96)',
+                                  transform: isActiveStatusHovered ? 'translateX(0) scale(1)' : 'translateX(10px) scale(0.96)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
@@ -2918,7 +2918,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 40 28 L 40 44 L 62 56"
+                                  d="M 10 14 L -20 14 L -40 2"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
@@ -2929,24 +2929,24 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="40"
-                                  cy="28"
+                                  cx="10"
+                                  cy="14"
                                   r="2.5"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '40px 28px',
+                                    transformOrigin: '10px 14px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                               </svg>
 
-                              {/* Offline Providers Floating HUD Box */}
+                              {/* Offline Providers Floating HUD Box docked into horizontal gap */}
                               <div
-                                className="absolute right-[-20px] top-[56px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
+                                className="absolute right-[calc(100%+32px)] top-[-10px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transform: isOfflineStatusHovered ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.96)',
+                                  transform: isOfflineStatusHovered ? 'translateX(0) scale(1)' : 'translateX(10px) scale(0.96)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
