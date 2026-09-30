@@ -2825,7 +2825,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -6 -2 L -28 -2"
+                                  d="M 0 14 L -28 14 L -52 -12"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2837,51 +2837,54 @@ export default function App() {
                                 />
                                 {/* Starting Dot at Pill */}
                                 <circle
-                                  cx="12"
+                                  cx="0"
                                   cy="14"
-                                  r="2.5"
+                                  r="3"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '12px 14px',
+                                    transformOrigin: '0px 14px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                                 {/* Elbow Joint Dot Linking Dandi 1 to Dandi 2 */}
                                 <circle
-                                  cx="-6"
-                                  cy="-2"
+                                  cx="-28"
+                                  cy="14"
                                   r="2"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-6px -2px',
+                                    transformOrigin: '-28px 14px',
                                     transition: 'transform 120ms ease-out 60ms',
                                   }}
                                 />
                                 {/* Terminal Corner Dot linked directly to the HUD Box */}
                                 <circle
-                                  cx="-28"
-                                  cy="-2"
+                                  cx="-52"
+                                  cy="-12"
                                   r="2.5"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-28px -2px',
+                                    transformOrigin: '-52px -12px',
                                     transition: 'transform 120ms ease-out 110ms',
                                   }}
                                 />
                               </svg>
 
-                              {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
+                              {/* 1:1 InteractiveModelPill Coordinate-Locked HUD Card */}
                               <div
-                                className="absolute right-[calc(100%+28px)] bottom-[-6px] z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute pointer-events-auto z-[100]"
                                 style={{
+                                  left: '-52px',
+                                  top: '-12px',
+                                  transform: `translate(-100%, -50%) ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transform: isActiveStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.95) translateX(8px)',
-                                  transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
+                                <div className="w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
                                 <div className="flex items-center justify-between gap-1.5 pb-1.5 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[10px] font-bold text-emerald-400 tracking-wider uppercase whitespace-nowrap">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
@@ -2920,6 +2923,8 @@ export default function App() {
                               </div>
                             </div>
                           </div>
+                        </div>
+                        </div>
 
                           {/* Divider */}
                           <span className="w-px h-3.5 bg-white/15 my-auto" />
@@ -2946,7 +2951,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -6 -2 L -28 -2"
+                                  d="M 0 14 L -28 14 L -52 -12"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
@@ -2958,51 +2963,54 @@ export default function App() {
                                 />
                                 {/* Starting Dot at Pill */}
                                 <circle
-                                  cx="12"
+                                  cx="0"
                                   cy="14"
-                                  r="2.5"
+                                  r="3"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '12px 14px',
+                                    transformOrigin: '0px 14px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                                 {/* Elbow Joint Dot Linking Dandi 1 to Dandi 2 */}
                                 <circle
-                                  cx="-6"
-                                  cy="-2"
+                                  cx="-28"
+                                  cy="14"
                                   r="2"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-6px -2px',
+                                    transformOrigin: '-28px 14px',
                                     transition: 'transform 120ms ease-out 60ms',
                                   }}
                                 />
                                 {/* Terminal Corner Dot linked directly to the HUD Box */}
                                 <circle
-                                  cx="-28"
-                                  cy="-2"
+                                  cx="-52"
+                                  cy="-12"
                                   r="2.5"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-28px -2px',
+                                    transformOrigin: '-52px -12px',
                                     transition: 'transform 120ms ease-out 110ms',
                                   }}
                                 />
                               </svg>
 
-                              {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
+                              {/* 1:1 InteractiveModelPill Coordinate-Locked HUD Card */}
                               <div
-                                className="absolute right-[calc(100%+28px)] bottom-[-6px] z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute pointer-events-auto z-[100]"
                                 style={{
+                                  left: '-52px',
+                                  top: '-12px',
+                                  transform: `translate(-100%, -50%) ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transform: isOfflineStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.95) translateX(8px)',
-                                  transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
+                                <div className="w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
                                 <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[9.5px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
