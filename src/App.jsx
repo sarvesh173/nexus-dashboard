@@ -1217,6 +1217,14 @@ const PROVIDER_LOGOS = {
   'qwen-cloud': '/provider-logos/qwen-cloud.svg',
   qwen: '/provider-logos/qwen-cloud.svg',
   alibaba: '/provider-logos/qwen-cloud.svg',
+  // Next 4 providers batch:
+  wandb: '/provider-logos/wandb.svg',
+  'cloudflare-ai': '/provider-logos/cloudflare-ai.svg',
+  cloudflare: '/provider-logos/cloudflare-ai.svg',
+  cohere: '/provider-logos/cohere.svg',
+  'ollama-cloud': '/provider-logos/ollama-cloud.svg',
+  ollamacloud: '/provider-logos/ollama-cloud.svg',
+  ollama: '/provider-logos/ollama-cloud.svg',
 };
 
 function getProviderLogoUrl(prov) {
