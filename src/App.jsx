@@ -2797,8 +2797,19 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      {/* Apple-style Translucent Segmented Glass Toolbar */}
+                      {/* Apple-style Translucent Segmented Glass Toolbar with Status Filtering */}
                       <div className="flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
+                        {/* Live vs Offline Quick Filter Pill */}
+                        <div className="hidden sm:flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 text-[10px] font-mono">
+                          <span className="px-2 py-0.5 text-emerald-400 font-semibold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
+                          </span>
+                          <span className="px-2 py-0.5 text-zinc-400 font-medium flex items-center gap-1 border-l border-white/10">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                            <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
+                          </span>
+                        </div>
                         {/* 1. Apple Logo Theme Segmented Control */}
                         <button
                           onClick={toggleLogoBgTheme}
@@ -2960,10 +2971,10 @@ export default function App() {
                               handleCancelAll();
                             }
                           }}
-                          className={`group p-4 rounded-2xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-xl ${
+                          className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
-                              ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/10 shadow-[0_12px_32px_rgba(124,58,237,0.25)] scale-[1.01] z-10'
-                              : 'bg-[var(--md-sys-color-surface-container)]/70 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/60 hover:border-[var(--md-sys-color-primary)]/80 hover:shadow-[0_16px_40px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:scale-[1.01] hover:z-20'
+                              ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.3)] scale-[1.015] z-10'
+                              : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/85 border-[var(--md-sys-color-outline-variant)]/50 hover:border-[var(--md-sys-color-primary)]/70 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.45)] hover:-translate-y-1.5 hover:scale-[1.012] hover:z-20'
                           }`}
                           style={{ minHeight: `${cardHeightPx}px` }}
                         >
@@ -3140,9 +3151,21 @@ export default function App() {
                                   <div className="mr-2 truncate">
                                     <InteractiveStatValue align={leaderAlign} rawValue={totalCount} displayValue={`${totalCount} Models`} label="Active catalog" colorClass="text-xs text-[var(--md-sys-color-primary)] font-semibold" />
                                   </div>
-                                  <span className="text-[10px] bg-[var(--md-sys-color-surface-container-high)] px-2 py-0.5 rounded-full border border-[var(--md-sys-color-outline-variant)] shrink-0 font-medium text-emerald-400">
-                                    {prov.enabled === false ? 'Offline' : (prov.status || 'Active')}
-                                  </span>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {(() => {
+                                      const isDown = prov.enabled === false || prov.status === 'down' || prov.status === 'offline';
+                                      return (
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono font-semibold flex items-center gap-1.5 shadow-2xs backdrop-blur-md ${
+                                          isDown
+                                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                        }`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${isDown ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
+                                          <span>{isDown ? 'Offline' : 'Active'}</span>
+                                        </span>
+                                      );
+                                    })()}
+                                  </div>
                                 </div>
                               </>
                             );
