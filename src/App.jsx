@@ -1212,6 +1212,9 @@ const CURRENCY_OPTIONS = [
 // Provider Official Compressed Vector Logos (Instant crisp UI load)
 const PROVIDER_LOGOS = {
   nvidia: '/provider-logos/nvidia.svg',
+  gemini: '/provider-logos/gemini.svg',
+  google: '/provider-logos/gemini.svg',
+  deepseek: '/provider-logos/deepseek.svg',
 };
 
 function getProviderLogoUrl(prov) {
