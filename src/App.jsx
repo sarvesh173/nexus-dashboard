@@ -1932,14 +1932,18 @@ export default function App() {
   });
 
   
-  // Windows / Linux File Manager Marquee Drag & Auto-Scroll Engine
+  // Optimized 60FPS Desktop File Manager Marquee Drag & Dual-Direction Auto-Scroll
   useEffect(() => {
     let autoScrollRaf = null;
     let isDragging = false;
     let startPoint = null;
+    let cachedCardRects = [];
+    let lastClientX = 0;
+    let lastClientY = 0;
+    let marqueeOverlayEl = null;
 
     const performSelectionCheck = (currentClientX, currentClientY) => {
-      if (!marqueeContainerRef.current || !startPoint) return;
+      if (!startPoint || cachedCardRects.length === 0) return;
 
       const pageStartX = startPoint.pageStartX;
       const pageStartY = startPoint.pageStartY;
@@ -1951,37 +1955,50 @@ export default function App() {
       const mPageTop = Math.min(pageStartY, pageCurrentY);
       const mPageBottom = Math.max(pageStartY, pageCurrentY);
 
-      const selectableElements = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
       const newSelected = new Set();
-
-      selectableElements.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const elPageLeft = rect.left + window.scrollX;
-        const elPageRight = rect.right + window.scrollX;
-        const elPageTop = rect.top + window.scrollY;
-        const elPageBottom = rect.bottom + window.scrollY;
-
-        // Elements within rectangular range get automatically selected
-        const intersects = !(elPageRight < mPageLeft || elPageLeft > mPageRight || elPageBottom < mPageTop || elPageTop > mPageBottom);
+      for (let i = 0; i < cachedCardRects.length; i++) {
+        const item = cachedCardRects[i];
+        const intersects = !(item.pageRight < mPageLeft || item.pageLeft > mPageRight || item.pageBottom < mPageTop || item.pageTop > mPageBottom);
         if (intersects) {
-          newSelected.add(el.getAttribute('data-selectable-id'));
+          newSelected.add(item.id);
         }
-      });
+      }
 
       if (!selectedProviderId) {
-        setSelectedProviderIds(prev => new Set([...prev, ...newSelected]));
+        setSelectedProviderIds(prev => {
+          let hasDiff = false;
+          newSelected.forEach(id => { if (!prev.has(id)) hasDiff = true; });
+          if (!hasDiff) return prev;
+          return new Set([...prev, ...newSelected]);
+        });
       } else {
-        setSelectedModelIds(prev => new Set([...prev, ...newSelected]));
+        setSelectedModelIds(prev => {
+          let hasDiff = false;
+          newSelected.forEach(id => { if (!prev.has(id)) hasDiff = true; });
+          if (!hasDiff) return prev;
+          return new Set([...prev, ...newSelected]);
+        });
       }
     };
 
+    const updateMarqueeVisual = (currX, currY) => {
+      if (!marqueeOverlayEl || !startPoint) return;
+      const left = Math.min(startPoint.clientX, currX);
+      const top = Math.min(startPoint.clientY, currY);
+      const width = Math.abs(currX - startPoint.clientX);
+      const height = Math.abs(currY - startPoint.clientY);
+      marqueeOverlayEl.style.left = `${left}px`;
+      marqueeOverlayEl.style.top = `${top}px`;
+      marqueeOverlayEl.style.width = `${width}px`;
+      marqueeOverlayEl.style.height = `${height}px`;
+      marqueeOverlayEl.style.display = 'block';
+    };
+
     const onMouseDown = (e) => {
-      // Ignore interactive clicks
       if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('.cursor-nwse-resize')) {
         return;
       }
       
-      // Start drag marquee if isSelectionMode is active or clicking in grid container
       if (isSelectionMode || e.target.closest('[data-marquee-trigger="true"]')) {
         isDragging = true;
         startPoint = {
@@ -1990,54 +2007,77 @@ export default function App() {
           pageStartX: e.clientX + window.scrollX,
           pageStartY: e.clientY + window.scrollY,
         };
-        setIsMarqueeActive(true);
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+
+        // Cache absolute item coordinates ONCE at drag start to eliminate reflow during scroll
+        if (marqueeContainerRef.current) {
+          const selectableEls = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
+          cachedCardRects = Array.from(selectableEls).map(el => {
+            const r = el.getBoundingClientRect();
+            return {
+              id: el.getAttribute('data-selectable-id'),
+              pageLeft: r.left + window.scrollX,
+              pageRight: r.right + window.scrollX,
+              pageTop: r.top + window.scrollY,
+              pageBottom: r.bottom + window.scrollY,
+            };
+          });
+        }
+
+        // Fast zero-re-render overlay element
+        marqueeOverlayEl = document.getElementById('nexus-live-marquee-overlay');
+        if (marqueeOverlayEl) {
+          updateMarqueeVisual(e.clientX, e.clientY);
+        }
         setIsSelectActive(true);
-        setMarqueeBox({
-          startX: e.clientX,
-          startY: e.clientY,
-          currentX: e.clientX,
-          currentY: e.clientY,
-        });
       }
+    };
+
+    const scrollLoop = () => {
+      if (!isDragging) return;
+
+      const edgeThreshold = 90;
+      const { innerHeight } = window;
+      let scrolled = false;
+
+      // 1. Scroll Down when mouse near bottom edge
+      if (lastClientY > innerHeight - edgeThreshold) {
+        const speed = Math.min(32, Math.max(6, ((lastClientY - (innerHeight - edgeThreshold)) / edgeThreshold) * 26 + 6));
+        window.scrollBy(0, speed);
+        scrolled = true;
+      }
+      // 2. Scroll Up when mouse near top edge
+      else if (lastClientY < edgeThreshold && window.scrollY > 0) {
+        const speed = Math.min(32, Math.max(6, ((edgeThreshold - lastClientY) / edgeThreshold) * 26 + 6));
+        window.scrollBy(0, -speed);
+        scrolled = true;
+      }
+
+      if (scrolled) {
+        performSelectionCheck(lastClientX, lastClientY);
+      }
+
+      autoScrollRaf = requestAnimationFrame(scrollLoop);
     };
 
     const onMouseMove = (e) => {
       if (!isDragging || !startPoint) return;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
 
-      setMarqueeBox({
-        startX: startPoint.clientX,
-        startY: startPoint.clientY,
-        currentX: e.clientX,
-        currentY: e.clientY,
-      });
+      updateMarqueeVisual(e.clientX, e.clientY);
+      performSelectionCheck(e.clientX, e.clientY);
 
-      // Desktop File Manager Auto-Scroll: When dragging near top or bottom screen boundary
       const edgeThreshold = 90;
       const { innerHeight } = window;
-      cancelAnimationFrame(autoScrollRaf);
+      const inEdgeZone = (e.clientY > innerHeight - edgeThreshold) || (e.clientY < edgeThreshold && window.scrollY > 0);
 
-      if (e.clientY > innerHeight - edgeThreshold) {
-        const speed = Math.min(32, Math.max(8, ((e.clientY - (innerHeight - edgeThreshold)) / edgeThreshold) * 28 + 8));
-        const scrollStep = () => {
-          window.scrollBy(0, speed);
-          performSelectionCheck(e.clientX, e.clientY);
-          if (isDragging) {
-            autoScrollRaf = requestAnimationFrame(scrollStep);
-          }
-        };
-        autoScrollRaf = requestAnimationFrame(scrollStep);
-      } else if (e.clientY < edgeThreshold) {
-        const speed = Math.min(32, Math.max(8, ((edgeThreshold - e.clientY) / edgeThreshold) * 28 + 8));
-        const scrollStep = () => {
-          window.scrollBy(0, -speed);
-          performSelectionCheck(e.clientX, e.clientY);
-          if (isDragging) {
-            autoScrollRaf = requestAnimationFrame(scrollStep);
-          }
-        };
-        autoScrollRaf = requestAnimationFrame(scrollStep);
-      } else {
-        performSelectionCheck(e.clientX, e.clientY);
+      if (inEdgeZone && !autoScrollRaf) {
+        autoScrollRaf = requestAnimationFrame(scrollLoop);
+      } else if (!inEdgeZone && autoScrollRaf) {
+        cancelAnimationFrame(autoScrollRaf);
+        autoScrollRaf = null;
       }
     };
 
@@ -2045,9 +2085,14 @@ export default function App() {
       if (isDragging) {
         isDragging = false;
         startPoint = null;
-        cancelAnimationFrame(autoScrollRaf);
-        setIsMarqueeActive(false);
-        setMarqueeBox(null);
+        cachedCardRects = [];
+        if (autoScrollRaf) {
+          cancelAnimationFrame(autoScrollRaf);
+          autoScrollRaf = null;
+        }
+        if (marqueeOverlayEl) {
+          marqueeOverlayEl.style.display = 'none';
+        }
       }
     };
 
@@ -2056,7 +2101,7 @@ export default function App() {
     window.addEventListener('mouseup', onMouseUp);
 
     return () => {
-      cancelAnimationFrame(autoScrollRaf);
+      if (autoScrollRaf) cancelAnimationFrame(autoScrollRaf);
       window.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
@@ -2067,18 +2112,11 @@ export default function App() {
     <div className="min-h-screen w-full flex flex-col antialiased transition-colors duration-250 bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)] relative">
       <style>{navMicroAnimationStyles}</style>
 
-      {/* Windows-style Liquid Glass Marquee Drag Rectangle */}
-      {isMarqueeActive && marqueeBox && (
-        <div
-          className="fixed pointer-events-none z-50 rounded-lg border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 backdrop-blur-[1px] shadow-[0_0_20px_rgba(168,85,247,0.2)]"
-          style={{
-            left: `${Math.min(marqueeBox.startX, marqueeBox.currentX)}px`,
-            top: `${Math.min(marqueeBox.startY, marqueeBox.currentY)}px`,
-            width: `${Math.abs(marqueeBox.currentX - marqueeBox.startX)}px`,
-            height: `${Math.abs(marqueeBox.currentY - marqueeBox.startY)}px`,
-          }}
-        />
-      )}
+      {/* Windows-style Liquid Glass Marquee Drag Rectangle (GPU Accelerated) */}
+      <div
+        id="nexus-live-marquee-overlay"
+        className="fixed pointer-events-none z-50 rounded-xl border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 backdrop-blur-[1.5px] shadow-[0_0_24px_rgba(124,58,237,0.3)] hidden will-change-transform"
+      />
 
       {/* M3 Active Polling Indicator Bar */}
       <div className="h-[3px] w-full overflow-hidden bg-transparent">
