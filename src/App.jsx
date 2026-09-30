@@ -2821,18 +2821,18 @@ export default function App() {
                                 className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transition: 'opacity 150ms ease-out',
+                                  transition: 'opacity 140ms ease-out',
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -12 14 L -24 -2"
+                                  d="M 12 14 L -8 14 L -20 2"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
-                                  strokeDasharray="120"
-                                  strokeDashoffset={isActiveStatusHovered ? '0' : '120'}
+                                  strokeDasharray="90"
+                                  strokeDashoffset={isActiveStatusHovered ? '0' : '90'}
                                   style={{
-                                    transition: isActiveStatusHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                    transition: isActiveStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
                                   }}
                                 />
                                 <circle
@@ -2847,33 +2847,33 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="-24"
-                                  cy="-2"
+                                  cx="-20"
+                                  cy="2"
                                   r="2"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-24px -2px',
-                                    transition: 'transform 180ms ease-out 100ms',
+                                    transformOrigin: '-20px 2px',
+                                    transition: 'transform 120ms ease-out 80ms',
                                   }}
                                 />
                               </svg>
 
-                              {/* Apple Compact HUD Glass Card */}
+                              {/* Apple Compact HUD Glass Card (Dashboard Native Color & Hierarchy) */}
                               <div
-                                className="absolute right-[calc(100%+24px)] bottom-0 z-[100] w-72 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/90 backdrop-blur-2xl border border-emerald-500/35 shadow-[0_16px_36px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] space-y-2 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-68 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.45)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transform: isActiveStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.94) translate(8px, 6px)',
-                                  transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transform: isActiveStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.95) translate(6px, 4px)',
+                                  transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
-                                <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-white/10 text-[9.5px] font-bold text-emerald-400 tracking-wider uppercase whitespace-nowrap">
+                                <div className="flex items-center justify-between gap-1.5 pb-1.5 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[10px] font-bold text-emerald-400 tracking-wider uppercase whitespace-nowrap">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
                                     <span>Top Active Providers</span>
                                   </span>
-                                  <span className="text-[8px] text-zinc-400 font-mono normal-case">telemetry</span>
+                                  <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">telemetry</span>
                                 </div>
                                 {visibleProviders
                                   .filter(p => p.enabled !== false && p.status !== 'down')
@@ -2882,13 +2882,13 @@ export default function App() {
                                     const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
                                     const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
                                     return (
-                                      <div key={idx} className="p-1.5 rounded-xl bg-black/25 border border-white/5 space-y-1 hover:border-emerald-500/30 transition-all duration-150">
-                                        <div className="flex items-center justify-between text-[10px] text-[var(--md-sys-color-on-surface)]">
-                                          <div className="flex items-center gap-1 min-w-0">
+                                      <div key={idx} className="p-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
+                                        <div className="flex items-center justify-between text-[10.5px]">
+                                          <div className="flex items-center gap-1.5 min-w-0">
                                             <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                                            <span className="font-semibold truncate max-w-[130px] text-white">{p.display_name || p.name || p.id}</span>
+                                            <span className="font-semibold truncate max-w-[130px] text-[var(--md-sys-color-on-surface)]">{p.display_name || p.name || p.id}</span>
                                           </div>
-                                          <span className="text-[8.5px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0} models</span>
+                                          <span className="text-[9px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0} models</span>
                                         </div>
                                         
                                         <div className="pt-0.5">
@@ -2927,18 +2927,18 @@ export default function App() {
                                 className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transition: 'opacity 150ms ease-out',
+                                  transition: 'opacity 140ms ease-out',
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -12 14 L -24 -2"
+                                  d="M 12 14 L -8 14 L -20 2"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
-                                  strokeDasharray="120"
-                                  strokeDashoffset={isOfflineStatusHovered ? '0' : '120'}
+                                  strokeDasharray="90"
+                                  strokeDashoffset={isOfflineStatusHovered ? '0' : '90'}
                                   style={{
-                                    transition: isOfflineStatusHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                    transition: isOfflineStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
                                   }}
                                 />
                                 <circle
@@ -2953,25 +2953,25 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="-24"
-                                  cy="-2"
+                                  cx="-20"
+                                  cy="2"
                                   r="2"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-24px -2px',
-                                    transition: 'transform 180ms ease-out 100ms',
+                                    transformOrigin: '-20px 2px',
+                                    transition: 'transform 120ms ease-out 80ms',
                                   }}
                                 />
                               </svg>
 
-                              {/* Apple Compact HUD Glass Card */}
+                              {/* Apple Compact HUD Glass Card (Dashboard Native Color & Hierarchy) */}
                               <div
-                                className="absolute right-[calc(100%+24px)] bottom-0 z-[100] w-72 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/90 backdrop-blur-2xl border border-rose-500/35 shadow-[0_16px_36px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] space-y-2 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-68 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.45)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transform: isOfflineStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.94) translate(8px, 6px)',
-                                  transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transform: isOfflineStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.95) translate(6px, 4px)',
+                                  transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
                                 <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10 text-[10px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
