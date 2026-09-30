@@ -1305,11 +1305,22 @@ export default function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const isOverviewNavActive = location.pathname === '/' || location.pathname === '/overview';
   const isModelsNavActive = location.pathname.startsWith('/model')
     || location.pathname.startsWith('/models')
     || location.pathname.startsWith('/modules');
-  const isAgentsNavActive = location.pathname === '/agents'
-    || location.pathname.startsWith('/agents/');
+  const isAgentsNavActive = location.pathname === '/agents';
+  const isAgentCliActive = location.pathname.startsWith('/agents/');
+  const isCostNavActive = location.pathname === '/cost';
+  const isSettingsNavActive = location.pathname === '/settings';
+
+  // Deep link sync: if URL is /model/:providerId, sync selectedProviderId
+  useEffect(() => {
+    const parts = location.pathname.split('/');
+    if ((parts[1] === 'model' || parts[1] === 'models' || parts[1] === 'modules') && parts[2]) {
+      setSelectedProviderId(parts[2]);
+    }
+  }, [location.pathname]);
 
   // The URL is the source of truth. Local state made /modules/<id> deep-links render an empty page and left the address bar on /modules,
   // which broke refresh, back/forward and any shared link.
@@ -1933,12 +1944,10 @@ export default function App() {
           );
         })()}
 
-        <Routes>
-          {/* OVERVIEW ROUTE */}
-          <Route
-            path="/"
-            element={
-              <div className="w-full space-y-6">
+        {/* PERSISTENT KEEP-ALIVE MULTI-CANVAS (0ms Sub-millisecond Instant Transitions) */}
+        
+        {/* VIEW 1: OVERVIEW CANVAS */}
+        <div className={`w-full space-y-6 ${isOverviewNavActive ? 'block' : 'hidden'}`}>
                 
                 {/* Section Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -2122,15 +2131,10 @@ export default function App() {
                   </div>
 
                 </div>
-              </div>
-            }
-          />
+        </div>
 
-          {/* COST DETAIL ROUTE */}
-          <Route
-            path="/cost"
-            element={
-              <div className="w-full space-y-6">
+        {/* VIEW 2: COST CANVAS */}
+        <div className={`w-full space-y-6 ${isCostNavActive ? 'block' : 'hidden'}`}>
                 <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--md-sys-color-outline-variant)] pb-3">
                     <div>
@@ -2168,20 +2172,10 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-              </div>
-            }
-          />
+        </div>
 
-          {/* PROFESSIONAL MODELS CATALOG ROUTE
-              The optional :providerId segment is what makes a provider
-              detail page reachable by URL. Without it every deep link and
-              every browser refresh rendered the header and nothing else. */}
-          {['/model/:providerId?', '/models/:providerId?', '/modules/:providerId?'].map((p) => (
-            <Route
-              key={p}
-              path={p}
-              element={
-              <div className="w-full space-y-6">
+        {/* VIEW 3: MODELS CATALOG CANVAS (Persistent in Memory - 0ms Switch!) */}
+        <div className={`w-full space-y-6 ${isModelsNavActive ? 'block' : 'hidden'}`}>
 
                 {/* 1. Header Toolbar (Title + Back Button + Search Bar) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -2768,16 +2762,10 @@ export default function App() {
                   </div>
                 )}
 
-              </div>
-            }
-          />
-          ))}
+        </div>
 
-          {/* AGENTS DASHBOARD ROUTE (View-Only, Non-Interactive) */}
-          <Route
-            path="/agents"
-            element={
-              <div className="w-full space-y-5">
+        {/* VIEW 4: AGENTS DASHBOARD CANVAS */}
+        <div className={`w-full space-y-5 ${isAgentsNavActive ? 'block' : 'hidden'}`}>
                 {/* Header Toolbar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
                   <div>
@@ -2841,21 +2829,15 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              </div>
-            }
-          />
+        </div>
 
-          {/* DEDICATED FULLSCREEN AGENT CLI SESSION ROUTE (URL-Driven, Non-Chat, URL Switchable, ESC/Mouse Closable) */}
-          <Route
-            path="/agents/:agentId"
-            element={<AgentSessionView navigate={navigate} />}
-          />
+        {/* VIEW 5: FULLSCREEN AGENT CLI SESSION (Rendered when inspecting agent) */}
+        {isAgentCliActive && (
+          <AgentSessionView navigate={navigate} />
+        )}
 
-          {/* SETTINGS ROUTE */}
-          <Route
-            path="/settings"
-            element={
-              <div className="w-full space-y-6">
+        {/* VIEW 6: SETTINGS CANVAS */}
+        <div className={`w-full space-y-6 ${isSettingsNavActive ? 'block' : 'hidden'}`}>
                 {/* Global Currency & Cost Symbol Selector (Top Global GDP & Developing Economies) */}
                 <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
                   <div className="flex items-center justify-between">
@@ -2962,10 +2944,7 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-              </div>
-            }
-          />
-        </Routes>
+        </div>
       </main>
     </div>
   );
