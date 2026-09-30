@@ -1142,51 +1142,20 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 }
 
 
-// Apple Fluid Action: Adaptive Morphing Capsule (Emil Kowalski Apple Design Spec)
-function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact }) {
+// Provider Header View Action: Rock-solid original button without cut button
+function ProviderHeaderAction({ prov, onSelect, isCompact, isUltraCompact }) {
   return (
-    <div
-      className="relative flex items-center justify-end h-8 z-20 overflow-visible py-2 -my-2 px-2 -mx-2 select-none"
-    >
-      <div className="flex items-center gap-1.5">
-        {/* 1. View Button (Morphs/Shrinks to make room for X on card hover; expands & suppresses X when hovered directly) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(prov.id);
-          }}
-          className={`provider-view-btn ${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap pointer-events-auto`}
-        >
-          View →
-        </button>
-
-        {/* 2. Apple Liquid Metallic Glass '✕' Cut (Appears on card hover; suppressed when View button is hovered) */}
-        <div className="provider-x-cut flex items-center">
-          <button
-            title={hidden.providers.includes(prov.id) ? 'Restore this provider' : 'Hide this provider'}
-            aria-label={hidden.providers.includes(prov.id) ? 'Restore ' + prov.id : 'Hide ' + prov.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setVisibility('providers', prov.id, !hidden.providers.includes(prov.id));
-            }}
-            className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center bg-white/[0.08] hover:bg-white/[0.18] active:bg-white/[0.25] backdrop-blur-xl border border-white/25 hover:border-white/45 shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_1.5px_rgba(255,255,255,0.45)] text-[var(--md-sys-color-on-surface)] transition-all duration-150 hover:scale-110 active:scale-95 cursor-pointer ring-1 ring-white/10"
-          >
-            {hidden.providers.includes(prov.id) ? (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
-            ) : (
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-                <line x1="2.5" y1="2.5" x2="9.5" y2="9.5" />
-                <line x1="9.5" y1="2.5" x2="2.5" y2="9.5" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </div>
+    <div className="flex items-center justify-end select-none">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(prov.id);
+        }}
+        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 pointer-events-auto`}
+      >
+        View →
+      </button>
     </div>
   );
 }
@@ -1337,12 +1306,83 @@ export default function App() {
   };
   const [hidden, setHidden] = useState({ providers: [], models: [] });
   const [showHidden, setShowHidden] = useState(false);
+  // Multi-select & File Manager Marquee Selection Engine
+  const [selectedProviderIds, setSelectedProviderIds] = useState(new Set());
+  const [selectedModelIds, setSelectedModelIds] = useState(new Set());
+  const isSelectionMode = selectedProviderIds.size > 0 || selectedModelIds.size > 0;
+  const currentSelectionCount = selectedProviderIds.size + selectedModelIds.size;
+  const [isMarqueeActive, setIsMarqueeActive] = useState(false);
+  const [marqueeBox, setMarqueeBox] = useState(null); // { startX, startY, currentX, currentY }
+  const marqueeContainerRef = useRef(null);
   // Distinguishes 'no providers configured' from 'the backend is down'.
   // Swallowing the fetch error made an outage look like an empty catalog.
   const [catalogError, setCatalogError] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // Human labels for the hidden rail, resolved from the live provider list
+  
+
+
+
+  const toggleSelectProvider = (id, e) => {
+    if (e) e.stopPropagation();
+    setSelectedProviderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectModel = (id, e) => {
+    if (e) e.stopPropagation();
+    setSelectedModelIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (!selectedProviderId) {
+      const allIds = new Set(visibleProviders.map(p => p.id));
+      setSelectedProviderIds(allIds);
+    } else {
+      const allMIds = new Set(filteredModels.map(m => m.id));
+      setSelectedModelIds(allMIds);
+    }
+  };
+
+  const handleCancelAll = () => {
+    setSelectedProviderIds(new Set());
+    setSelectedModelIds(new Set());
+  };
+
+  const handleHideSelected = async () => {
+    if (!selectedProviderId) {
+      const pids = Array.from(selectedProviderIds);
+      for (const pid of pids) {
+        await setVisibility('providers', pid, true);
+      }
+      setSelectedProviderIds(new Set());
+      setToast(`Vaulted ${pids.length} provider(s)`);
+    } else {
+      const mids = Array.from(selectedModelIds);
+      for (const mid of mids) {
+        await setVisibility('models', mid, true);
+      }
+      setSelectedModelIds(new Set());
+      setToast(`Vaulted ${mids.length} model(s)`);
+    }
+  };
+
+  
+
+
+  // Marquee mouse drag + auto-scroll
+  
+
+// Human labels for the hidden rail, resolved from the live provider list
   // so a hidden model still shows its real name and not a raw id.
   const hiddenItems = (() => {
     const out = [];
@@ -1858,6 +1898,71 @@ export default function App() {
     return matchesCategory && matchesTier && matchesSearch;
   });
 
+  
+  useEffect(() => {
+    if (!isMarqueeActive) return;
+
+    let autoScrollInterval = null;
+
+    const handleMouseMove = (e) => {
+      setMarqueeBox(prev => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null);
+
+      // Auto-scroll near viewport boundaries (Windows File Manager spec)
+      const edgeThreshold = 60;
+      const scrollSpeed = 16;
+      const { innerHeight } = window;
+
+      clearInterval(autoScrollInterval);
+      if (e.clientY > innerHeight - edgeThreshold) {
+        autoScrollInterval = setInterval(() => {
+          window.scrollBy({ top: scrollSpeed, behavior: 'instant' });
+        }, 16);
+      } else if (e.clientY < edgeThreshold) {
+        autoScrollInterval = setInterval(() => {
+          window.scrollBy({ top: -scrollSpeed, behavior: 'instant' });
+        }, 16);
+      }
+
+      // Check intersect items
+      if (marqueeContainerRef.current) {
+        const selectableElements = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
+        const mLeft = Math.min(marqueeBox?.startX || e.clientX, e.clientX);
+        const mRight = Math.max(marqueeBox?.startX || e.clientX, e.clientX);
+        const mTop = Math.min(marqueeBox?.startY || e.clientY, e.clientY);
+        const mBottom = Math.max(marqueeBox?.startY || e.clientY, e.clientY);
+
+        const newSelected = new Set();
+        selectableElements.forEach(el => {
+          const rect = el.getBoundingClientRect();
+          const intersects = !(rect.right < mLeft || rect.left > mRight || rect.bottom < mTop || rect.top > mBottom);
+          if (intersects) {
+            newSelected.add(el.getAttribute('data-selectable-id'));
+          }
+        });
+
+        if (!selectedProviderId) {
+          setSelectedProviderIds(prev => new Set([...prev, ...newSelected]));
+        } else {
+          setSelectedModelIds(prev => new Set([...prev, ...newSelected]));
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      clearInterval(autoScrollInterval);
+      setIsMarqueeActive(false);
+      setMarqueeBox(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      clearInterval(autoScrollInterval);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isMarqueeActive, marqueeBox, selectedProviderId]);
+
   return (
     <div className="min-h-screen w-full flex flex-col antialiased transition-colors duration-250 bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)]">
       <style>{navMicroAnimationStyles}</style>
@@ -2353,7 +2458,61 @@ export default function App() {
                 {!selectedProviderId && (
                   <div className="space-y-4">
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between flex-wrap gap-2">
-                      <span>Configured Model Providers (click or tap a card to enter)</span>
+                      {/* File Manager Style Selection Action Bar */}
+                      <div className="flex items-center gap-2">
+                        {/* Select All Base Button */}
+                        <button
+                          onClick={handleSelectAll}
+                          className="px-3 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1.5 active:scale-95"
+                          title="Select all items in current view"
+                        >
+                          <span className="w-2.5 h-2.5 rounded-sm border border-[var(--md-sys-color-outline)] flex items-center justify-center text-[8px]">✓</span>
+                          <span>Select All</span>
+                        </button>
+
+                        {/* Magically Appearing Action Capsule (Zip vanish animation when deselected) */}
+                        <div
+                          className={`flex items-center gap-1.5 transition-all duration-300 origin-left overflow-hidden ${
+                            isSelectionMode
+                              ? 'max-w-[340px] opacity-100 scale-100'
+                              : 'max-w-0 opacity-0 scale-90 pointer-events-none'
+                          }`}
+                          style={{
+                            transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                          }}
+                        >
+                          <span className="px-2 py-0.5 rounded-md bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] font-mono text-[10px] font-bold whitespace-nowrap">
+                            {currentSelectionCount} selected
+                          </span>
+
+                          {/* Vault / Hide Selected */}
+                          <button
+                            onClick={handleHideSelected}
+                            className="px-2.5 py-1 rounded-full bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)] hover:text-white border border-[var(--md-sys-color-error)]/30 text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1"
+                            title="Hide / Vault all selected items"
+                          >
+                            <span>Hide</span>
+                          </button>
+
+                          {/* Cancel All */}
+                          <button
+                            onClick={handleCancelAll}
+                            className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-outline)] text-[11px] font-mono transition-all active:scale-95 whitespace-nowrap"
+                            title="Deselect all items"
+                          >
+                            Cancel
+                          </button>
+
+                          {/* Close & Clear Zip Button */}
+                          <button
+                            onClick={handleCancelAll}
+                            className="w-6 h-6 rounded-full flex items-center justify-center bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error-container)] border border-[var(--md-sys-color-outline-variant)] text-xs transition-transform active:scale-90"
+                            title="Close selection bar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-3">
                         <button
                           onClick={toggleLogoBgTheme}
@@ -2617,14 +2776,7 @@ export default function App() {
                                       </div>
                                     </div>
 
-<ProviderHeaderMorphAction
-                                      prov={prov}
-                                      hidden={hidden}
-                                      setVisibility={setVisibility}
-                                      onSelect={setSelectedProviderId}
-                                      isCompact={isCompact}
-                                      isUltraCompact={isUltraCompact}
-                                    />
+<ProviderHeaderAction prov={prov} onSelect={setSelectedProviderId} isCompact={isCompact} isUltraCompact={isUltraCompact} />
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
@@ -2788,11 +2940,36 @@ export default function App() {
 
                     {/* Model List Cards */}
                     <div className="space-y-3">
-                      {filteredModels.map((item) => (
+                      {filteredModels.map((item) => {
+                        const isMSelected = selectedModelIds.has(item.id);
+                        return (
                         <div
                           key={item.id ?? '—'}
-                          className="p-4 sm:p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)] transition-all flex flex-col gap-3 shadow-xs"
+                          data-selectable-id={item.id}
+                          onClick={() => {
+                            if (isSelectionMode) {
+                              toggleSelectModel(item.id);
+                            }
+                          }}
+                          className={`p-4 sm:p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border transition-all flex flex-col gap-3 shadow-xs relative group cursor-pointer ${
+                            isMSelected
+                              ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-md'
+                              : 'border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)]'
+                          }`}
                         >
+                          {/* Selection Checkbox */}
+                          <button
+                            type="button"
+                            onClick={(e) => toggleSelectModel(item.id, e)}
+                            className={`absolute top-4 right-4 z-20 w-5 h-5 rounded-md border flex items-center justify-center text-[10px] font-bold transition-all ${
+                              isMSelected
+                                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] opacity-100 scale-100'
+                                : 'bg-[var(--md-sys-color-surface-container-highest)] border-[var(--md-sys-color-outline-variant)] text-transparent opacity-0 group-hover:opacity-100 hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)]/40 scale-90 group-hover:scale-100'
+                            }`}
+                            title={isMSelected ? "Deselect model" : "Select model"}
+                          >
+                            ✓
+                          </button>
                           {/* Row 1: Header */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-3">
@@ -2902,7 +3079,7 @@ export default function App() {
                           </div>
 
                         </div>
-                      ))}
+                      );})}
                     </div>
                   </div>
                 )}
@@ -3094,3 +3271,61 @@ export default function App() {
     </div>
   );
 }
+
+
+
+  const toggleSelectProvider = (id, e) => {
+    if (e) e.stopPropagation();
+    setSelectedProviderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectModel = (id, e) => {
+    if (e) e.stopPropagation();
+    setSelectedModelIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (!selectedProviderId) {
+      const allIds = new Set((visibleProviders || []).map(p => p.id));
+      setSelectedProviderIds(allIds);
+    } else {
+      const allMIds = new Set((filteredModels || []).map(m => m.id));
+      setSelectedModelIds(allMIds);
+    }
+  };
+
+  const handleCancelAll = () => {
+    setSelectedProviderIds(new Set());
+    setSelectedModelIds(new Set());
+  };
+
+  const handleHideSelected = async () => {
+    if (selectedProviderIds.size > 0) {
+      const pids = Array.from(selectedProviderIds);
+      for (const pid of pids) {
+        await setVisibility('providers', pid, true);
+      }
+      setSelectedProviderIds(new Set());
+      setToast(`Vaulted ${pids.length} provider(s)`);
+    }
+    if (selectedModelIds.size > 0) {
+      const mids = Array.from(selectedModelIds);
+      for (const mid of mids) {
+        await setVisibility('models', mid, true);
+      }
+      setSelectedModelIds(new Set());
+      setToast(`Vaulted ${mids.length} model(s)`);
+    }
+  };
+
+  
