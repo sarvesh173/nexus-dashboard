@@ -2859,9 +2859,9 @@ export default function App() {
                                 />
                               </svg>
 
-                              {/* Apple Compact HUD Glass Card (Dashboard Native Color & Hierarchy) */}
+                              {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
                               <div
-                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-68 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.45)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-52 p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_12px_28px_rgba(0,0,0,0.5)] space-y-1.5 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
                                   transform: isActiveStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.95) translate(6px, 4px)',
@@ -2965,9 +2965,9 @@ export default function App() {
                                 />
                               </svg>
 
-                              {/* Apple Compact HUD Glass Card (Dashboard Native Color & Hierarchy) */}
+                              {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
                               <div
-                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-68 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.45)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-52 p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_12px_28px_rgba(0,0,0,0.5)] space-y-1.5 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
                                   transform: isOfflineStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.95) translate(6px, 4px)',
