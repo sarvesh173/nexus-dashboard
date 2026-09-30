@@ -2922,10 +2922,7 @@ export default function App() {
                           <span>Vault ({hiddenCount})</span>
                         </button>
 
-                        {/* 4. Connected Badge */}
-                        <span className="font-mono text-[11px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] font-semibold border border-[var(--md-sys-color-primary)]/20">
-                          {visibleProviders.length} Live
-                        </span>
+
                       </div>
                     </div>
 
