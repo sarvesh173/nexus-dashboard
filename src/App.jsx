@@ -2802,62 +2802,65 @@ export default function App() {
                       {/* Apple-style Translucent Segmented Glass Toolbar with Status Filtering */}
                       <div className="flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
                         {/* Live vs Offline Quick Filter Pill with Top 3 Provider Hovers */}
-                        <div className="hidden sm:flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 text-[10px] font-mono select-none">
+                        <div className="hidden sm:inline-flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/70 backdrop-blur-xl border border-[var(--md-sys-color-outline-variant)]/50 text-[10.5px] font-mono select-none shadow-xs whitespace-nowrap">
                           {/* Active Providers Pill */}
                           <div 
                             className="relative"
                             onMouseEnter={() => setIsActiveStatusHovered(true)}
                             onMouseLeave={() => setIsActiveStatusHovered(false)}
                           >
-                            <span className="px-2 py-0.5 text-emerald-400 font-semibold flex items-center gap-1 cursor-default hover:bg-emerald-500/10 rounded-full transition-colors">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/10 rounded-full transition-all duration-150">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                               <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
                             </span>
 
                             {/* Active Popover: Top 3 Active Providers */}
                             <div 
-                              className={`absolute left-0 top-full mt-2 z-50 pointer-events-none transition-all duration-150 ${
-                                isActiveStatusHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+                              className={`absolute left-0 top-full mt-2 z-50 pointer-events-none transition-all duration-200 ease-out transform ${
+                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-1 invisible'
                               }`}
                             >
-                              <div className="w-56 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-1.5">
-                                <div className="flex items-center justify-between pb-1 border-b border-white/10 text-[9.5px] font-bold text-emerald-400">
-                                  <span>TOP ACTIVE PROVIDERS</span>
+                              <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-2 ring-1 ring-white/10 text-left">
+                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9.5px] font-bold text-emerald-400 tracking-wider uppercase">
+                                  <span>Top Active Providers</span>
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                 </div>
                                 {visibleProviders
                                   .filter(p => p.enabled !== false && p.status !== 'down')
                                   .slice(0, 3)
                                   .map((p, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-[10px] text-[var(--md-sys-color-on-surface)] bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                    <div key={idx} className="flex items-center justify-between text-[10.5px] text-[var(--md-sys-color-on-surface)] bg-black/25 px-2.5 py-1.5 rounded-xl border border-white/5">
                                       <span className="font-semibold truncate max-w-[130px]">{p.display_name || p.name || p.id}</span>
-                                      <span className="text-[9px] text-emerald-400/80 font-mono">{(p.models && p.models.length) || 0} models</span>
+                                      <span className="text-[9.5px] text-emerald-400/90 font-mono font-medium">{(p.models && p.models.length) || 0} models</span>
                                     </div>
                                   ))}
                               </div>
                             </div>
                           </div>
 
+                          {/* Divider */}
+                          <span className="w-px h-3.5 bg-white/15 my-auto" />
+
                           {/* Offline Providers Pill */}
                           <div 
-                            className="relative border-l border-white/10"
+                            className="relative"
                             onMouseEnter={() => setIsOfflineStatusHovered(true)}
                             onMouseLeave={() => setIsOfflineStatusHovered(false)}
                           >
-                            <span className="px-2 py-0.5 text-zinc-400 font-medium flex items-center gap-1 cursor-default hover:bg-zinc-500/10 rounded-full transition-colors">
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                            <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/10 rounded-full transition-all duration-150">
+                              <span className="w-2 h-2 rounded-full bg-zinc-500" />
                               <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
                             </span>
 
                             {/* Offline Popover: Top 3 Offline Providers */}
                             <div 
-                              className={`absolute right-0 top-full mt-2 z-50 pointer-events-none transition-all duration-150 ${
-                                isOfflineStatusHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+                              className={`absolute right-0 top-full mt-2 z-50 pointer-events-none transition-all duration-200 ease-out transform ${
+                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-1 invisible'
                               }`}
                             >
-                              <div className="w-56 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-1.5">
-                                <div className="flex items-center justify-between pb-1 border-b border-white/10 text-[9.5px] font-bold text-rose-400">
-                                  <span>OFFLINE PROVIDERS</span>
+                              <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-2 ring-1 ring-white/10 text-left">
+                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9.5px] font-bold text-rose-400 tracking-wider uppercase">
+                                  <span>Offline Providers</span>
                                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                                 </div>
                                 {(() => {
@@ -2870,9 +2873,9 @@ export default function App() {
                                     );
                                   }
                                   return offlineList.slice(0, 3).map((p, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-[10px] text-[var(--md-sys-color-on-surface)] bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                    <div key={idx} className="flex items-center justify-between text-[10.5px] text-[var(--md-sys-color-on-surface)] bg-black/25 px-2.5 py-1.5 rounded-xl border border-white/5">
                                       <span className="font-semibold truncate max-w-[130px]">{p.display_name || p.name || p.id}</span>
-                                      <span className="text-[9px] text-rose-400/80 font-mono">Offline</span>
+                                      <span className="text-[9.5px] text-rose-400/90 font-mono font-medium">Offline</span>
                                     </div>
                                   ));
                                 })()}
