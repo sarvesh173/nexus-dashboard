@@ -2803,24 +2803,59 @@ export default function App() {
                       <div className="relative z-30 flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
                         {/* Live vs Offline Quick Filter Pill with Top 3 Provider Hovers */}
                         <div className="hidden sm:inline-flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/70 backdrop-blur-xl border border-[var(--md-sys-color-outline-variant)]/50 text-[10.5px] font-mono select-none shadow-xs whitespace-nowrap">
-                          {/* Active Providers Pill */}
+                          {/* Active Providers Pill with Leader-Line HUD Hover */}
                           <div 
                             className="relative"
                             onMouseEnter={() => setIsActiveStatusHovered(true)}
                             onMouseLeave={() => setIsActiveStatusHovered(false)}
                           >
-                            <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/10 rounded-full transition-all duration-150">
+                            <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/15 rounded-full transition-all duration-150">
                               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                               <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
                             </span>
 
-                            {/* Active Popover: Top 3 Active Providers with Single Top Model + Hover Telemetry Animation */}
-                            <div 
-                              className={`absolute left-0 top-full mt-2.5 z-[999] pointer-events-auto transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
-                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none invisible'
-                              }`}
-                            >
-                              <div className="w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left font-mono">
+                            {/* Animated SVG Leader Line & HUD Telemetry */}
+                            <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isActiveStatusHovered ? 'visible' : 'invisible'}`}>
+                              <svg
+                                className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+                                style={{
+                                  opacity: isActiveStatusHovered ? 1 : 0,
+                                  transition: 'opacity 140ms ease-out',
+                                }}
+                              >
+                                <path
+                                  d="M 40 28 L 40 44 L 18 56"
+                                  fill="none"
+                                  stroke="#34d399"
+                                  strokeWidth="1.5"
+                                  strokeDasharray="90"
+                                  strokeDashoffset={isActiveStatusHovered ? '0' : '90'}
+                                  style={{
+                                    transition: isActiveStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                  }}
+                                />
+                                <circle
+                                  cx="40"
+                                  cy="28"
+                                  r="2.5"
+                                  fill="#34d399"
+                                  style={{
+                                    transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
+                                    transformOrigin: '40px 28px',
+                                    transition: 'transform 120ms ease-out',
+                                  }}
+                                />
+                              </svg>
+
+                              {/* Top Active Providers Floating HUD Box */}
+                              <div
+                                className="absolute left-[-20px] top-[56px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
+                                style={{
+                                  opacity: isActiveStatusHovered ? 1 : 0,
+                                  transform: isActiveStatusHovered ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.96)',
+                                  transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                }}
+                              >
                                 <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[10px] font-bold text-emerald-400 tracking-wider uppercase">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
@@ -2844,7 +2879,6 @@ export default function App() {
                                           <span className="text-[9.5px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0} models</span>
                                         </div>
                                         
-                                        {/* Single Top Model Pill with full Interactive Leader Telemetry */}
                                         <div className="pt-0.5">
                                           <InteractiveModelPill
                                             model={topModel}
@@ -2863,24 +2897,59 @@ export default function App() {
                           {/* Divider */}
                           <span className="w-px h-3.5 bg-white/15 my-auto" />
 
-                          {/* Offline Providers Pill */}
+                          {/* Offline Providers Pill with Leader-Line HUD Hover */}
                           <div 
                             className="relative"
                             onMouseEnter={() => setIsOfflineStatusHovered(true)}
                             onMouseLeave={() => setIsOfflineStatusHovered(false)}
                           >
-                            <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/10 rounded-full transition-all duration-150">
+                            <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/15 rounded-full transition-all duration-150">
                               <span className="w-2 h-2 rounded-full bg-zinc-500" />
                               <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
                             </span>
 
-                            {/* Offline Popover: Top 3 Offline Providers with Top Model Preview */}
-                            <div 
-                              className={`absolute right-0 top-full mt-2.5 z-[999] pointer-events-auto transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
-                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none invisible'
-                              }`}
-                            >
-                              <div className="w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left font-mono">
+                            {/* Animated SVG Leader Line & HUD Telemetry */}
+                            <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isOfflineStatusHovered ? 'visible' : 'invisible'}`}>
+                              <svg
+                                className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+                                style={{
+                                  opacity: isOfflineStatusHovered ? 1 : 0,
+                                  transition: 'opacity 140ms ease-out',
+                                }}
+                              >
+                                <path
+                                  d="M 40 28 L 40 44 L 62 56"
+                                  fill="none"
+                                  stroke="#f43f5e"
+                                  strokeWidth="1.5"
+                                  strokeDasharray="90"
+                                  strokeDashoffset={isOfflineStatusHovered ? '0' : '90'}
+                                  style={{
+                                    transition: isOfflineStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                  }}
+                                />
+                                <circle
+                                  cx="40"
+                                  cy="28"
+                                  r="2.5"
+                                  fill="#f43f5e"
+                                  style={{
+                                    transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
+                                    transformOrigin: '40px 28px',
+                                    transition: 'transform 120ms ease-out',
+                                  }}
+                                />
+                              </svg>
+
+                              {/* Offline Providers Floating HUD Box */}
+                              <div
+                                className="absolute right-[-20px] top-[56px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
+                                style={{
+                                  opacity: isOfflineStatusHovered ? 1 : 0,
+                                  transform: isOfflineStatusHovered ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.96)',
+                                  transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                }}
+                              >
                                 <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[10px] font-bold text-rose-400 tracking-wider uppercase">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-rose-500" />
