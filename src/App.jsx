@@ -1218,7 +1218,6 @@ const PROVIDER_LOGOS = {
   qwen: '/provider-logos/qwen-cloud.svg',
   alibaba: '/provider-logos/alibaba.svg',
   ali: '/provider-logos/alibaba.svg',
-  // Next 4 providers batch:
   wandb: '/provider-logos/wandb.svg',
   'cloudflare-ai': '/provider-logos/cloudflare-ai.svg',
   cloudflare: '/provider-logos/cloudflare-ai.svg',
@@ -1226,6 +1225,17 @@ const PROVIDER_LOGOS = {
   'ollama-cloud': '/provider-logos/ollama-cloud.svg',
   ollamacloud: '/provider-logos/ollama-cloud.svg',
   ollama: '/provider-logos/ollama-cloud.svg',
+  // Batch 8 (Doubled tier):
+  'jina-ai': '/provider-logos/jina-ai.svg',
+  jina: '/provider-logos/jina-ai.svg',
+  upstage: '/provider-logos/upstage.svg',
+  groq: '/provider-logos/groq.svg',
+  openrouter: '/provider-logos/openrouter.svg',
+  anthropic: '/provider-logos/anthropic.svg',
+  'openai-codex': '/provider-logos/openai.svg',
+  openai: '/provider-logos/openai.svg',
+  morph: '/provider-logos/morph.svg',
+  typhoon: '/provider-logos/typhoon.svg',
 };
 
 function getProviderLogoUrl(prov) {

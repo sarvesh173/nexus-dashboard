@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Solid Full-Bleed Dark Container Base -->
+  <rect width="100" height="100" fill="#171313"/>
+  <!-- Mathematically & Optically Centered Vector Symbol (size: 64x64, offset: 18.0) -->
+  <svg x="18.0" y="18.0" width="64.0" height="64.0" viewBox="0 0 24 24" overflow="visible">
+    <path d="M14.615 2.05a9.7 9.7 0 00-6.19 1.488l2.67 3.655a5.1 5.1 0 013.064-.95c2.81 0 5.09 2.28 5.09 5.09a5.1 5.1 0 01-.95 3.065l3.655 2.67a9.68 9.68 0 001.488-6.19c0-4.88-3.95-8.83-8.83-8.83l.003.002zM7.28 4.796A9.68 9.68 0 005.79 10.98c0 4.88 3.95 8.83 8.83 8.83a9.7 9.7 0 006.19-1.488l-2.67-3.655a5.1 5.1 0 01-3.064.95 5.09 5.09 0 01-5.09-5.09 5.1 5.1 0 01.95-3.065L7.28 4.796z" fill="#F55036"/>
+  </svg>
+</svg>
