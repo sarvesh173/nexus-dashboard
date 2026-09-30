@@ -31,7 +31,15 @@ import {
   CpuIcon,
   Code2,
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Edit2,
+  Upload,
+  ZoomIn,
+  ZoomOut,
+  ImagePlus,
+  FileQuestion,
+  Undo2,
+  X
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
@@ -1145,21 +1153,307 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 }
 
 
-// Apple Liquid Glass Action: Overlapping View button with tactile spring checkbox
-function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onToggleSelect, onSelect, isCompact, isUltraCompact }) {
+
+{/* Apple Cupertino Provider Customization & WhatsApp-style Image Cropper Modal */}
+function ProviderEditModal({ provider, overrides, onSave, onClose }) {
+  if (!provider) return null;
+  const id = (provider.id || '').toLowerCase();
+  const currentOverride = overrides[id] || {};
+  const [name, setName] = useState(currentOverride.name || provider.display_name || provider.name || provider.id);
+  const [logoPreview, setLogoPreview] = useState(currentOverride.logo || getProviderLogoUrl(provider, overrides) || '');
+  const [rawImageSrc, setRawImageSrc] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const fileInputRef = useRef(null);
+  const cropCanvasRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setRawImageSrc(ev.target.result);
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setRawImageSrc(ev.target.result);
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleApplyCrop = () => {
+    if (!rawImageSrc) return;
+    const canvas = document.createElement('canvas');
+    const size = 256;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Background fill
+      ctx.fillStyle = '#141416';
+      ctx.fillRect(0, 0, size, size);
+
+      // Apply zoom & pan:
+      const scaledWidth = img.width * zoom;
+      const scaledHeight = img.height * zoom;
+      const minDimension = Math.min(scaledWidth, scaledHeight);
+      const scaleToFit = size / minDimension;
+
+      const drawW = scaledWidth * scaleToFit;
+      const drawH = scaledHeight * scaleToFit;
+      const drawX = (size - drawW) / 2 + pan.x;
+      const drawY = (size - drawH) / 2 + pan.y;
+
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      const croppedDataUrl = canvas.toDataURL('image/png');
+      setLogoPreview(croppedDataUrl);
+      setRawImageSrc(null);
+    };
+    img.src = rawImageSrc;
+  };
+
+  const handleSave = () => {
+    onSave(id, {
+      name: name.slice(0, 32).trim(),
+      logo: logoPreview
+    });
+    onClose();
+  };
+
+  const handleReset = () => {
+    setName(provider.display_name || provider.name || provider.id);
+    setLogoPreview(provider.logo || PROVIDER_LOGOS[id] || '');
+    setRawImageSrc(null);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_24px_60px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.15)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)]/60 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] flex items-center justify-center border border-[var(--md-sys-color-primary)]/30">
+              <Edit2 size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold tracking-tight">Edit Provider Identity</h2>
+              <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">{id}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* 1. Name Input with Strict 32 Characters Limit */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs font-semibold">
+            <span>Provider Display Name</span>
+            <span className={`font-mono text-[10px] ${name.length >= 32 ? 'text-rose-400 font-bold' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>
+              {name.length}/32 chars
+            </span>
+          </div>
+          <input
+            type="text"
+            maxLength={32}
+            value={name}
+            onChange={(e) => setName(e.target.value.slice(0, 32))}
+            placeholder="Enter provider name (max 32 chars)"
+            className="w-full px-3.5 py-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs font-medium text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+          />
+        </div>
+
+        {/* 2. Drag & Drop Logo Picker & WhatsApp-style Visual Cropper */}
+        <div className="space-y-2">
+          <span className="text-xs font-semibold block">Logo & Visual Brand</span>
+
+          {rawImageSrc ? (
+            /* WhatsApp-style interactive Cropper Box */
+            <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
+              <div className="text-center text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                Drag to reposition or adjust zoom. Box shows exact cropped display area:
+              </div>
+
+              {/* Viewport Preview Area */}
+              <div
+                className="relative w-40 h-40 mx-auto rounded-2xl overflow-hidden border-2 border-[var(--md-sys-color-primary)] shadow-inner cursor-grab active:cursor-grabbing bg-black/60 select-none"
+                onMouseDown={(e) => {
+                  setIsDragging(true);
+                  setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging) return;
+                  setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+                }}
+                onMouseUp={() => setIsDragging(false)}
+                onMouseLeave={() => setIsDragging(false)}
+              >
+                {/* Guide overlay */}
+                <div className="absolute inset-0 pointer-events-none border border-white/20 grid grid-cols-3 grid-rows-3 z-10 opacity-40">
+                  <div className="border-r border-b border-white/20" />
+                  <div className="border-r border-b border-white/20" />
+                  <div className="border-b border-white/20" />
+                  <div className="border-r border-b border-white/20" />
+                  <div className="border-r border-b border-white/20" />
+                  <div className="border-b border-white/20" />
+                </div>
+                <img
+                  src={rawImageSrc}
+                  alt="Raw crop target"
+                  draggable={false}
+                  className="max-w-none transition-transform pointer-events-none"
+                  style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    transformOrigin: 'center center',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
+
+              {/* Zoom & Pan Sliders */}
+              <div className="flex items-center justify-center gap-3 pt-1">
+                <ZoomOut size={14} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                <input
+                  type="range"
+                  min="0.5"
+                  max="3"
+                  step="0.05"
+                  value={zoom}
+                  onChange={(e) => setZoom(parseFloat(e.target.value))}
+                  className="w-48 accent-[var(--md-sys-color-primary)] cursor-pointer"
+                />
+                <ZoomIn size={14} className="text-[var(--md-sys-color-on-surface-variant)]" />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRawImageSrc(null)}
+                  className="px-3 py-1.5 rounded-full text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyCrop}
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all"
+                >
+                  Apply Crop
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Upload & Dropzone Area */
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className="p-5 rounded-2xl border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)]/50 hover:bg-[var(--md-sys-color-surface-container-high)] transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group text-center"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs overflow-hidden">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <ImagePlus size={20} className="text-[var(--md-sys-color-primary)]" />
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface)]">
+                  Click to browse or drag & drop logo
+                </p>
+                <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                  PNG, JPG, SVG, WebP. Auto-crop & visual resize supported.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Actions */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--md-sys-color-outline-variant)]/60">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+          >
+            <Undo2 size={13} />
+            <span>Reset Defaults</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-full text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-5 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Apple Liquid Glass Action: Replaced View with Edit button and tactile spring checkbox
+function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onToggleSelect, onOpenEdit, isCompact, isUltraCompact }) {
   return (
     <div className="relative flex items-center justify-end select-none">
-      {/* 1. Rock-solid View Button with active scale feedback */}
+      {/* 1. Sleek Edit Button (Replaced View button as requested) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          onSelect(prov.id);
+          onOpenEdit(prov);
         }}
-        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-all duration-150 pointer-events-auto flex items-center gap-1.5`}
+        title="Edit provider name and custom logo"
+        className={`${isUltraCompact ? 'px-2.5 py-1 text-[10px]' : isCompact ? 'px-3 py-1 text-[11px]' : 'px-3.5 py-1.5 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-all duration-150 pointer-events-auto flex items-center gap-1.5`}
       >
-        <span>View</span>
-        <span className="text-[11px] opacity-70">→</span>
+        <Edit2 size={isUltraCompact ? 10 : 12} />
+        <span>Edit</span>
       </button>
 
       {/* 2. Apple Tactile Checkbox: visible only when isSelectionMode is active with Apple liquid scale */}
@@ -1293,12 +1587,20 @@ const PROVIDER_LOGOS = {
   'gemini-cli': '/provider-logos/gemini-cli.svg',
 };
 
-function getProviderLogoUrl(prov) {
+function getProviderLogoUrl(prov, overrides = {}) {
   if (!prov) return null;
-  if (prov.logo) return prov.logo;
   const id = (prov.id || '').toLowerCase();
+  if (overrides[id] && overrides[id].logo) return overrides[id].logo;
+  if (prov.logo) return prov.logo;
   if (PROVIDER_LOGOS[id]) return PROVIDER_LOGOS[id];
   return null;
+}
+
+function getProviderDisplayName(prov, overrides = {}) {
+  if (!prov) return '';
+  const id = (prov.id || '').toLowerCase();
+  if (overrides[id] && overrides[id].name) return overrides[id].name;
+  return prov.display_name || prov.name || prov.id || '';
 }
 
 export default function App() {
@@ -1925,7 +2227,8 @@ export default function App() {
 
   // Filter models — guard against undefined model arrays (null safety)
   const currentProvider = providersList.find(p => p.id === selectedProviderId) || null;
-  const activeModelsPool = (currentProvider?.models) || (providersList.length > 0 ? (providersList[0].models || []) : []);
+  const isProviderNotFound = Boolean(selectedProviderId && providersList.length > 0 && !currentProvider);
+  const activeModelsPool = currentProvider ? (currentProvider.models || []) : [];
 
   const filteredModels = activeModelsPool.filter((m) => {
     const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
@@ -2583,7 +2886,7 @@ export default function App() {
                       )}
                       <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
                         <Boxes size={22} className="text-[var(--md-sys-color-primary)]" />
-                        {selectedProviderId ? `${currentProvider?.display_name || 'NVIDIA NIM'} Models` : 'Model Providers & Infrastructure'}
+                        {selectedProviderId ? (isProviderNotFound ? 'Provider Not Found (404)' : `${getProviderDisplayName(currentProvider, providerOverrides)} Models`) : 'Model Providers & Infrastructure'}
                       </h1>
                     </div>
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
@@ -3463,8 +3766,34 @@ export default function App() {
                   </div>
                 )}
 
-                {/* VIEW 2: PROVIDER'S SPECIFIC MODELS LIST (Shown after double-click / selection) */}
-                {selectedProviderId && (
+                {/* VIEW 2: PROVIDER'S SPECIFIC MODELS LIST (Or Apple 404 if provider not found) */}
+                {selectedProviderId && isProviderNotFound && (
+                  <div className="flex flex-col items-center justify-center text-center py-20 px-6 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] space-y-4 max-w-lg mx-auto my-8">
+                    <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20 shadow-inner">
+                      <FileQuestion size={32} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-mono uppercase tracking-widest text-rose-400 font-bold bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
+                        404 • Not Found
+                      </span>
+                      <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)] pt-2">
+                        Provider "{selectedProviderId}" Not Found
+                      </h2>
+                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-sm mx-auto">
+                        The requested provider endpoint does not exist in your active infrastructure catalog.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedProviderId(null)}
+                      className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <ArrowLeft size={14} />
+                      <span>Back to All Providers</span>
+                    </button>
+                  </div>
+                )}
+
+                {selectedProviderId && !isProviderNotFound && (
                   <div className="space-y-4">
                     {/* Modality Picker Tabs WITH Corner Paid/Free Tier Filter */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-1">
