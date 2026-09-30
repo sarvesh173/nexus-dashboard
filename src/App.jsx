@@ -564,61 +564,59 @@ const navMicroAnimationStyles = `
     100% { transform: rotate(8deg) scale(1.05); }
   }
 
-  /* Fully dynamic theme-synchronized coin ring and luminous radial shimmer */
+  /* Orbital dynamic spinning loop with balanced luminous ring that keeps the currency symbol 100% visible */
   .nav-cost-icon::before {
     content: '';
     position: absolute;
-    inset: -3px;
-    border: 1.5px solid var(--md-sys-color-primary);
+    inset: -3.5px;
+    border: 1.5px dashed var(--md-sys-color-primary);
+    border-top-color: transparent;
     border-radius: 50%;
     opacity: 0;
-    transform: scale(0.6);
-    transition: transform 380ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 280ms ease;
+    pointer-events: none;
+    transform: rotate(0deg) scale(0.8);
+    transition: opacity 240ms ease, transform 300ms ease;
   }
   .nav-cost-icon::after {
     content: '';
     position: absolute;
-    z-index: 3;
-    inset: -2px;
+    z-index: 0;
+    inset: -1px;
     border-radius: 50%;
     background: radial-gradient(
-      circle at 35% 35%,
-      color-mix(in srgb, var(--md-sys-color-primary) 70%, white) 0%,
-      var(--md-sys-color-primary) 55%,
-      transparent 85%
+      circle,
+      color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent) 0%,
+      transparent 70%
     );
     opacity: 0;
     pointer-events: none;
-    transform: scale(0.6);
+    transition: opacity 280ms ease;
   }
   .nav-cost-button:hover .nav-cost-icon::before,
   .nav-cost-button:focus-visible .nav-cost-icon::before,
   .nav-cost-button.nav-cost-active .nav-cost-icon::before {
-    opacity: 1;
-    border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent),
-                inset 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 40%, white);
-    animation: nav-cost-circle-bloom 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0.95;
+    border-style: solid;
+    border-top-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, white);
+    border-right-color: var(--md-sys-color-primary);
+    border-bottom-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
+    border-left-color: transparent;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
+    animation: nav-cost-spin-orbit 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
   .nav-cost-button:hover .nav-cost-icon::after,
   .nav-cost-button:focus-visible .nav-cost-icon::after,
   .nav-cost-button.nav-cost-active .nav-cost-icon::after {
-    animation: nav-cost-shine-reveal 700ms 180ms ease-out forwards;
+    opacity: 0.85;
   }
   .nav-cost-button:active .nav-cost-icon::before {
-    transform: scale(1.3);
-    opacity: 1;
-    filter: brightness(1.3);
+    animation-duration: 0.5s;
+    box-shadow: 0 0 12px var(--md-sys-color-primary);
   }
-  @keyframes nav-cost-circle-bloom {
-    0% { transform: scale(0.5); opacity: 0; }
-    50% { transform: scale(1.22); opacity: 0.95; }
-    100% { transform: scale(1.12); opacity: 0.85; }
-  }
-  @keyframes nav-cost-shine-reveal {
-    0% { opacity: 0; transform: scale(0.6) rotate(0deg); }
-    40% { opacity: 1; transform: scale(1.1) rotate(45deg); filter: drop-shadow(0 0 6px rgba(255,255,255,0.9)); }
-    100% { opacity: 0.35; transform: scale(1) rotate(90deg); filter: drop-shadow(0 0 2px currentColor); }
+  @keyframes nav-cost-spin-orbit {
+    0% { transform: rotate(0deg) scale(1.1); }
+    50% { transform: rotate(180deg) scale(1.18); }
+    100% { transform: rotate(360deg) scale(1.1); }
   }
 
   .nav-settings-button.nav-settings-active .nav-settings-icon {
@@ -1177,6 +1175,23 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
   );
 }
 
+const CURRENCY_OPTIONS = [
+  { id: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸', rank: '#1 GDP' },
+  { id: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳', rank: '#2 GDP' },
+  { id: 'EUR', symbol: '€', name: 'Eurozone', flag: '🇪🇺', rank: '#3 GDP' },
+  { id: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵', rank: '#4 GDP' },
+  { id: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳', rank: '#5 GDP' },
+  { id: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧', rank: '#6 GDP' },
+  { id: 'CAD', symbol: 'CA$', name: 'Canadian Dollar', flag: '🇨🇦', rank: '#9 GDP' },
+  { id: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷', rank: '#8 GDP' },
+  { id: 'RUB', symbol: '₽', name: 'Russian Ruble', flag: '🇷🇺', rank: '#11 GDP' },
+  { id: 'KRW', symbol: '₩', name: 'South Korean Won', flag: '🇰🇷', rank: '#12 GDP' },
+  { id: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺', rank: '#13 GDP' },
+  { id: 'CHF', symbol: 'CHF', name: 'Swiss Franc', flag: '🇨🇭', rank: '#20 GDP' },
+  { id: 'AED', symbol: 'AED', name: 'UAE Dirham', flag: '🇦🇪', rank: '#30 GDP' },
+  { id: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬', rank: '#32 GDP' },
+];
+
 export default function App() {
   // Persisted like the card size controls are, otherwise every reload
   // silently snapped the whole UI back to indigo-violet.
@@ -1184,6 +1199,9 @@ export default function App() {
     localStorage.getItem('nexus_theme') || 'indigo-violet');
   const [leaderAlign, setLeaderAlign] = useState(() =>
     localStorage.getItem('nexus_leader_align') || 'right');
+  const [currencyCode, setCurrencyCode] = useState(() =>
+    localStorage.getItem('nexus_currency') || 'USD');
+  const activeCurrency = CURRENCY_OPTIONS.find(c => c.id === currencyCode) || CURRENCY_OPTIONS[0];
   const [palettePickerOpen, setPalettePickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -1794,7 +1812,13 @@ export default function App() {
             }`}
           >
             <span className="nav-cost-icon" aria-hidden="true">
-              <DollarSign size={14} className={location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'} />
+              {activeCurrency.id === 'USD' ? (
+                <DollarSign size={14} className={location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'} />
+              ) : (
+                <span className={`text-[12px] font-bold leading-none select-none ${location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'}`}>
+                  {activeCurrency.symbol}
+                </span>
+              )}
             </span>
             <span>Cost</span>
           </button>
@@ -2835,6 +2859,46 @@ export default function App() {
             path="/settings"
             element={
               <div className="w-full space-y-6">
+                {/* Global Currency & Cost Symbol Selector (Top Global GDP & Developing Economies) */}
+                <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">Global Currency & Cost Symbol</h2>
+                      <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1">
+                        Select your preferred currency symbol for cost telemetry and navigation ({activeCurrency.name}).
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]">
+                      {activeCurrency.flag} {activeCurrency.symbol} ({activeCurrency.id})
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 pt-2">
+                    {CURRENCY_OPTIONS.map(curr => {
+                      const isSel = currencyCode === curr.id;
+                      return (
+                        <button
+                          key={curr.id}
+                          onClick={() => {
+                            localStorage.setItem('nexus_currency', curr.id);
+                            setCurrencyCode(curr.id);
+                          }}
+                          className={`p-3 rounded-2xl border text-center transition-all cursor-pointer active:scale-95 flex flex-col items-center justify-center gap-1 ${
+                            isSel
+                              ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] ring-2 ring-[var(--md-sys-color-primary)] shadow-sm'
+                              : 'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-outline)]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base">{curr.flag}</span>
+                            <span className="text-xs font-bold text-[var(--md-sys-color-on-surface)]">{curr.symbol}</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)]">{curr.id}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Leader Line & Tooltip Alignment Preference */}
                 <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
                   <div className="flex items-center justify-between">
