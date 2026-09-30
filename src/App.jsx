@@ -1143,7 +1143,7 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 
 
 // Apple Liquid Glass Action: Overlapping View button with tactile spring checkbox
-function ProviderHeaderAction({ prov, isSelected, onToggleSelect, onSelect, isCompact, isUltraCompact }) {
+function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onToggleSelect, onSelect, isCompact, isUltraCompact }) {
   return (
     <div className="relative flex items-center justify-end select-none">
       {/* 1. Rock-solid View Button with active scale feedback */}
@@ -1159,30 +1159,32 @@ function ProviderHeaderAction({ prov, isSelected, onToggleSelect, onSelect, isCo
         <span className="text-[11px] opacity-70">→</span>
       </button>
 
-      {/* 2. Apple Tactile Checkbox: positioned right on corner/overlap */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleSelect(prov.id, e);
-        }}
-        aria-label={isSelected ? `Deselect ${prov.name || prov.id}` : `Select ${prov.name || prov.id}`}
-        className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-90 ${
-          isSelected
-            ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm scale-100 ring-2 ring-[var(--md-sys-color-primary)]/40'
-            : 'bg-[var(--md-sys-color-surface-container-highest)]/80 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] opacity-40 hover:opacity-100 hover:border-[var(--md-sys-color-primary)] group-hover:opacity-90'
-        }`}
-        title={isSelected ? "Deselect" : "Select"}
-      >
-        <svg
-          viewBox="0 0 16 16"
-          className={`w-3 h-3 stroke-current stroke-2 fill-none transition-transform duration-150 ${
-            isSelected ? 'scale-100' : 'scale-75 opacity-0 hover:opacity-50'
+      {/* 2. Apple Tactile Checkbox: visible only when isSelectionMode is active with Apple liquid scale */}
+      {isSelectionMode && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(prov.id, e);
+          }}
+          aria-label={isSelected ? `Deselect ${prov.name || prov.id}` : `Select ${prov.name || prov.id}`}
+          className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1) cursor-pointer active:scale-90 animate-in fade-in zoom-in-75 backdrop-blur-md ${
+            isSelected
+              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_2px_8px_rgba(124,58,237,0.35)] scale-110 ring-2 ring-[var(--md-sys-color-primary)]/50'
+              : 'bg-[var(--md-sys-color-surface-container-highest)]/85 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:scale-105'
           }`}
+          title=""
         >
-          <polyline points="3.5 8.5 6.5 11.5 12.5 5" />
-        </svg>
-      </button>
+          <svg
+            viewBox="0 0 16 16"
+            className={`w-3 h-3 stroke-current stroke-2 fill-none transition-transform duration-150 ${
+              isSelected ? 'scale-100' : 'scale-75 opacity-0 hover:opacity-50'
+            }`}
+          >
+            <polyline points="3.5 8.5 6.5 11.5 12.5 5" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -1334,9 +1336,11 @@ export default function App() {
   const [hidden, setHidden] = useState({ providers: [], models: [] });
   const [showHidden, setShowHidden] = useState(false);
   // Multi-select & File Manager Marquee Selection Engine
+  const [isSelectActive, setIsSelectActive] = useState(false);
   const [selectedProviderIds, setSelectedProviderIds] = useState(new Set());
   const [selectedModelIds, setSelectedModelIds] = useState(new Set());
-  const isSelectionMode = selectedProviderIds.size > 0 || selectedModelIds.size > 0;
+  const isSelectionMode = isSelectActive || selectedProviderIds.size > 0 || selectedModelIds.size > 0;
+  const [isHideHovered, setIsHideHovered] = useState(false);
   const currentSelectionCount = selectedProviderIds.size + selectedModelIds.size;
   const [isMarqueeActive, setIsMarqueeActive] = useState(false);
   const [marqueeBox, setMarqueeBox] = useState(null); // { startX, startY, currentX, currentY }
@@ -1383,6 +1387,7 @@ export default function App() {
   const handleCancelAll = () => {
     setSelectedProviderIds(new Set());
     setSelectedModelIds(new Set());
+    setIsSelectActive(false);
   };
 
   const handleHideSelected = async () => {
@@ -1991,8 +1996,21 @@ export default function App() {
   }, [isMarqueeActive, marqueeBox, selectedProviderId]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col antialiased transition-colors duration-250 bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)]">
+    <div className="min-h-screen w-full flex flex-col antialiased transition-colors duration-250 bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)] relative">
       <style>{navMicroAnimationStyles}</style>
+
+      {/* Windows-style Liquid Glass Marquee Drag Rectangle */}
+      {isMarqueeActive && marqueeBox && (
+        <div
+          className="fixed pointer-events-none z-50 rounded-lg border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 backdrop-blur-[1px] shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+          style={{
+            left: `${Math.min(marqueeBox.startX, marqueeBox.currentX)}px`,
+            top: `${Math.min(marqueeBox.startY, marqueeBox.currentY)}px`,
+            width: `${Math.abs(marqueeBox.currentX - marqueeBox.startX)}px`,
+            height: `${Math.abs(marqueeBox.currentY - marqueeBox.startY)}px`,
+          }}
+        />
+      )}
 
       {/* M3 Active Polling Indicator Bar */}
       <div className="h-[3px] w-full overflow-hidden bg-transparent">
@@ -2483,46 +2501,116 @@ export default function App() {
 
                 {/* VIEW 1: PROVIDERS SELECTION GRID (Shown when selectedProviderId is null) */}
                 {!selectedProviderId && (
-                  <div className="space-y-4">
+                  <div
+                    className="space-y-4 select-none"
+                    onMouseDown={(e) => {
+                      // Only trigger marquee drag if clicking on background/empty space, not buttons or inputs
+                      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
+                      setIsMarqueeActive(true);
+                      setIsSelectActive(true);
+                      setMarqueeBox({
+                        startX: e.clientX,
+                        startY: e.clientY,
+                        currentX: e.clientX,
+                        currentY: e.clientY
+                      });
+                    }}
+                  >
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between flex-wrap gap-2">
-                      {/* File Manager Style Selection Action Bar */}
+                      {/* Apple Liquid Glass Selection Action Bar */}
                       <div className="flex items-center gap-2">
-                        {/* Select All Base Button */}
+                        {/* 1. Primary "Select" Toggle Button */}
                         <button
-                          onClick={handleSelectAll}
-                          className="px-3 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1.5 active:scale-95"
-                          title="Select all items in current view"
+                          type="button"
+                          onClick={() => {
+                            if (isSelectionMode) {
+                              handleCancelAll();
+                            } else {
+                              setIsSelectActive(true);
+                            }
+                          }}
+                          className={`px-3 py-1 rounded-full border text-[11px] font-mono font-semibold transition-all duration-200 flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs ${
+                            isSelectionMode
+                              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30'
+                              : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]'
+                          }`}
+                          title={isSelectionMode ? "Exit selection mode" : "Enter selection mode to choose cards"}
                         >
-                          <span className="w-2.5 h-2.5 rounded-sm border border-[var(--md-sys-color-outline)] flex items-center justify-center text-[8px]">✓</span>
-                          <span>Select All</span>
+                          <svg viewBox="0 0 16 16" className="w-3 h-3 stroke-current stroke-2 fill-none">
+                            <rect x="2" y="2" width="12" height="12" rx="3" />
+                            {isSelectionMode && <polyline points="4.5 8.5 7 11 11.5 5" />}
+                          </svg>
+                          <span>{isSelectionMode ? 'Done' : 'Select'}</span>
                         </button>
 
-                        {/* Magically Appearing Action Capsule (Zip vanish animation when deselected) */}
+                        {/* 2. Liquid Glass Reveal Capsule (Smooth Apple spring expand) */}
                         <div
-                          className={`flex items-center gap-1.5 transition-all duration-300 origin-left overflow-hidden ${
+                          className={`flex items-center gap-1.5 transition-all duration-300 origin-left overflow-visible ${
                             isSelectionMode
-                              ? 'max-w-[340px] opacity-100 scale-100'
+                              ? 'max-w-[500px] opacity-100 scale-100'
                               : 'max-w-0 opacity-0 scale-90 pointer-events-none'
                           }`}
                           style={{
                             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
                           }}
                         >
+                          {/* Select All Pill */}
+                          <button
+                            type="button"
+                            onClick={handleSelectAll}
+                            className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                            title=""
+                          >
+                            <span className="text-[10px]">✓✓</span>
+                            <span>Select All</span>
+                          </button>
+
                           <span className="px-2 py-0.5 rounded-md bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] font-mono text-[10px] font-bold whitespace-nowrap">
                             {currentSelectionCount} selected
                           </span>
 
-                          {/* Vault / Hide Selected */}
-                          <button
-                            onClick={handleHideSelected}
-                            className="px-2.5 py-1 rounded-full bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)] hover:text-white border border-[var(--md-sys-color-error)]/30 text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1"
-                            title="Hide / Vault all selected items"
+                          {/* Vault / Hide Selected with Interactive Apple Leader-Style Hover Tooltip */}
+                          <div
+                            className="relative inline-block"
+                            onMouseEnter={() => setIsHideHovered(true)}
+                            onMouseLeave={() => setIsHideHovered(false)}
                           >
-                            <span>Hide</span>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={handleHideSelected}
+                              disabled={currentSelectionCount === 0}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1 border ${
+                                currentSelectionCount > 0
+                                  ? 'bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)] hover:text-white border-[var(--md-sys-color-error)]/30 cursor-pointer'
+                                  : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]/40 border-[var(--md-sys-color-outline-variant)]/40 cursor-not-allowed'
+                              }`}
+                            >
+                              <span>Hide</span>
+                            </button>
+
+                            {/* Apple Leader-Style Explainer Tooltip Box */}
+                            <div
+                              className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none z-50 transition-all duration-200 ${
+                                isHideHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                              }`}
+                            >
+                              <div className="w-64 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.6)] text-[10.5px] font-mono leading-relaxed text-[var(--md-sys-color-on-surface)] space-y-1">
+                                <div className="flex items-center gap-1.5 text-amber-400 font-semibold">
+                                  <span>🔒</span>
+                                  <span>Soft Vaulting</span>
+                                </div>
+                                <p className="text-[var(--md-sys-color-on-surface-variant)]">
+                                  This doesn&apos;t delete permanently, just hides it from your config. You can restore it anytime in the Vault rail, delete all in settings, or ask your agent.
+                                </p>
+                              </div>
+                              {/* Bottom Arrow */}
+                              <div className="w-2 h-2 bg-[var(--md-sys-color-surface-container-highest)] border-r border-b border-white/20 rotate-45 mx-auto -mt-1" />
+                            </div>
+                          </div>
 
                           {/* Cancel All */}
                           <button
+                            type="button"
                             onClick={handleCancelAll}
                             className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-outline)] text-[11px] font-mono transition-all active:scale-95 whitespace-nowrap"
                             title="Deselect all items"
@@ -2532,9 +2620,10 @@ export default function App() {
 
                           {/* Close & Clear Zip Button */}
                           <button
+                            type="button"
                             onClick={handleCancelAll}
                             className="w-6 h-6 rounded-full flex items-center justify-center bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error-container)] border border-[var(--md-sys-color-outline-variant)] text-xs transition-transform active:scale-90"
-                            title="Close selection bar"
+                            title="Close selection mode"
                           >
                             ✕
                           </button>
@@ -2675,6 +2764,7 @@ export default function App() {
                     {/* Responsive tracks never exceed the available width, even with a saved card size. */}
                     {!catalogError && visibleProviders.length > 0 && (
                     <div
+                      ref={marqueeContainerRef}
                       className="grid gap-3.5 items-stretch w-full min-w-0"
                       style={{
                         gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${cardWidthPx > 0 ? cardWidthPx : 320}px), 1fr))`,
@@ -2823,7 +2913,7 @@ export default function App() {
                                       </div>
                                     </div>
 
-<ProviderHeaderAction prov={prov} isSelected={isProvSelected} onToggleSelect={toggleSelectProvider} onSelect={setSelectedProviderId} isCompact={isCompact} isUltraCompact={isUltraCompact} />
+<ProviderHeaderAction prov={prov} isSelected={isProvSelected} isSelectionMode={isSelectionMode} onToggleSelect={toggleSelectProvider} onSelect={setSelectedProviderId} isCompact={isCompact} isUltraCompact={isUltraCompact} />
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
@@ -3004,19 +3094,21 @@ export default function App() {
                               : 'border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)]'
                           }`}
                         >
-                          {/* Selection Checkbox */}
-                          <button
-                            type="button"
-                            onClick={(e) => toggleSelectModel(item.id, e)}
-                            className={`absolute top-4 right-4 z-20 w-5 h-5 rounded-md border flex items-center justify-center text-[10px] font-bold transition-all ${
-                              isMSelected
-                                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] opacity-100 scale-100'
-                                : 'bg-[var(--md-sys-color-surface-container-highest)] border-[var(--md-sys-color-outline-variant)] text-transparent opacity-0 group-hover:opacity-100 hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)]/40 scale-90 group-hover:scale-100'
-                            }`}
-                            title={isMSelected ? "Deselect model" : "Select model"}
-                          >
-                            ✓
-                          </button>
+                          {/* Selection Checkbox - only shown in selection mode */}
+                          {isSelectionMode && (
+                            <button
+                              type="button"
+                              onClick={(e) => toggleSelectModel(item.id, e)}
+                              className={`absolute top-4 right-4 z-20 w-5 h-5 rounded-md border flex items-center justify-center text-[10px] font-bold transition-all animate-in fade-in zoom-in-75 ${
+                                isMSelected
+                                  ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] opacity-100 scale-100'
+                                  : 'bg-[var(--md-sys-color-surface-container-highest)] border-[var(--md-sys-color-outline-variant)] text-transparent hover:border-[var(--md-sys-color-primary)]'
+                              }`}
+                              title={isMSelected ? "Deselect model" : "Select model"}
+                            >
+                              ✓
+                            </button>
+                          )}
                           {/* Row 1: Header */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-3">
@@ -3318,61 +3410,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-  const toggleSelectProvider = (id, e) => {
-    if (e) e.stopPropagation();
-    setSelectedProviderIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectModel = (id, e) => {
-    if (e) e.stopPropagation();
-    setSelectedModelIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const handleSelectAll = () => {
-    if (!selectedProviderId) {
-      const allIds = new Set((visibleProviders || []).map(p => p.id));
-      setSelectedProviderIds(allIds);
-    } else {
-      const allMIds = new Set((filteredModels || []).map(m => m.id));
-      setSelectedModelIds(allMIds);
-    }
-  };
-
-  const handleCancelAll = () => {
-    setSelectedProviderIds(new Set());
-    setSelectedModelIds(new Set());
-  };
-
-  const handleHideSelected = async () => {
-    if (selectedProviderIds.size > 0) {
-      const pids = Array.from(selectedProviderIds);
-      for (const pid of pids) {
-        await setVisibility('providers', pid, true);
-      }
-      setSelectedProviderIds(new Set());
-      setToast(`Vaulted ${pids.length} provider(s)`);
-    }
-    if (selectedModelIds.size > 0) {
-      const mids = Array.from(selectedModelIds);
-      for (const mid of mids) {
-        await setVisibility('models', mid, true);
-      }
-      setSelectedModelIds(new Set());
-      setToast(`Vaulted ${mids.length} model(s)`);
-    }
-  };
-
-  
