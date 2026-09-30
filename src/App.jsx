@@ -1344,6 +1344,8 @@ export default function App() {
   const isSelectionMode = isSelectActive || selectedProviderIds.size > 0 || selectedModelIds.size > 0;
   const [isHideHovered, setIsHideHovered] = useState(false);
   const [isSelectHovered, setIsSelectHovered] = useState(false);
+  const [isActiveStatusHovered, setIsActiveStatusHovered] = useState(false);
+  const [isOfflineStatusHovered, setIsOfflineStatusHovered] = useState(false);
   const currentSelectionCount = selectedProviderIds.size + selectedModelIds.size;
   const [isMarqueeActive, setIsMarqueeActive] = useState(false);
   const [marqueeBox, setMarqueeBox] = useState(null); // { startX, startY, currentX, currentY }
@@ -2799,16 +2801,84 @@ export default function App() {
                       </div>
                       {/* Apple-style Translucent Segmented Glass Toolbar with Status Filtering */}
                       <div className="flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
-                        {/* Live vs Offline Quick Filter Pill */}
-                        <div className="hidden sm:flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 text-[10px] font-mono">
-                          <span className="px-2 py-0.5 text-emerald-400 font-semibold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
-                          </span>
-                          <span className="px-2 py-0.5 text-zinc-400 font-medium flex items-center gap-1 border-l border-white/10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
-                            <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
-                          </span>
+                        {/* Live vs Offline Quick Filter Pill with Top 3 Provider Hovers */}
+                        <div className="hidden sm:flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 text-[10px] font-mono select-none">
+                          {/* Active Providers Pill */}
+                          <div 
+                            className="relative"
+                            onMouseEnter={() => setIsActiveStatusHovered(true)}
+                            onMouseLeave={() => setIsActiveStatusHovered(false)}
+                          >
+                            <span className="px-2 py-0.5 text-emerald-400 font-semibold flex items-center gap-1 cursor-default hover:bg-emerald-500/10 rounded-full transition-colors">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
+                            </span>
+
+                            {/* Active Popover: Top 3 Active Providers */}
+                            <div 
+                              className={`absolute left-0 top-full mt-2 z-50 pointer-events-none transition-all duration-150 ${
+                                isActiveStatusHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+                              }`}
+                            >
+                              <div className="w-56 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-1.5">
+                                <div className="flex items-center justify-between pb-1 border-b border-white/10 text-[9.5px] font-bold text-emerald-400">
+                                  <span>TOP ACTIVE PROVIDERS</span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                </div>
+                                {visibleProviders
+                                  .filter(p => p.enabled !== false && p.status !== 'down')
+                                  .slice(0, 3)
+                                  .map((p, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-[10px] text-[var(--md-sys-color-on-surface)] bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                      <span className="font-semibold truncate max-w-[130px]">{p.display_name || p.name || p.id}</span>
+                                      <span className="text-[9px] text-emerald-400/80 font-mono">{(p.models && p.models.length) || 0} models</span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Offline Providers Pill */}
+                          <div 
+                            className="relative border-l border-white/10"
+                            onMouseEnter={() => setIsOfflineStatusHovered(true)}
+                            onMouseLeave={() => setIsOfflineStatusHovered(false)}
+                          >
+                            <span className="px-2 py-0.5 text-zinc-400 font-medium flex items-center gap-1 cursor-default hover:bg-zinc-500/10 rounded-full transition-colors">
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                              <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
+                            </span>
+
+                            {/* Offline Popover: Top 3 Offline Providers */}
+                            <div 
+                              className={`absolute right-0 top-full mt-2 z-50 pointer-events-none transition-all duration-150 ${
+                                isOfflineStatusHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+                              }`}
+                            >
+                              <div className="w-56 p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-1.5">
+                                <div className="flex items-center justify-between pb-1 border-b border-white/10 text-[9.5px] font-bold text-rose-400">
+                                  <span>OFFLINE PROVIDERS</span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                </div>
+                                {(() => {
+                                  const offlineList = visibleProviders.filter(p => p.enabled === false || p.status === 'down');
+                                  if (offlineList.length === 0) {
+                                    return (
+                                      <div className="text-[10px] text-zinc-400 text-center py-1">
+                                        All providers online ✓
+                                      </div>
+                                    );
+                                  }
+                                  return offlineList.slice(0, 3).map((p, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-[10px] text-[var(--md-sys-color-on-surface)] bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                                      <span className="font-semibold truncate max-w-[130px]">{p.display_name || p.name || p.id}</span>
+                                      <span className="text-[9px] text-rose-400/80 font-mono">Offline</span>
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                         {/* 1. Apple Logo Theme Segmented Control */}
                         <button
@@ -2971,7 +3041,7 @@ export default function App() {
                               handleCancelAll();
                             }
                           }}
-                          className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl overflow-hidden ${
+                          className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
                               ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-[1.015] z-10'
                               : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:-translate-y-1.5 hover:scale-[1.012] hover:z-20'
