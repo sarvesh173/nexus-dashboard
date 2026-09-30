@@ -2800,7 +2800,7 @@ export default function App() {
                         </div>
                       </div>
                       {/* Apple-style Translucent Segmented Glass Toolbar with Status Filtering */}
-                      <div className="flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
+                      <div className="relative z-30 flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
                         {/* Live vs Offline Quick Filter Pill with Top 3 Provider Hovers */}
                         <div className="hidden sm:inline-flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/70 backdrop-blur-xl border border-[var(--md-sys-color-outline-variant)]/50 text-[10.5px] font-mono select-none shadow-xs whitespace-nowrap">
                           {/* Active Providers Pill */}
@@ -2816,8 +2816,8 @@ export default function App() {
 
                             {/* Active Popover: Top 3 Active Providers */}
                             <div 
-                              className={`absolute left-0 top-full mt-2 z-50 pointer-events-none transition-all duration-200 ease-out transform ${
-                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-1 invisible'
+                              className={`absolute left-0 bottom-full mb-2 z-[100] pointer-events-none transition-all duration-200 ease-out transform ${
+                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-1 invisible'
                               }`}
                             >
                               <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-2 ring-1 ring-white/10 text-left">
@@ -2854,8 +2854,8 @@ export default function App() {
 
                             {/* Offline Popover: Top 3 Offline Providers */}
                             <div 
-                              className={`absolute right-0 top-full mt-2 z-50 pointer-events-none transition-all duration-200 ease-out transform ${
-                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-1 invisible'
+                              className={`absolute right-0 bottom-full mb-2 z-[100] pointer-events-none transition-all duration-200 ease-out transform ${
+                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-1 invisible'
                               }`}
                             >
                               <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-2 ring-1 ring-white/10 text-left">
