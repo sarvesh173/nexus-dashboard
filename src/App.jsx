@@ -2824,7 +2824,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 35 0 L 35 -10 L 0 -18"
+                                  d="M 0 14 L -16 14 L -28 14"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2835,24 +2835,24 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="35"
-                                  cy="0"
+                                  cx="0"
+                                  cy="14"
                                   r="2.5"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '35px 0px',
+                                    transformOrigin: '0px 14px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                               </svg>
 
-                              {/* Top Active Providers Floating HUD Box UPWARDS in red scribble zone */}
+                              {/* Top Active Providers Floating HUD Box SIDE MEIN (to the left in open space) */}
                               <div
-                                className="absolute right-0 bottom-[calc(100%+18px)] z-[100] w-84 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.7)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
+                                className="absolute right-[calc(100%+30px)] top-1/2 -translate-y-1/2 z-[100] w-84 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.7)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transform: isActiveStatusHovered ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
+                                  transform: isActiveStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.96) translateX(10px)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
@@ -2918,7 +2918,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 35 0 L 35 -14 L 60 -28"
+                                  d="M 0 14 L -16 14 L -28 14"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
@@ -2929,24 +2929,24 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="35"
-                                  cy="0"
+                                  cx="0"
+                                  cy="14"
                                   r="2.5"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '35px 0px',
+                                    transformOrigin: '0px 14px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                               </svg>
 
-                              {/* Offline Providers Floating HUD Box UPWARDS in red scribble zone */}
+                              {/* Offline Providers Floating HUD Box SIDE MEIN (to the left in open space) */}
                               <div
-                                className="absolute right-0 bottom-[calc(100%+18px)] z-[100] w-84 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.7)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
+                                className="absolute right-[calc(100%+30px)] top-1/2 -translate-y-1/2 z-[100] w-84 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.7)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transform: isOfflineStatusHovered ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
+                                  transform: isOfflineStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.96) translateX(10px)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
