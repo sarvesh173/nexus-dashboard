@@ -2825,7 +2825,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 0 14 L -28 14 L -52 -32"
+                                  d="M 0 14 L -28 14 L -52 -58"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2862,12 +2862,12 @@ export default function App() {
                                 {/* Terminal Corner Dot linked directly to the HUD Box */}
                                 <circle
                                   cx="-52"
-                                  cy="-32"
+                                  cy="-58"
                                   r="2.5"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-52px -32px',
+                                    transformOrigin: '-52px -58px',
                                     transition: 'transform 120ms ease-out 110ms',
                                   }}
                                 />
@@ -2878,7 +2878,7 @@ export default function App() {
                                 className="absolute pointer-events-auto z-[100]"
                                 style={{
                                   left: '-52px',
-                                  top: '-32px',
+                                  top: '-58px',
                                   transform: `translate(-100%, -50%) ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                   opacity: isActiveStatusHovered ? 1 : 0,
                                   transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
@@ -2951,7 +2951,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 0 14 L -28 14 L -52 -32"
+                                  d="M 0 14 L -28 14 L -52 -58"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
@@ -2988,12 +2988,12 @@ export default function App() {
                                 {/* Terminal Corner Dot linked directly to the HUD Box */}
                                 <circle
                                   cx="-52"
-                                  cy="-32"
+                                  cy="-58"
                                   r="2.5"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-52px -32px',
+                                    transformOrigin: '-52px -58px',
                                     transition: 'transform 120ms ease-out 110ms',
                                   }}
                                 />
@@ -3004,7 +3004,7 @@ export default function App() {
                                 className="absolute pointer-events-auto z-[100]"
                                 style={{
                                   left: '-52px',
-                                  top: '-32px',
+                                  top: '-58px',
                                   transform: `translate(-100%, -50%) ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                   opacity: isOfflineStatusHovered ? 1 : 0,
                                   transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
