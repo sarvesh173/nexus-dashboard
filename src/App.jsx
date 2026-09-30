@@ -206,146 +206,193 @@ function getModelTelemetry(modelId, modelName = '') {
 }
 
 
-// HOVER ANATOMY: M3 Theme-Aware Dynamic Colors (Zero hardcoded cyan, matches dashboard palette perfectly):
-function InteractiveStatValue({ rawValue, displayValue, label = '', colorClass = '', align = null }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const containerRef = useRef(null);
-  
-  const currentAlign = align || localStorage.getItem('nexus_leader_align') || 'right';
+const EMPTY_MODELS = Object.freeze([]);
+const TOP_MODELS_LIMIT = 5;
+const PROVIDER_MODALITIES = [
+  { id: 'text', label: 'LLM', description: 'LLM models', color: 'text-amber-400' },
+  { id: 'vision', label: 'Vision', description: 'Vision models', color: 'text-indigo-400' },
+  { id: 'embedding', label: 'Embed', description: 'Embeddings', color: 'text-zinc-200' },
+  { id: 'stt', label: 'STT', description: 'STT models', color: 'text-emerald-400' },
+  { id: 'tts', label: 'TTS', description: 'TTS models', color: 'text-purple-400' },
+];
+const MODALITY_ALIASES = {
+  text: 'text', llm: 'text', decision: 'text',
+  vision: 'vision', image: 'vision', 'image-gen': 'vision', image_gen: 'vision',
+  embedding: 'embedding', embeddings: 'embedding',
+  stt: 'stt', audio: 'stt', tts: 'tts',
+};
 
-  const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
-  const exactFormatted = Number(numVal).toLocaleString('en-US');
+function getProviderModalityStats(provider) {
+  const stats = Object.fromEntries(PROVIDER_MODALITIES.map(({ id }) => [id, { count: 0, models: [] }]));
+  const models = provider.models || EMPTY_MODELS;
 
-  const getGeometry = (goRight) => {
-    const dotX = 12;
-    const dotY = 1;
-    const vertX = dotX;
-    const vertY = dotY - 32;
-    const diagSpanX = 64;
-    const diagSpanY = 40;
-    const diagX = goRight ? vertX + diagSpanX : vertX - diagSpanX;
-    const diagY = vertY - diagSpanY;
-    return { dotX, dotY, vertX, vertY, diagX, diagY, isRightAligned: goRight };
-  };
-
-  const [coords, setCoords] = useState(() => getGeometry(currentAlign !== 'left'));
-
-  const handleMouseEnter = () => {
-    let goRight = true;
-    if (currentAlign === 'left') {
-      goRight = false;
-    } else if (currentAlign === 'right') {
-      goRight = true;
-    } else {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        goRight = (window.innerWidth - rect.right) > 220;
-      }
+  // Count and preview the same live catalog. Backend aggregates can be stale
+  // after hiding models. Keep only five references per modality, in catalog order.
+  if (Array.isArray(provider.models)) {
+    for (const model of models) {
+      const category = model.category || (model.capabilities?.vision ? 'vision' : (model.capabilities?.audio ? 'tts' : 'text'));
+      const stat = stats[MODALITY_ALIASES[category]];
+      if (!stat) continue;
+      stat.count += 1;
+      if (stat.models.length < TOP_MODELS_LIMIT) stat.models.push(model);
     }
-    setCoords(getGeometry(goRight));
-    setIsHovered(true);
-  };
+  } else {
+    const categories = Object.entries(provider.categories || {});
+    for (const [category, count] of categories) {
+      const stat = stats[MODALITY_ALIASES[category]];
+      if (stat) stat.count += Number(count) || 0;
+    }
+    if (categories.length === 0) {
+      stats.text.count = provider.total_models ?? provider.model_count ?? 0;
+    }
+  }
+  return stats;
+}
 
-  const handleMouseLeave = () => {
-    setIsHovered(false);
+const ProviderModalityStats = React.memo(function ProviderModalityStats({ provider, align }) {
+  const stats = React.useMemo(() => getProviderModalityStats(provider), [provider]);
+  return (
+    <div className="grid grid-cols-5 gap-1.5 pt-1 items-stretch">
+      {PROVIDER_MODALITIES.map(({ id, label, description, color }) => (
+        <InteractiveStatValue
+          key={id}
+          align={align}
+          rawValue={stats[id].count}
+          label={description}
+          boxLabel={label}
+          providerName={provider.display_name || provider.name || provider.id}
+          topModels={stats[id].models}
+          colorClass={`text-xs font-bold font-mono ${color} block leading-none`}
+        />
+      ))}
+    </div>
+  );
+});
+
+// The stat owns the whole modality box, including its label and padding.
+const InteractiveStatValue = React.memo(function InteractiveStatValue({
+  rawValue, displayValue, label = '', colorClass = '', align = 'right',
+  boxLabel = '', providerName = '', topModels = null,
+}) {
+  // A null geometry also means closed: no separate hover state or idle overlay DOM.
+  const [coords, setCoords] = useState(null);
+  const containerRef = useRef(null);
+  const tooltipId = React.useId();
+  const numVal = typeof rawValue === 'number' ? rawValue : parseInt(rawValue, 10) || 0;
+
+  const showTooltip = () => {
+    if (coords || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const tooltipWidth = Math.min(240, window.innerWidth - 24);
+    const goRight = align === 'left' ? false : align === 'right' ? true : (window.innerWidth - rect.right) > tooltipWidth + 64;
+    const dotX = boxLabel ? rect.width / 2 : 12;
+    let diagX = dotX + (goRight ? 64 : -64);
+    if (boxLabel) {
+      // Keep the larger model preview within the viewport without detaching its leader.
+      const minX = 12 - rect.left + (goRight ? 0 : tooltipWidth);
+      const maxX = window.innerWidth - 12 - rect.left - (goRight ? tooltipWidth : 0);
+      diagX = Math.max(minX, Math.min(diagX, maxX));
+    }
+    setCoords({ dotX, dotY: 1, vertX: dotX, vertY: -31, diagX, diagY: -71, isRightAligned: goRight });
   };
 
   return (
     <div
       ref={containerRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className="relative inline-flex items-center justify-center cursor-default select-none"
+      tabIndex={boxLabel ? 0 : undefined}
+      aria-label={boxLabel ? `${providerName}: ${numVal} ${label}` : undefined}
+      aria-describedby={coords ? tooltipId : undefined}
+      onMouseEnter={showTooltip}
+      onMouseLeave={(event) => {
+        if (!event.currentTarget.contains(document.activeElement)) setCoords(null);
+      }}
+      onFocus={showTooltip}
+      onBlur={() => setCoords(null)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          setCoords(null);
+        }
+      }}
+      className={`relative inline-flex items-center justify-center cursor-default select-none ${coords ? 'z-50' : ''} ${
+        boxLabel
+          ? `min-w-0 p-1.5 rounded-xl border text-center flex-col transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords
+              ? 'bg-[var(--md-sys-color-primary)]/15 border-[var(--md-sys-color-primary)]'
+              : 'bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)]'}`
+          : ''
+      }`}
     >
-      {/* 1. PILL HIGHLIGHT */}
-      <span
-        className={`absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-[var(--md-sys-color-primary)]/15 pointer-events-none transition-opacity duration-150 ease-out ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      {/* Value Text */}
+      {!boxLabel && coords && (
+        <span className="absolute inset-x-[-8px] inset-y-[-3px] rounded-full bg-[var(--md-sys-color-primary)]/15 pointer-events-none" />
+      )}
+      {boxLabel && (
+        <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">
+          {boxLabel}
+        </span>
+      )}
       <span className={`relative z-10 ${colorClass}`}>{displayValue ?? rawValue}</span>
 
-      {/* 2 & 3. OVERLAY LAYER (M3 Theme-Linked Colors) */}
-      <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible'}`}>
-        {/* LEADER LINE + ANCHOR DOT */}
-        <svg
-          className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
-          style={{
-            opacity: isHovered ? 1 : 0,
-            transition: 'opacity 140ms ease-out',
-          }}
-        >
-          {/* Continuous Badi Dandi (Themed to Dashboard Primary Tone) */}
-          <path
-            d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
-            fill="none"
-            stroke="var(--md-sys-color-primary)"
-            strokeWidth="1.5"
-            strokeDasharray="140"
-            strokeDashoffset={isHovered ? '0' : '140'}
+      {/* Mount the SVG, blurred surface, and model rows only for an open stat. */}
+      {coords && (
+        <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
+          <svg aria-hidden="true" className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
+            <path
+              d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
+              fill="none"
+              stroke="var(--md-sys-color-primary)"
+              strokeWidth="1.5"
+            />
+            <circle cx={coords.dotX} cy={coords.dotY} r="3" fill="var(--md-sys-color-primary)" />
+            <circle cx={coords.diagX} cy={coords.diagY} r="2.5" fill="var(--md-sys-color-primary)" />
+          </svg>
+          <div
+            id={tooltipId}
+            role="tooltip"
+            className={`absolute pointer-events-none px-3.5 py-2 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)] ${topModels ? 'w-60 max-w-[calc(100vw-24px)]' : ''}`}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              left: coords.diagX,
+              top: coords.diagY,
+              transform: coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)',
             }}
-          />
-
-          {/* Anchor Dot matches Primary Tone */}
-          <circle
-            cx={coords.dotX}
-            cy={coords.dotY}
-            r="3"
-            fill="var(--md-sys-color-primary)"
-            style={{
-              transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
-              transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-            }}
-          />
-
-          {/* Connection Dot linked directly to the Tooltip Corner */}
-          <circle
-            cx={coords.diagX}
-            cy={coords.diagY}
-            r="2.5"
-            fill="var(--md-sys-color-primary)"
-            style={{
-              transformOrigin: `${coords.diagX}px ${coords.diagY}px`,
-              transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-            }}
-          />
-        </svg>
-
-        {/* TOOLTIP WITH EXACT NUMBER (M3 Surface Container + Outline Variant + Primary Accents) */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: `${coords.diagX}px`,
-            top: `${coords.diagY}px`,
-            transform: `${coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)'} ${
-              isHovered ? 'scale(1)' : 'scale(0.92)'
-            }`,
-            opacity: isHovered ? 1 : 0,
-            transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
-          }}
-        >
-          <div className="px-3.5 py-1.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 flex items-center gap-2 whitespace-nowrap text-[var(--md-sys-color-on-surface)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] shadow-[0_0_8px_var(--md-sys-color-primary)]" />
-            <span className="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] tracking-tight font-mono">
-              {exactFormatted}
-            </span>
-            {label && (
-              <span className="text-[10.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono border-l border-white/10 pl-2">
-                {label}
+          >
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] shrink-0" />
+              <span className="text-[13px] font-semibold tracking-tight font-mono">
+                {numVal.toLocaleString('en-US')}
               </span>
+              {label && (
+                <span className="text-[10.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono border-l border-white/10 pl-2">
+                  {label}
+                </span>
+              )}
+            </div>
+            {topModels && (
+              <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] font-mono">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-[10px] font-bold whitespace-nowrap">Top Models</span>
+                  <span className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] truncate">{providerName}</span>
+                </div>
+                {topModels.length > 0 ? (
+                  <ul className="space-y-1">
+                    {topModels.map((model, index) => (
+                      <li key={model.id || index} className="text-[10px] leading-snug break-words">
+                        {model.name || model.id}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+                    {numVal > 0 ? 'Model details unavailable' : 'No models available'}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
-}
+});
 
 function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -515,14 +562,8 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
   const [isHovered, setIsHovered] = useState(false);
   const badgeRef = useRef(null);
 
-  const rawModels = provider.models && provider.models.length > 0 ? provider.models : [];
-  const sortedModels = React.useMemo(() => {
-    return [...rawModels].sort((a, b) => {
-      const nameA = (a.name || a.id || '').toLowerCase();
-      const nameB = (b.name || b.id || '').toLowerCase();
-      return nameA.localeCompare(nameB);
-    }).slice(0, 4);
-  }, [rawModels]);
+  const rawModels = provider.models || EMPTY_MODELS;
+  const topModels = React.useMemo(() => rawModels.slice(0, TOP_MODELS_LIMIT), [rawModels]);
 
   const displayCount = rawModels.length || totalCount;
 
@@ -548,68 +589,70 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
         </span>
       </button>
 
-      {/* Floating A-to-Z Preview Popover with 'See more →' */}
-      <div
-        className={`absolute right-0 top-[calc(100%+6px)] w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 z-50 text-left font-mono transition-all duration-150 pointer-events-auto ${
-          isHovered ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-1.5">
-          <span className="text-[9.5px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] tracking-wider">
-            Models (A–Z)
-          </span>
-          <span className="text-[9px] text-[var(--md-sys-color-primary)] font-medium">
-            {displayCount} total
-          </span>
-        </div>
-
-        {/* 3-4 Sorted Models List */}
-        <div className="space-y-1 mb-2">
-          {sortedModels.length > 0 ? (
-            sortedModels.map((m, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[var(--md-sys-color-surface-container)] text-[10px] text-[var(--md-sys-color-on-surface)] truncate hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)]/50"
-                title={m.name || m.id}
-              >
-                <span className="w-1 h-1 rounded-full bg-[var(--md-sys-color-primary)] shrink-0" />
-                <span className="truncate">{m.name || m.id}</span>
-              </div>
-            ))
-          ) : (
-            <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] py-1 px-1">
-              Standard provider models
-            </div>
-          )}
-        </div>
-
-        {/* See more → Button (Themed) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect?.();
-          }}
-          className="w-full py-1.5 px-2.5 rounded-xl bg-[var(--md-sys-color-primary)] hover:opacity-90 active:scale-95 text-[var(--md-sys-color-on-primary)] text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+      {/* Mount the catalog's top-five preview only while the badge is hovered. */}
+      {isHovered && (
+        <div
+          className="absolute right-0 top-full w-60 pt-1.5 z-50 pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
         >
-          <span>See more</span>
-          <span>→</span>
-        </button>
-      </div>
+          {/* Padding bridges the gap so the pointer can reach See more without closing. */}
+          <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-left font-mono">
+            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-1.5">
+              <span className="text-[9.5px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] tracking-wider">
+                Top Models
+              </span>
+              <span className="text-[9px] text-[var(--md-sys-color-primary)] font-medium">
+                {displayCount} total
+              </span>
+            </div>
+
+            {/* At most five models, preserving the provider's catalog order. */}
+            <div className="space-y-1 mb-2">
+              {topModels.length > 0 ? (
+                topModels.map((m, i) => (
+                  <div
+                    key={m.id || i}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[var(--md-sys-color-surface-container)] text-[10px] text-[var(--md-sys-color-on-surface)] truncate hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)]/50"
+                    title={m.name || m.id}
+                  >
+                    <span className="w-1 h-1 rounded-full bg-[var(--md-sys-color-primary)] shrink-0" />
+                    <span className="truncate">{m.name || m.id}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] py-1 px-1">
+                  Standard provider models
+                </div>
+              )}
+            </div>
+
+            {/* See more → Button (Themed) */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect?.();
+              }}
+              className="w-full py-1.5 px-2.5 rounded-xl bg-[var(--md-sys-color-primary)] hover:opacity-90 active:scale-95 text-[var(--md-sys-color-on-primary)] text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            >
+              <span>See more</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 
 // Apple Fluid Action: Anti-Loop Hysteresis Envelope & Static Bounding Box (Emil Kowalski Apple Design Spec)
-function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact, isCardHovered }) {
+function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact }) {
   const [hoverTarget, setHoverTarget] = useState('none'); // 'none' | 'view' | 'x'
   const clusterRef = useRef(null);
 
-  // If hovering the 'X' button or hovering card outside View button -> show X!
-  // If hovering directly over View button -> hide X and keep View button resting!
-  const isXVisible = isCardHovered && (hoverTarget === 'x' || hoverTarget !== 'view');
+  // CSS handles card hover; only the View-button exception needs local state.
+  // Entering/leaving a provider no longer rerenders the entire App.
 
   return (
     <div
@@ -633,10 +676,10 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
         {/* 2. Apple Liquid Metallic Glass '✕' Cut with Generous Aura Envelope */}
         <div
           onMouseEnter={() => setHoverTarget('x')}
-          className={`flex items-center transition-all duration-200 ${
-            isXVisible
-              ? 'w-7 opacity-100 scale-100 pointer-events-auto translate-x-0'
-              : 'w-0 opacity-0 scale-75 pointer-events-none translate-x-1 overflow-hidden'
+          className={`flex items-center transition-all duration-200 w-0 opacity-0 scale-75 pointer-events-none translate-x-1 overflow-hidden ${
+            hoverTarget !== 'view'
+              ? 'group-hover:w-7 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:overflow-visible'
+              : ''
           }`}
           style={{
             transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
@@ -781,10 +824,6 @@ export default function App() {
   }, []);
 
 
-  // Card count is measured from the real grid width so the layout always fills
-  // the viewport exactly: more providers -> more columns, not more scrolling.
-  const [cols, setCols] = useState(5);
-  const gridRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -805,67 +844,27 @@ export default function App() {
     return isNaN(v) ? 320 : v;
   });
   const [isResizingCard, setIsResizingCard] = useState(false);
-  const [hoveredCardId, setHoveredCardId] = useState(null);
   const [modelTierFilter, setModelTierFilter] = useState('all'); // 'all' | 'paid' | 'free'
   const [searchQuery, setSearchQuery] = useState('');
 
   const _baseProviders = allProviders.length ? allProviders : providersList;
-  const _ranked = (
-    showRouters ? _baseProviders
-      : _baseProviders.filter((p) => p.kind !== 'router')
-  ).map((p) => {
-    // Identity matches first. A model-only hit is still useful, but typing
-    // "nvidia" should surface the Nvidia card above every provider that
-    // merely happens to serve one nvidia/* model.
-    if (!searchQuery) return { p, rank: 1 };
+  const visibleProviders = React.useMemo(() => {
+    const providers = showRouters ? _baseProviders : _baseProviders.filter((p) => p.kind !== 'router');
+    if (!searchQuery) return providers;
     const q = searchQuery.toLowerCase();
-    const idHit = (p.name || '').toLowerCase().includes(q)
-               || (p.id || '').toLowerCase().includes(q)
-               || (p.display_name || '').toLowerCase().includes(q);
-    return { p, rank: idHit ? 0 : 1 };
-  });
-  const visibleProviders = _ranked.filter(({ p }) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    // Match on identity and model names only. Including `status` pulled in
-    // every "Live (via ...)" card, so searching "glm" or any gateway name
-    // matched unrelated providers through their transport label.
-    return (p.name || '').toLowerCase().includes(q)
-        || (p.id || '').toLowerCase().includes(q)
-        || (p.display_name || '').toLowerCase().includes(q)
-        || (p.models || []).some((m) =>
-             (m.name || '').toLowerCase().includes(q)
-          || (m.id || '').toLowerCase().includes(q));
-  }).sort((a, b) => a.rank - b.rank).map(({ p }) => p);
+    // Identity matches first; model-only hits remain useful. Transport/status
+    // labels are deliberately excluded so they cannot match unrelated cards.
+    return providers.map((p) => {
+      const idHit = (p.name || '').toLowerCase().includes(q)
+                 || (p.id || '').toLowerCase().includes(q)
+                 || (p.display_name || '').toLowerCase().includes(q);
+      return { p, rank: idHit ? 0 : 1 };
+    }).filter(({ p, rank }) => rank === 0 || (p.models || EMPTY_MODELS).some((m) =>
+      (m.name || '').toLowerCase().includes(q) || (m.id || '').toLowerCase().includes(q)
+    )).sort((a, b) => a.rank - b.rank).map(({ p }) => p);
+  }, [_baseProviders, showRouters, searchQuery]);
   
   const modalityScrollRef = useHorizontalScroll();
-
-  // Recompute cols from gridRef width + cardWidthPx (0 = auto)
-  useEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const measure = () => {
-      const w = el.clientWidth || window.innerWidth;
-      if (cardWidthPx > 0) {
-        // manual width: fill container without overflow
-        const n = Math.max(1, Math.floor((w + 16) / (cardWidthPx + 16)));
-        setCols(n);
-      } else {
-        // auto: aim ~5 cards per row, but never force 2 columns on a phone -
-        // at 390px two 170px cards clip every name to "Nvi...". One column
-        // below 640px keeps names and the resize sliders legible.
-        const target = Math.max(280, w / 5);
-        const fit = Math.round(w / target);
-        // Phones: 1 column under 520px (two 170px cards clip every name).
-        // 520-640px: 2 columns is comfortable. Above that use the fitted count.
-        setCols(w < 520 ? 1 : Math.max(2, Math.min(9, fit)));
-      }
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [cardWidthPx, visibleProviders.length]);
 
   // Keyboard shortcuts listener for accessibility (mouse + keyboard parity)
   useEffect(() => {
@@ -1834,7 +1833,6 @@ export default function App() {
                     {/* Flexible responsive grid — auto-fills row space with zero empty voids */}
                     {!catalogError && visibleProviders.length > 0 && (
                     <div
-                      ref={gridRef}
                       className="grid gap-3.5 items-stretch justify-start w-full"
                       style={{
                         gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidthPx > 0 ? `${cardWidthPx}px` : '320px'}, 1fr))`,
@@ -1845,14 +1843,12 @@ export default function App() {
                         return (
                         <div
                           key={prov.id}
-                          onMouseEnter={() => setHoveredCardId(prov.id)}
-                          onMouseLeave={() => setHoveredCardId(null)}
                           onClick={() => {
                             if (!isResizingCard) {
                               setSelectedProviderId(prov.id);
                             }
                           }}
-                          className="group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg relative flex flex-col justify-between select-none"
+                          className="group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none"
                           style={{
                             width: '100%',
                             height: 'auto',
@@ -1913,22 +1909,7 @@ export default function App() {
 
                           {(() => {
                             const isUltraCompact = (cardHeightPx < 210) || (cardWidthPx > 0 && cardWidthPx < 280);
-                            const isTall = (cardHeightPx >= 280) && (cardWidthPx > 0 && cardWidthPx < 360);
-                            // Auto-derive categories if backend sent empty object so NO provider ever has empty gap
-                            const cats = (prov.categories && Object.keys(prov.categories).length > 0)
-                              ? prov.categories
-                              : (prov.models || []).reduce((acc, m) => {
-                                  const c = m.category || (m.capabilities?.vision ? 'vision' : (m.capabilities?.audio ? 'tts' : 'text'));
-                                  acc[c] = (acc[c] || 0) + 1;
-                                  return acc;
-                                }, {});
                             const totalCount = prov.id === 'nvidia' ? (prov.total_models || 0) : (prov.model_count || 0);
-                            const visionCount = (cats.vision ?? cats.image) ?? (cats['image-gen'] ?? 0);
-                            const sttCount = cats.stt ?? cats.audio ?? 0;
-                            const ttsCount = cats.tts ?? 0;
-                            const embeddingCount = cats.embedding ?? cats.embeddings ?? 0;
-                            const textCount = cats.text ?? cats.llm ?? Math.max(0, totalCount - visionCount - sttCount - ttsCount - embeddingCount);
-                            const displayModels = (prov.models || []).slice(0, 8);
 
                             return (
                               <>
@@ -1995,34 +1976,12 @@ export default function App() {
                                       onSelect={setSelectedProviderId}
                                       isCompact={isCompact}
                                       isUltraCompact={isUltraCompact}
-                                      isCardHovered={hoveredCardId === prov.id}
                                     />
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
                                   {!isUltraCompact && (
-                                  <div className="grid grid-cols-5 gap-1.5 pt-1 items-stretch">
-                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
-                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">LLM</span>
-                                      <InteractiveStatValue align={leaderAlign} rawValue={textCount} label="LLM models" colorClass="text-xs font-bold font-mono text-amber-400 block leading-none" />
-                                    </div>
-                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
-                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Vision</span>
-                                      <InteractiveStatValue align={leaderAlign} rawValue={visionCount} label="Vision models" colorClass="text-xs font-bold font-mono text-indigo-400 block leading-none" />
-                                    </div>
-                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
-                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">Embed</span>
-                                      <InteractiveStatValue align={leaderAlign} rawValue={embeddingCount} label="Embeddings" colorClass="text-xs font-bold font-mono text-zinc-200 block leading-none" />
-                                    </div>
-                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
-                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">STT</span>
-                                      <InteractiveStatValue align={leaderAlign} rawValue={sttCount} label="STT models" colorClass="text-xs font-bold font-mono text-emerald-400 block leading-none" />
-                                    </div>
-                                    <div className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-center flex flex-col justify-center">
-                                      <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-semibold block leading-none mb-1">TTS</span>
-                                      <InteractiveStatValue align={leaderAlign} rawValue={ttsCount} label="TTS models" colorClass="text-xs font-bold font-mono text-purple-400 block leading-none" />
-                                    </div>
-                                  </div>
+                                    <ProviderModalityStats provider={prov} align={leaderAlign} />
                                   )}
 
                                   {/* Center Gap Fill on Ultra-Compact: Prominent Models Count */}
