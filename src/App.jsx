@@ -1110,9 +1110,6 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
   const [hoverTarget, setHoverTarget] = useState('none'); // 'none' | 'view' | 'x'
   const clusterRef = useRef(null);
 
-  // CSS handles card hover; only the View-button exception needs local state.
-  // Entering/leaving a provider no longer rerenders the entire App.
-
   return (
     <div
       ref={clusterRef}
@@ -1120,17 +1117,26 @@ function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCo
       className="relative flex items-center justify-end h-8 z-20 overflow-visible py-3 -my-3 px-3 -mx-3"
     >
       <div className="flex items-center gap-2">
-        {/* 1. View Button (Hitbox is static; no movement jitter that triggers infinite loop) */}
-        <button
+        {/* 1. View Button with 360-degree Hitbox Protective Envelope (Left, Top, Bottom, Up-Left) */}
+        <div 
+          className="relative inline-flex items-center justify-center p-2.5 -m-2.5 cursor-pointer z-10"
+          onMouseEnter={() => setHoverTarget('view')}
           onClick={(e) => {
             e.stopPropagation();
             onSelect(prov.id);
           }}
-          onMouseEnter={() => setHoverTarget('view')}
-          className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 select-none`}
         >
-          View →
-        </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(prov.id);
+            }}
+            className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 select-none pointer-events-auto`}
+          >
+            View →
+          </button>
+        </div>
 
         {/* 2. Apple Liquid Metallic Glass '✕' Cut with Generous Aura Envelope */}
         <div
