@@ -1341,6 +1341,7 @@ export default function App() {
   const [selectedModelIds, setSelectedModelIds] = useState(new Set());
   const isSelectionMode = isSelectActive || selectedProviderIds.size > 0 || selectedModelIds.size > 0;
   const [isHideHovered, setIsHideHovered] = useState(false);
+  const [isSelectHovered, setIsSelectHovered] = useState(false);
   const currentSelectionCount = selectedProviderIds.size + selectedModelIds.size;
   const [isMarqueeActive, setIsMarqueeActive] = useState(false);
   const [marqueeBox, setMarqueeBox] = useState(null); // { startX, startY, currentX, currentY }
@@ -2519,29 +2520,51 @@ export default function App() {
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between flex-wrap gap-2">
                       {/* Apple Liquid Glass Selection Action Bar */}
                       <div className="flex items-center gap-2">
-                        {/* 1. Primary "Select" Toggle Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isSelectionMode) {
-                              handleCancelAll();
-                            } else {
-                              setIsSelectActive(true);
-                            }
-                          }}
-                          className={`px-3 py-1 rounded-full border text-[11px] font-mono font-semibold transition-all duration-200 flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs ${
-                            isSelectionMode
-                              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30'
-                              : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]'
-                          }`}
-                          title={isSelectionMode ? "Exit selection mode" : "Enter selection mode to choose cards"}
+                        {/* 1. Primary "Select" Toggle Button with Apple Liquid Glass Hover Tooltip */}
+                        <div
+                          className="relative inline-block"
+                          onMouseEnter={() => setIsSelectHovered(true)}
+                          onMouseLeave={() => setIsSelectHovered(false)}
                         >
-                          <svg viewBox="0 0 16 16" className="w-3 h-3 stroke-current stroke-2 fill-none">
-                            <rect x="2" y="2" width="12" height="12" rx="3" />
-                            {isSelectionMode && <polyline points="4.5 8.5 7 11 11.5 5" />}
-                          </svg>
-                          <span>{isSelectionMode ? 'Done' : 'Select'}</span>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isSelectionMode) {
+                                handleCancelAll();
+                              } else {
+                                setIsSelectActive(true);
+                              }
+                            }}
+                            className={`px-3 py-1 rounded-full border text-[11px] font-mono font-semibold transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1) flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs ${
+                              isSelectionMode
+                                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30 hover:scale-105'
+                                : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:scale-105'
+                            }`}
+                            title=""
+                          >
+                            <svg viewBox="0 0 16 16" className="w-3 h-3 stroke-current stroke-2 fill-none">
+                              <rect x="2" y="2" width="12" height="12" rx="3" />
+                              {isSelectionMode && <polyline points="4.5 8.5 7 11 11.5 5" />}
+                            </svg>
+                            <span>{isSelectionMode ? 'Done' : 'Select'}</span>
+                          </button>
+
+                          {/* Smooth Apple Spring Tooltip Popup */}
+                          {isSelectHovered && (
+                            <div
+                              className="absolute left-0 bottom-full mb-2 z-50 px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-highest)]/95 text-[var(--md-sys-color-on-surface)] text-[10px] font-mono shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-[var(--md-sys-color-outline-variant)]/60 backdrop-blur-xl whitespace-nowrap pointer-events-none animate-in fade-in zoom-in-95 duration-200"
+                              style={{
+                                transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                              }}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] animate-pulse" />
+                                <span>{isSelectionMode ? "Click to exit selection mode" : "Click to select or drag across cards"}</span>
+                              </div>
+                              <div className="absolute left-3 top-full w-2 h-2 -mt-1 rotate-45 bg-[var(--md-sys-color-surface-container-highest)] border-r border-b border-[var(--md-sys-color-outline-variant)]/60" />
+                            </div>
+                          )}
+                        </div>
 
                         {/* 2. Liquid Glass Reveal Capsule (Smooth Apple spring expand) */}
                         <div
