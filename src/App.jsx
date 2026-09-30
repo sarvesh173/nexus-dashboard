@@ -1932,18 +1932,19 @@ export default function App() {
   });
 
   
+  // Windows / Linux File Manager Marquee Drag & Auto-Scroll Engine
   useEffect(() => {
-    if (!isMarqueeActive) return;
-
     let autoScrollRaf = null;
+    let isDragging = false;
+    let startPoint = null;
 
-    const performSelectionCheck = (currentX, currentY) => {
-      if (!marqueeContainerRef.current || !marqueeBox) return;
+    const performSelectionCheck = (currentClientX, currentClientY) => {
+      if (!marqueeContainerRef.current || !startPoint) return;
 
-      const pageStartX = marqueeBox.startX + (marqueeBox.startScrollX || 0);
-      const pageStartY = marqueeBox.startY + (marqueeBox.startScrollY || 0);
-      const pageCurrentX = currentX + window.scrollX;
-      const pageCurrentY = currentY + window.scrollY;
+      const pageStartX = startPoint.pageStartX;
+      const pageStartY = startPoint.pageStartY;
+      const pageCurrentX = currentClientX + window.scrollX;
+      const pageCurrentY = currentClientY + window.scrollY;
 
       const mPageLeft = Math.min(pageStartX, pageCurrentX);
       const mPageRight = Math.max(pageStartX, pageCurrentX);
@@ -1955,13 +1956,12 @@ export default function App() {
 
       selectableElements.forEach(el => {
         const rect = el.getBoundingClientRect();
-        // Element absolute page coordinates
         const elPageLeft = rect.left + window.scrollX;
         const elPageRight = rect.right + window.scrollX;
         const elPageTop = rect.top + window.scrollY;
         const elPageBottom = rect.bottom + window.scrollY;
 
-        // Select only elements intersecting with marquee selection range
+        // Elements within rectangular range get automatically selected
         const intersects = !(elPageRight < mPageLeft || elPageLeft > mPageRight || elPageBottom < mPageTop || elPageTop > mPageBottom);
         if (intersects) {
           newSelected.add(el.getAttribute('data-selectable-id'));
@@ -1975,49 +1975,93 @@ export default function App() {
       }
     };
 
-    const handleMouseMove = (e) => {
-      setMarqueeBox(prev => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null);
+    const onMouseDown = (e) => {
+      // Ignore interactive clicks
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('.cursor-nwse-resize')) {
+        return;
+      }
+      
+      // Start drag marquee if isSelectionMode is active or clicking in grid container
+      if (isSelectionMode || e.target.closest('[data-marquee-trigger="true"]')) {
+        isDragging = true;
+        startPoint = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          pageStartX: e.clientX + window.scrollX,
+          pageStartY: e.clientY + window.scrollY,
+        };
+        setIsMarqueeActive(true);
+        setIsSelectActive(true);
+        setMarqueeBox({
+          startX: e.clientX,
+          startY: e.clientY,
+          currentX: e.clientX,
+          currentY: e.clientY,
+        });
+      }
+    };
 
-      // Windows/Linux desktop style dynamic auto-scroll near viewport edges
-      const edgeThreshold = 80;
+    const onMouseMove = (e) => {
+      if (!isDragging || !startPoint) return;
+
+      setMarqueeBox({
+        startX: startPoint.clientX,
+        startY: startPoint.clientY,
+        currentX: e.clientX,
+        currentY: e.clientY,
+      });
+
+      // Desktop File Manager Auto-Scroll: When dragging near top or bottom screen boundary
+      const edgeThreshold = 90;
       const { innerHeight } = window;
       cancelAnimationFrame(autoScrollRaf);
 
       if (e.clientY > innerHeight - edgeThreshold) {
-        const intensity = Math.min(30, ((e.clientY - (innerHeight - edgeThreshold)) / edgeThreshold) * 28 + 6);
-        const scrollLoop = () => {
-          window.scrollBy(0, intensity);
+        const speed = Math.min(32, Math.max(8, ((e.clientY - (innerHeight - edgeThreshold)) / edgeThreshold) * 28 + 8));
+        const scrollStep = () => {
+          window.scrollBy(0, speed);
           performSelectionCheck(e.clientX, e.clientY);
-          autoScrollRaf = requestAnimationFrame(scrollLoop);
+          if (isDragging) {
+            autoScrollRaf = requestAnimationFrame(scrollStep);
+          }
         };
-        autoScrollRaf = requestAnimationFrame(scrollLoop);
+        autoScrollRaf = requestAnimationFrame(scrollStep);
       } else if (e.clientY < edgeThreshold) {
-        const intensity = Math.min(30, ((edgeThreshold - e.clientY) / edgeThreshold) * 28 + 6);
-        const scrollLoop = () => {
-          window.scrollBy(0, -intensity);
+        const speed = Math.min(32, Math.max(8, ((edgeThreshold - e.clientY) / edgeThreshold) * 28 + 8));
+        const scrollStep = () => {
+          window.scrollBy(0, -speed);
           performSelectionCheck(e.clientX, e.clientY);
-          autoScrollRaf = requestAnimationFrame(scrollLoop);
+          if (isDragging) {
+            autoScrollRaf = requestAnimationFrame(scrollStep);
+          }
         };
-        autoScrollRaf = requestAnimationFrame(scrollLoop);
+        autoScrollRaf = requestAnimationFrame(scrollStep);
       } else {
         performSelectionCheck(e.clientX, e.clientY);
       }
     };
 
-    const handleMouseUp = () => {
-      cancelAnimationFrame(autoScrollRaf);
-      setIsMarqueeActive(false);
-      setMarqueeBox(null);
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        startPoint = null;
+        cancelAnimationFrame(autoScrollRaf);
+        setIsMarqueeActive(false);
+        setMarqueeBox(null);
+      }
     };
 
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('mouseup', onMouseUp);
+
     return () => {
       cancelAnimationFrame(autoScrollRaf);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [isMarqueeActive, marqueeBox, selectedProviderId]);
+  }, [isSelectionMode, selectedProviderId]);
 
   return (
     <div className="min-h-screen w-full flex flex-col antialiased transition-colors duration-250 bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)] relative">
