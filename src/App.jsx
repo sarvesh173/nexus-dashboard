@@ -2825,7 +2825,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -8 14 L -20 2"
+                                  d="M 12 14 L -8 14 L -20 14"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2848,12 +2848,12 @@ export default function App() {
                                 />
                                 <circle
                                   cx="-20"
-                                  cy="2"
+                                  cy="14"
                                   r="2"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-20px 2px',
+                                    transformOrigin: '-20px 14px',
                                     transition: 'transform 120ms ease-out 80ms',
                                   }}
                                 />
@@ -2861,10 +2861,10 @@ export default function App() {
 
                               {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
                               <div
-                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-52 p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_12px_28px_rgba(0,0,0,0.5)] space-y-1.5 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute right-[calc(100%+20px)] top-1/2 -translate-y-1/2 z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-right"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transform: isActiveStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.95) translate(6px, 4px)',
+                                  transform: isActiveStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.95) translateX(8px)',
                                   transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
@@ -2875,33 +2875,34 @@ export default function App() {
                                   </span>
                                   <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">telemetry</span>
                                 </div>
-                                {visibleProviders
-                                  .filter(p => p.enabled !== false && p.status !== 'down')
-                                  .slice(0, 3)
-                                  .map((p, idx) => {
-                                    const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
-                                    const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
-                                    return (
-                                      <div key={idx} className="p-2 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
-                                        <div className="flex items-center justify-between text-[10.5px]">
-                                          <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                                            <span className="font-semibold truncate max-w-[130px] text-[var(--md-sys-color-on-surface)]">{p.display_name || p.name || p.id}</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {visibleProviders
+                                    .filter(p => p.enabled !== false && p.status !== 'down')
+                                    .slice(0, 3)
+                                    .map((p, idx) => {
+                                      const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
+                                      const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
+                                      return (
+                                        <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
+                                          <div className="flex items-center justify-between text-[10px]">
+                                            <span className="font-semibold truncate max-w-[85px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
+                                              {p.display_name || p.name || p.id}
+                                            </span>
+                                            <span className="text-[8px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0}m</span>
                                           </div>
-                                          <span className="text-[9px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0} models</span>
+                                          
+                                          <div className="pt-0.5">
+                                            <InteractiveModelPill
+                                              model={topModel}
+                                              telemetry={tel}
+                                              align="right"
+                                              onSelect={() => setSelectedProviderId(p.id)}
+                                            />
+                                          </div>
                                         </div>
-                                        
-                                        <div className="pt-0.5">
-                                          <InteractiveModelPill
-                                            model={topModel}
-                                            telemetry={tel}
-                                            align="right"
-                                            onSelect={() => setSelectedProviderId(p.id)}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    })}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2931,7 +2932,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -8 14 L -20 2"
+                                  d="M 12 14 L -8 14 L -20 14"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
@@ -2954,12 +2955,12 @@ export default function App() {
                                 />
                                 <circle
                                   cx="-20"
-                                  cy="2"
+                                  cy="14"
                                   r="2"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-20px 2px',
+                                    transformOrigin: '-20px 14px',
                                     transition: 'transform 120ms ease-out 80ms',
                                   }}
                                 />
@@ -2967,10 +2968,10 @@ export default function App() {
 
                               {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
                               <div
-                                className="absolute right-[calc(100%+20px)] bottom-[-6px] z-[100] w-52 p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_12px_28px_rgba(0,0,0,0.5)] space-y-1.5 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
+                                className="absolute right-[calc(100%+20px)] top-1/2 -translate-y-1/2 z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-right"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transform: isOfflineStatusHovered ? 'scale(1) translate(0, 0)' : 'scale(0.95) translate(6px, 4px)',
+                                  transform: isOfflineStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.95) translateX(8px)',
                                   transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
