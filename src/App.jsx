@@ -1218,7 +1218,6 @@ const PROVIDER_LOGOS = {
   qwen: '/provider-logos/qwen-cloud.svg',
   alibaba: '/provider-logos/alibaba.svg',
   ali: '/provider-logos/alibaba.svg',
-  // Next 4 providers batch:
   wandb: '/provider-logos/wandb.svg',
   'cloudflare-ai': '/provider-logos/cloudflare-ai.svg',
   cloudflare: '/provider-logos/cloudflare-ai.svg',
@@ -1226,6 +1225,10 @@ const PROVIDER_LOGOS = {
   'ollama-cloud': '/provider-logos/ollama-cloud.svg',
   ollamacloud: '/provider-logos/ollama-cloud.svg',
   ollama: '/provider-logos/ollama-cloud.svg',
+  // Official Brand Assets directly fetched:
+  typhoon: '/provider-logos/typhoon.svg',
+  groq: '/provider-logos/groq.svg',
+  morph: '/provider-logos/morph.svg',
 };
 
 function getProviderLogoUrl(prov) {
