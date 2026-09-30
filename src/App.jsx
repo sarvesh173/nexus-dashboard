@@ -2824,7 +2824,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 35 0 L 35 -14 L 10 -28"
+                                  d="M 35 0 L 35 -10 L 0 -18"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2847,21 +2847,21 @@ export default function App() {
                                 />
                               </svg>
 
-                              {/* Top Active Providers Floating HUD Box UPWARDS above toolbar */}
+                              {/* Top Active Providers Floating HUD Box UPWARDS in red scribble zone */}
                               <div
-                                className="absolute left-[-100px] bottom-[calc(100%+16px)] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
+                                className="absolute right-0 bottom-[calc(100%+18px)] z-[100] w-84 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.7)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
                                   transform: isActiveStatusHovered ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
-                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[10px] font-bold text-emerald-400 tracking-wider uppercase">
+                                <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10 text-[10px] font-bold text-emerald-400 tracking-wider uppercase whitespace-nowrap">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                                    <span>Top Active Providers & Models</span>
+                                    <span>Top Active Providers</span>
                                   </span>
-                                  <span className="text-[9px] text-zinc-400 font-normal">hover model for telemetry</span>
+                                  <span className="text-[8.5px] text-zinc-400 font-normal normal-case">telemetry preview</span>
                                 </div>
                                 {visibleProviders
                                   .filter(p => p.enabled !== false && p.status !== 'down')
@@ -2941,21 +2941,21 @@ export default function App() {
                                 />
                               </svg>
 
-                              {/* Offline Providers Floating HUD Box UPWARDS above toolbar */}
+                              {/* Offline Providers Floating HUD Box UPWARDS in red scribble zone */}
                               <div
-                                className="absolute right-[-20px] bottom-[calc(100%+16px)] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
+                                className="absolute right-0 bottom-[calc(100%+18px)] z-[100] w-84 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.7)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
                                   transform: isOfflineStatusHovered ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
-                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[10px] font-bold text-rose-400 tracking-wider uppercase">
+                                <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10 text-[10px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
                                   <span className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-rose-500" />
-                                    <span>Offline Providers & Models</span>
+                                    <span>Offline Providers</span>
                                   </span>
-                                  <span className="text-[9px] text-zinc-400 font-normal">hover model for telemetry</span>
+                                  <span className="text-[8.5px] text-zinc-400 font-normal normal-case">telemetry preview</span>
                                 </div>
                                 {(() => {
                                   const offlineList = visibleProviders.filter(p => p.enabled === false || p.status === 'down');
