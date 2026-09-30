@@ -446,28 +446,23 @@ const navMicroAnimationStyles = `
 
   .nav-agent-button:hover .nav-agent-icon::before,
   .nav-agent-button:focus-visible .nav-agent-icon::before,
-  .nav-agent-button.nav-agent-active .nav-agent-icon::before,
   .nav-agent-button:hover .nav-agent-pulse,
-  .nav-agent-button:focus-visible .nav-agent-pulse,
-  .nav-agent-button.nav-agent-active .nav-agent-pulse {
+  .nav-agent-button:focus-visible .nav-agent-pulse {
     animation: nav-agent-neural-pulse 1.65s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
   }
 
   .nav-agent-button:hover .nav-agent-icon::after,
-  .nav-agent-button:focus-visible .nav-agent-icon::after,
-  .nav-agent-button.nav-agent-active .nav-agent-icon::after {
+  .nav-agent-button:focus-visible .nav-agent-icon::after {
     animation: nav-agent-aura 1.65s ease-in-out infinite;
   }
 
   .nav-agent-button:hover .nav-agent-spark-a,
-  .nav-agent-button:focus-visible .nav-agent-spark-a,
-  .nav-agent-button.nav-agent-active .nav-agent-spark-a {
+  .nav-agent-button:focus-visible .nav-agent-spark-a {
     animation: nav-agent-spark-a 1.45s 120ms ease-in-out infinite;
   }
 
   .nav-agent-button:hover .nav-agent-spark-b,
-  .nav-agent-button:focus-visible .nav-agent-spark-b,
-  .nav-agent-button.nav-agent-active .nav-agent-spark-b {
+  .nav-agent-button:focus-visible .nav-agent-spark-b {
     animation: nav-agent-spark-b 1.45s 480ms ease-in-out infinite;
   }
 
@@ -527,8 +522,7 @@ const navMicroAnimationStyles = `
     filter: drop-shadow(0 0 4px currentColor);
   }
   .nav-overview-button:hover .nav-overview-cell,
-  .nav-overview-button:focus-visible .nav-overview-cell,
-  .nav-overview-button.nav-overview-active .nav-overview-cell {
+  .nav-overview-button:focus-visible .nav-overview-cell {
     animation: nav-overview-grid-pulse 820ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
   }
   .nav-overview-cell:nth-child(2) { animation-delay: 70ms !important; }
@@ -593,8 +587,7 @@ const navMicroAnimationStyles = `
     transition: opacity 280ms ease;
   }
   .nav-cost-button:hover .nav-cost-icon::before,
-  .nav-cost-button:focus-visible .nav-cost-icon::before,
-  .nav-cost-button.nav-cost-active .nav-cost-icon::before {
+  .nav-cost-button:focus-visible .nav-cost-icon::before {
     opacity: 0.95;
     border-style: solid;
     border-top-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, white);
@@ -605,8 +598,7 @@ const navMicroAnimationStyles = `
     animation: nav-cost-spin-orbit 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
   .nav-cost-button:hover .nav-cost-icon::after,
-  .nav-cost-button:focus-visible .nav-cost-icon::after,
-  .nav-cost-button.nav-cost-active .nav-cost-icon::after {
+  .nav-cost-button:focus-visible .nav-cost-icon::after {
     opacity: 0.85;
   }
   .nav-cost-button:active .nav-cost-icon::before {
