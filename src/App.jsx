@@ -2816,8 +2816,8 @@ export default function App() {
 
                             {/* Active Popover: Top 3 Active Providers with Single Top Model + Hover Telemetry Animation */}
                             <div 
-                              className={`absolute left-0 bottom-full mb-3 z-[100] pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
-                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-2 pointer-events-none invisible'
+                              className={`absolute left-0 top-full mt-2.5 z-[999] pointer-events-auto transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
+                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none invisible'
                               }`}
                             >
                               <div className="w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left font-mono">
@@ -2876,8 +2876,8 @@ export default function App() {
 
                             {/* Offline Popover: Top 3 Offline Providers with Top Model Preview */}
                             <div 
-                              className={`absolute right-0 bottom-full mb-3 z-[100] pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
-                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-2 pointer-events-none invisible'
+                              className={`absolute right-0 top-full mt-2.5 z-[999] pointer-events-auto transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
+                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none invisible'
                               }`}
                             >
                               <div className="w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left font-mono">
