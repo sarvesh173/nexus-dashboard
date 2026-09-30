@@ -1,6 +1,5 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import visibility
 import psutil
 import subprocess
 import os
@@ -9,9 +8,24 @@ import time
 import yaml
 import requests
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import model_health
-import hermes_gateway
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
+try:
+    import model_health
+except ImportError:
+    model_health = None
+
+try:
+    import hermes_gateway
+except ImportError:
+    hermes_gateway = None
+
+try:
+    import visibility
+except ImportError:
+    visibility = None
 
 _cached_data = None
 _last_poll_time = 0
