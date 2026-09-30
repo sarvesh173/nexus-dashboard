@@ -2458,12 +2458,12 @@ export default function App() {
                                   {/* Provider Header */}
                                   <div className="flex items-start justify-between gap-2.5 min-w-0">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                      <div className={`${isUltraCompact ? 'w-8 h-8 p-1 rounded-lg' : isCompact ? 'w-9 h-9 p-1 rounded-xl' : 'w-12 h-12 p-2 rounded-2xl'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all`}>
+                                      <div className={`${isUltraCompact ? 'w-8 h-8 rounded-lg' : isCompact ? 'w-9 h-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} ${getProviderLogoUrl(prov) ? 'p-0' : 'p-2'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all shadow-inner`}>
                                         {getProviderLogoUrl(prov) ? (
                                           <img
                                             src={getProviderLogoUrl(prov)}
                                             alt={prov.name || prov.id}
-                                            className="w-full h-full object-contain"
+                                            className="w-full h-full object-cover block"
                                             onError={(e) => {
                                               e.currentTarget.style.display = 'none';
                                             }}
