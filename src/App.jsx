@@ -1214,7 +1214,9 @@ const PROVIDER_LOGOS = {
   nvidia: '/provider-logos/nvidia.svg',
   gemini: '/provider-logos/gemini.svg',
   google: '/provider-logos/gemini.svg',
-  deepseek: '/provider-logos/deepseek.svg',
+  'qwen-cloud': '/provider-logos/qwen-cloud.svg',
+  qwen: '/provider-logos/qwen-cloud.svg',
+  alibaba: '/provider-logos/qwen-cloud.svg',
 };
 
 function getProviderLogoUrl(prov) {
