@@ -222,6 +222,308 @@ const MODALITY_ALIASES = {
   stt: 'stt', audio: 'stt', tts: 'tts',
 };
 
+// Navigation-only motion stays local to App.jsx so the icons can feel tactile
+// without adding a global animation dependency or affecting the rest of the UI.
+const navMicroAnimationStyles = `
+  .nav-model-icon,
+  .nav-agent-icon {
+    position: relative;
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 16px;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .nav-model-icon {
+    perspective: 520px;
+    transition: transform 420ms cubic-bezier(0.2, 0.85, 0.25, 1),
+      filter 240ms ease;
+  }
+
+  /* A small raised chassis behind Boxes gives the icon a readable metal block
+     silhouette before the isometric twist even starts. */
+  .nav-model-icon::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: 3px;
+    left: 2px;
+    width: 12px;
+    height: 10px;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 58%, var(--md-sys-color-outline-variant));
+    border-radius: 3px;
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--md-sys-color-on-surface) 30%, var(--md-sys-color-surface-container-highest)),
+      var(--md-sys-color-surface-container-high) 48%,
+      var(--md-sys-color-surface-container)
+    );
+    box-shadow:
+      inset 1px 1px 0 rgb(255 255 255 / 0.24),
+      inset -2px -2px 0 rgb(0 0 0 / 0.2),
+      2px 3px 0 color-mix(in srgb, var(--md-sys-color-primary) 42%, var(--md-sys-color-surface-container)),
+      3px 5px 7px rgb(0 0 0 / 0.24);
+    transform: translate3d(1px, 1px, -4px) rotateX(54deg) rotateZ(-5deg);
+    transform-origin: center;
+    transition: transform 420ms cubic-bezier(0.2, 0.85, 0.25, 1),
+      box-shadow 240ms ease;
+  }
+
+  /* The moving highlight is deliberately brief: each hover feels like a
+     polished object catching light instead of a constantly flashing icon. */
+  .nav-model-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    top: -3px;
+    left: -7px;
+    width: 4px;
+    height: 22px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.7),
+      transparent
+    );
+    transform: translateX(-10px) rotate(25deg);
+  }
+
+  .nav-model-icon > svg,
+  .nav-agent-icon > svg {
+    position: relative;
+    z-index: 2;
+  }
+
+  .nav-model-button:hover .nav-model-icon,
+  .nav-model-button:focus-visible .nav-model-icon {
+    filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.28));
+    transform: perspective(520px) rotateX(18deg) rotateY(-22deg)
+      translate3d(0, -1px, 3px) scale(1.12);
+  }
+
+  .nav-model-button:hover .nav-model-icon::before,
+  .nav-model-button:focus-visible .nav-model-icon::before,
+  .nav-model-button.nav-model-active .nav-model-icon::before {
+    box-shadow:
+      inset 1px 1px 0 rgb(255 255 255 / 0.34),
+      inset -2px -2px 0 rgb(0 0 0 / 0.24),
+      3px 4px 0 color-mix(in srgb, var(--md-sys-color-primary) 54%, var(--md-sys-color-surface-container)),
+      4px 7px 9px rgb(0 0 0 / 0.28);
+  }
+
+  .nav-model-button:hover .nav-model-icon::before,
+  .nav-model-button:focus-visible .nav-model-icon::before {
+    transform: translate3d(2px, 2px, -4px) rotateX(58deg) rotateZ(-5deg);
+  }
+
+  .nav-model-button:hover .nav-model-icon::after,
+  .nav-model-button:focus-visible .nav-model-icon::after,
+  .nav-model-button.nav-model-active .nav-model-icon::after {
+    animation: nav-model-metal-sheen 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .nav-model-button.nav-model-active .nav-model-icon {
+    transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+      translate3d(0, -0.5px, 2px) scale(1.06);
+  }
+
+  .nav-model-button:active .nav-model-icon {
+    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  @keyframes nav-model-metal-sheen {
+    0% { opacity: 0; transform: translateX(-10px) rotate(25deg); }
+    18% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateX(30px) rotate(25deg); }
+  }
+
+  @keyframes nav-model-spring {
+    0% {
+      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+        translate3d(0, -0.5px, 2px) scale(1.06);
+    }
+    22% {
+      transform: perspective(520px) rotateX(-18deg) rotateY(24deg)
+        translate3d(0, 2px, -3px) scale(0.86, 0.88);
+    }
+    52% {
+      transform: perspective(520px) rotateX(22deg) rotateY(-27deg)
+        translate3d(0, -2px, 5px) scale(1.16);
+    }
+    76% {
+      transform: perspective(520px) rotateX(8deg) rotateY(-10deg)
+        translate3d(0, 0.5px, 1px) scale(1.02);
+    }
+    100% {
+      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+        translate3d(0, -0.5px, 2px) scale(1.06);
+    }
+  }
+
+  .nav-agent-icon {
+    --nav-agent-glow: var(--md-sys-color-primary);
+    transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      filter 240ms ease;
+  }
+
+  /* Layered rings make the Bot feel like it is receiving a small neural
+     signal, while the soft aura keeps the effect harmonious with M3 color. */
+  .nav-agent-icon::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 85%, white);
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.52);
+    pointer-events: none;
+  }
+
+  .nav-agent-icon::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--nav-agent-glow) 58%, transparent),
+      transparent 70%
+    );
+    opacity: 0;
+    filter: blur(3px);
+    pointer-events: none;
+  }
+
+  .nav-agent-pulse {
+    position: absolute;
+    inset: 1px;
+    z-index: 1;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 88%, white);
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.68);
+    pointer-events: none;
+  }
+
+  .nav-agent-spark {
+    position: absolute;
+    z-index: 4;
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--nav-agent-glow) 82%, white);
+    box-shadow: 0 0 5px 1px var(--nav-agent-glow);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav-agent-spark::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 78%, white);
+    transform: rotate(45deg);
+  }
+
+  .nav-agent-spark-a { top: -1px; right: 0; }
+  .nav-agent-spark-b { bottom: 0; left: -1px; }
+
+  .nav-agent-button:hover .nav-agent-icon,
+  .nav-agent-button:focus-visible .nav-agent-icon,
+  .nav-agent-button.nav-agent-active .nav-agent-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 64%, transparent));
+    transform: translateY(-0.5px) scale(1.08);
+  }
+
+  .nav-agent-button:hover .nav-agent-icon::before,
+  .nav-agent-button:focus-visible .nav-agent-icon::before,
+  .nav-agent-button.nav-agent-active .nav-agent-icon::before,
+  .nav-agent-button:hover .nav-agent-pulse,
+  .nav-agent-button:focus-visible .nav-agent-pulse,
+  .nav-agent-button.nav-agent-active .nav-agent-pulse {
+    animation: nav-agent-neural-pulse 1.65s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-icon::after,
+  .nav-agent-button:focus-visible .nav-agent-icon::after,
+  .nav-agent-button.nav-agent-active .nav-agent-icon::after {
+    animation: nav-agent-aura 1.65s ease-in-out infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-spark-a,
+  .nav-agent-button:focus-visible .nav-agent-spark-a,
+  .nav-agent-button.nav-agent-active .nav-agent-spark-a {
+    animation: nav-agent-spark-a 1.45s 120ms ease-in-out infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-spark-b,
+  .nav-agent-button:focus-visible .nav-agent-spark-b,
+  .nav-agent-button.nav-agent-active .nav-agent-spark-b {
+    animation: nav-agent-spark-b 1.45s 480ms ease-in-out infinite;
+  }
+
+  .nav-agent-button:active .nav-agent-icon {
+    transform: scale(0.91) rotate(5deg);
+  }
+
+  @keyframes nav-agent-neural-pulse {
+    0% { opacity: 0; transform: scale(0.52); box-shadow: 0 0 0 0 transparent; }
+    28% { opacity: 0.95; }
+    72% { opacity: 0.45; }
+    100% { opacity: 0; transform: scale(1.62); box-shadow: 0 0 0 3px transparent; }
+  }
+
+  @keyframes nav-agent-aura {
+    0%, 100% { opacity: 0.18; transform: scale(0.82); }
+    50% { opacity: 0.72; transform: scale(1.12); }
+  }
+
+  @keyframes nav-agent-spark-a {
+    0%, 100% { opacity: 0; transform: translate(-2px, 2px) scale(0.35) rotate(0deg); }
+    35% { opacity: 1; transform: translate(0, 0) scale(1) rotate(45deg); }
+    70% { opacity: 0.15; transform: translate(2px, -2px) scale(0.6) rotate(90deg); }
+  }
+
+  @keyframes nav-agent-spark-b {
+    0%, 100% { opacity: 0; transform: translate(2px, -1px) scale(0.35) rotate(0deg); }
+    35% { opacity: 0.18; transform: translate(0, 0) scale(0.6) rotate(45deg); }
+    70% { opacity: 1; transform: translate(-2px, 1px) scale(1) rotate(90deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-model-icon,
+    .nav-model-icon::before,
+    .nav-agent-icon {
+      transition: none;
+    }
+
+    .nav-model-button:hover .nav-model-icon,
+    .nav-model-button:focus-visible .nav-model-icon,
+    .nav-model-button.nav-model-active .nav-model-icon,
+    .nav-agent-button:hover .nav-agent-icon,
+    .nav-agent-button:focus-visible .nav-agent-icon,
+    .nav-agent-button.nav-agent-active .nav-agent-icon {
+      transform: none;
+      filter: none;
+    }
+
+    .nav-model-icon::after,
+    .nav-agent-icon::before,
+    .nav-agent-icon::after,
+    .nav-agent-pulse,
+    .nav-agent-spark {
+      animation: none !important;
+      opacity: 0;
+    }
+  }
+`;
+
 function getProviderModalityStats(provider) {
   const stats = Object.fromEntries(PROVIDER_MODALITIES.map(({ id }) => [id, { count: 0, models: [] }]));
   const models = provider.models || EMPTY_MODELS;
@@ -826,6 +1128,11 @@ export default function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const isModelsNavActive = location.pathname.startsWith('/model')
+    || location.pathname.startsWith('/models')
+    || location.pathname.startsWith('/modules');
+  const isAgentsNavActive = location.pathname === '/agents'
+    || location.pathname.startsWith('/agents/');
 
   // The URL is the source of truth. Local state made /modules/<id> deep-links render an empty page and left the address bar on /modules,
   // which broke refresh, back/forward and any shared link.
@@ -1237,7 +1544,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full flex flex-col antialiased transition-colors duration-250 bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] selection:bg-[var(--md-sys-color-primary-container)]">
-      
+      <style>{navMicroAnimationStyles}</style>
+
       {/* M3 Active Polling Indicator Bar */}
       <div className="h-[3px] w-full overflow-hidden bg-transparent">
         {isRefreshing && <div className="m3-linear-indeterminate" />}
@@ -1275,29 +1583,36 @@ export default function App() {
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/model')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
-              location.pathname.startsWith('/model') || location.pathname.startsWith('/models') || location.pathname.startsWith('/modules')
-                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+            aria-current={isModelsNavActive ? 'page' : undefined}
+            className={`nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+              isModelsNavActive
+                ? 'nav-model-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="inline-flex transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110">
-              <Boxes size={14} className={location.pathname.startsWith('/model') ? '' : 'text-[var(--md-sys-color-primary)]'} />
+            <span className="nav-model-icon" aria-hidden="true">
+              <Boxes size={14} className={isModelsNavActive ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Models</span>
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/agents')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
-              location.pathname === '/agents'
-                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+            aria-current={isAgentsNavActive ? 'page' : undefined}
+            className={`nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+              isAgentsNavActive
+                ? 'nav-agent-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="inline-flex transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-110">
-              <Bot size={14} className={location.pathname === '/agents' ? '' : 'text-[var(--md-sys-color-primary)]'} />
+            <span className="nav-agent-icon" aria-hidden="true">
+              <span className="nav-agent-pulse" />
+              <span className="nav-agent-spark nav-agent-spark-a" />
+              <span className="nav-agent-spark nav-agent-spark-b" />
+              <Bot size={14} className={isAgentsNavActive ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Agents</span>
           </button>
