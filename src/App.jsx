@@ -2816,7 +2816,7 @@ export default function App() {
 
                             {/* Apple Cupertino Animated SVG Leader Line & Compact HUD Card */}
                             <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isActiveStatusHovered ? 'visible' : 'invisible'}`}>
-                              {/* Perfectly Linked SVG Leader Dandi */}
+                              {/* Perfectly Linked Dual-Segment SVG Leader Dandi (Jointed Elbow + Extension) */}
                               <svg
                                 className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                 style={{
@@ -2825,16 +2825,17 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -8 14 L -20 14"
+                                  d="M 12 14 L -6 -2 L -28 -2"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
-                                  strokeDasharray="90"
-                                  strokeDashoffset={isActiveStatusHovered ? '0' : '90'}
+                                  strokeDasharray="100"
+                                  strokeDashoffset={isActiveStatusHovered ? '0' : '100'}
                                   style={{
-                                    transition: isActiveStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                    transition: isActiveStatusHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
                                   }}
                                 />
+                                {/* Starting Dot at Pill */}
                                 <circle
                                   cx="12"
                                   cy="14"
@@ -2846,22 +2847,35 @@ export default function App() {
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
+                                {/* Elbow Joint Dot Linking Dandi 1 to Dandi 2 */}
                                 <circle
-                                  cx="-20"
-                                  cy="14"
+                                  cx="-6"
+                                  cy="-2"
                                   r="2"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-20px 14px',
-                                    transition: 'transform 120ms ease-out 80ms',
+                                    transformOrigin: '-6px -2px',
+                                    transition: 'transform 120ms ease-out 60ms',
+                                  }}
+                                />
+                                {/* Terminal Corner Dot linked directly to the HUD Box */}
+                                <circle
+                                  cx="-28"
+                                  cy="-2"
+                                  r="2.5"
+                                  fill="#34d399"
+                                  style={{
+                                    transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
+                                    transformOrigin: '-28px -2px',
+                                    transition: 'transform 120ms ease-out 110ms',
                                   }}
                                 />
                               </svg>
 
                               {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
                               <div
-                                className="absolute right-[calc(100%+20px)] top-1/2 -translate-y-1/2 z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-right"
+                                className="absolute right-[calc(100%+28px)] bottom-[-6px] z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
                                   transform: isActiveStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.95) translateX(8px)',
@@ -2923,7 +2937,7 @@ export default function App() {
 
                             {/* Apple Cupertino Animated SVG Leader Line & Compact HUD Card */}
                             <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isOfflineStatusHovered ? 'visible' : 'invisible'}`}>
-                              {/* Perfectly Linked SVG Leader Dandi */}
+                              {/* Perfectly Linked Dual-Segment SVG Leader Dandi (Jointed Elbow + Extension) */}
                               <svg
                                 className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                 style={{
@@ -2932,16 +2946,17 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 12 14 L -8 14 L -20 14"
+                                  d="M 12 14 L -6 -2 L -28 -2"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
-                                  strokeDasharray="90"
-                                  strokeDashoffset={isOfflineStatusHovered ? '0' : '90'}
+                                  strokeDasharray="100"
+                                  strokeDashoffset={isOfflineStatusHovered ? '0' : '100'}
                                   style={{
-                                    transition: isOfflineStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                    transition: isOfflineStatusHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
                                   }}
                                 />
+                                {/* Starting Dot at Pill */}
                                 <circle
                                   cx="12"
                                   cy="14"
@@ -2953,22 +2968,35 @@ export default function App() {
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
+                                {/* Elbow Joint Dot Linking Dandi 1 to Dandi 2 */}
                                 <circle
-                                  cx="-20"
-                                  cy="14"
+                                  cx="-6"
+                                  cy="-2"
                                   r="2"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-20px 14px',
-                                    transition: 'transform 120ms ease-out 80ms',
+                                    transformOrigin: '-6px -2px',
+                                    transition: 'transform 120ms ease-out 60ms',
+                                  }}
+                                />
+                                {/* Terminal Corner Dot linked directly to the HUD Box */}
+                                <circle
+                                  cx="-28"
+                                  cy="-2"
+                                  r="2.5"
+                                  fill="#f43f5e"
+                                  style={{
+                                    transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
+                                    transformOrigin: '-28px -2px',
+                                    transition: 'transform 120ms ease-out 110ms',
                                   }}
                                 />
                               </svg>
 
                               {/* Apple Compact HUD Glass Card (Shrunk & Dashboard Native) */}
                               <div
-                                className="absolute right-[calc(100%+20px)] top-1/2 -translate-y-1/2 z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-right"
+                                className="absolute right-[calc(100%+28px)] bottom-[-6px] z-[100] w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left pointer-events-auto overflow-hidden origin-bottom-right"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
                                   transform: isOfflineStatusHovered ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.95) translateX(8px)',
