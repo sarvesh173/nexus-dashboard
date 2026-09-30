@@ -1935,62 +1935,85 @@ export default function App() {
   useEffect(() => {
     if (!isMarqueeActive) return;
 
-    let autoScrollInterval = null;
+    let autoScrollRaf = null;
+
+    const performSelectionCheck = (currentX, currentY) => {
+      if (!marqueeContainerRef.current || !marqueeBox) return;
+
+      const pageStartX = marqueeBox.startX + (marqueeBox.startScrollX || 0);
+      const pageStartY = marqueeBox.startY + (marqueeBox.startScrollY || 0);
+      const pageCurrentX = currentX + window.scrollX;
+      const pageCurrentY = currentY + window.scrollY;
+
+      const mPageLeft = Math.min(pageStartX, pageCurrentX);
+      const mPageRight = Math.max(pageStartX, pageCurrentX);
+      const mPageTop = Math.min(pageStartY, pageCurrentY);
+      const mPageBottom = Math.max(pageStartY, pageCurrentY);
+
+      const selectableElements = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
+      const newSelected = new Set();
+
+      selectableElements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        // Element absolute page coordinates
+        const elPageLeft = rect.left + window.scrollX;
+        const elPageRight = rect.right + window.scrollX;
+        const elPageTop = rect.top + window.scrollY;
+        const elPageBottom = rect.bottom + window.scrollY;
+
+        // Select only elements intersecting with marquee selection range
+        const intersects = !(elPageRight < mPageLeft || elPageLeft > mPageRight || elPageBottom < mPageTop || elPageTop > mPageBottom);
+        if (intersects) {
+          newSelected.add(el.getAttribute('data-selectable-id'));
+        }
+      });
+
+      if (!selectedProviderId) {
+        setSelectedProviderIds(prev => new Set([...prev, ...newSelected]));
+      } else {
+        setSelectedModelIds(prev => new Set([...prev, ...newSelected]));
+      }
+    };
 
     const handleMouseMove = (e) => {
       setMarqueeBox(prev => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null);
 
-      // Auto-scroll near viewport boundaries (Windows File Manager spec)
-      const edgeThreshold = 60;
-      const scrollSpeed = 16;
+      // Windows/Linux desktop style dynamic auto-scroll near viewport edges
+      const edgeThreshold = 80;
       const { innerHeight } = window;
+      cancelAnimationFrame(autoScrollRaf);
 
-      clearInterval(autoScrollInterval);
       if (e.clientY > innerHeight - edgeThreshold) {
-        autoScrollInterval = setInterval(() => {
-          window.scrollBy({ top: scrollSpeed, behavior: 'instant' });
-        }, 16);
+        const intensity = Math.min(30, ((e.clientY - (innerHeight - edgeThreshold)) / edgeThreshold) * 28 + 6);
+        const scrollLoop = () => {
+          window.scrollBy(0, intensity);
+          performSelectionCheck(e.clientX, e.clientY);
+          autoScrollRaf = requestAnimationFrame(scrollLoop);
+        };
+        autoScrollRaf = requestAnimationFrame(scrollLoop);
       } else if (e.clientY < edgeThreshold) {
-        autoScrollInterval = setInterval(() => {
-          window.scrollBy({ top: -scrollSpeed, behavior: 'instant' });
-        }, 16);
-      }
-
-      // Check intersect items
-      if (marqueeContainerRef.current) {
-        const selectableElements = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
-        const mLeft = Math.min(marqueeBox?.startX || e.clientX, e.clientX);
-        const mRight = Math.max(marqueeBox?.startX || e.clientX, e.clientX);
-        const mTop = Math.min(marqueeBox?.startY || e.clientY, e.clientY);
-        const mBottom = Math.max(marqueeBox?.startY || e.clientY, e.clientY);
-
-        const newSelected = new Set();
-        selectableElements.forEach(el => {
-          const rect = el.getBoundingClientRect();
-          const intersects = !(rect.right < mLeft || rect.left > mRight || rect.bottom < mTop || rect.top > mBottom);
-          if (intersects) {
-            newSelected.add(el.getAttribute('data-selectable-id'));
-          }
-        });
-
-        if (!selectedProviderId) {
-          setSelectedProviderIds(prev => new Set([...prev, ...newSelected]));
-        } else {
-          setSelectedModelIds(prev => new Set([...prev, ...newSelected]));
-        }
+        const intensity = Math.min(30, ((edgeThreshold - e.clientY) / edgeThreshold) * 28 + 6);
+        const scrollLoop = () => {
+          window.scrollBy(0, -intensity);
+          performSelectionCheck(e.clientX, e.clientY);
+          autoScrollRaf = requestAnimationFrame(scrollLoop);
+        };
+        autoScrollRaf = requestAnimationFrame(scrollLoop);
+      } else {
+        performSelectionCheck(e.clientX, e.clientY);
       }
     };
 
     const handleMouseUp = () => {
-      clearInterval(autoScrollInterval);
+      cancelAnimationFrame(autoScrollRaf);
       setIsMarqueeActive(false);
       setMarqueeBox(null);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
-      clearInterval(autoScrollInterval);
+      cancelAnimationFrame(autoScrollRaf);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -2513,7 +2536,9 @@ export default function App() {
                         startX: e.clientX,
                         startY: e.clientY,
                         currentX: e.clientX,
-                        currentY: e.clientY
+                        currentY: e.clientY,
+                        startScrollX: window.scrollX,
+                        startScrollY: window.scrollY,
                       });
                     }}
                   >
@@ -2612,10 +2637,21 @@ export default function App() {
                             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
                           }}
                         >
-                          {/* Select All Pill with Tactile Mini Checkbox */}
+                          {/* Select All Pill with Tactile Mini Checkbox & Toggle/Double-Tap Unselect */}
                           <button
                             type="button"
-                            onClick={handleSelectAll}
+                            onClick={() => {
+                              const allIds = visibleProviders.map(p => p.id);
+                              if (selectedProviderIds.size === allIds.length && allIds.length > 0) {
+                                handleCancelAll();
+                              } else {
+                                handleSelectAll();
+                              }
+                            }}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelAll();
+                            }}
                             className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1.5 active:scale-95 whitespace-nowrap cursor-pointer"
                             title=""
                           >
@@ -2840,10 +2876,10 @@ export default function App() {
                               handleCancelAll();
                             }
                           }}
-                          className={`group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none min-w-0 ${
+                          className={`group p-4 rounded-2xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-xl ${
                             isProvSelected
-                              ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-md'
-                              : 'border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
+                              ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/10 shadow-[0_12px_32px_rgba(124,58,237,0.25)] scale-[1.01] z-10'
+                              : 'bg-[var(--md-sys-color-surface-container)]/70 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/60 hover:border-[var(--md-sys-color-primary)]/80 hover:shadow-[0_16px_40px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:scale-[1.01] hover:z-20'
                           }`}
                           style={{ minHeight: `${cardHeightPx}px` }}
                         >
