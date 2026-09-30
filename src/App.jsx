@@ -1216,7 +1216,8 @@ const PROVIDER_LOGOS = {
   google: '/provider-logos/gemini.svg',
   'qwen-cloud': '/provider-logos/qwen-cloud.svg',
   qwen: '/provider-logos/qwen-cloud.svg',
-  alibaba: '/provider-logos/qwen-cloud.svg',
+  alibaba: '/provider-logos/alibaba.svg',
+  ali: '/provider-logos/alibaba.svg',
   // Next 4 providers batch:
   wandb: '/provider-logos/wandb.svg',
   'cloudflare-ai': '/provider-logos/cloudflare-ai.svg',
