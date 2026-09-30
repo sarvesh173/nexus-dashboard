@@ -2803,260 +2803,278 @@ export default function App() {
                       <div className="relative z-30 flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
                         {/* Live vs Offline Quick Filter Pill with Top 3 Provider Hovers */}
                         <div className="hidden sm:inline-flex items-center p-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)]/70 backdrop-blur-xl border border-[var(--md-sys-color-outline-variant)]/50 text-[10.5px] font-mono select-none shadow-xs whitespace-nowrap">
-                          {/* Active Providers Pill with Leader-Line HUD Hover */}
-                          <div 
-                            className="relative"
-                            onMouseEnter={() => setIsActiveStatusHovered(true)}
-                            onMouseLeave={() => setIsActiveStatusHovered(false)}
-                          >
-                            <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/15 rounded-full transition-all duration-150">
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                              <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
-                            </span>
+                          {(() => {
+                            // Dynamic leader trajectory driven by Settings preference ('right' | 'left' | 'auto')
+                            const activeGoRight = leaderAlign === 'right' ? true : (leaderAlign === 'left' ? false : false);
+                            // In 'auto' mode: Active goes left (into open gap), Offline goes opposite (or user-tuned direction)
+                            const offlineGoRight = leaderAlign === 'right' ? true : (leaderAlign === 'left' ? false : true);
 
-                            {/* Apple Cupertino Animated SVG Leader Line & Compact HUD Card */}
-                            <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isActiveStatusHovered ? 'visible' : 'invisible'}`}>
-                              {/* Perfectly Linked Dual-Segment SVG Leader Dandi (Jointed Elbow + Extension) */}
-                              <svg
-                                className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
-                                style={{
-                                  opacity: isActiveStatusHovered ? 1 : 0,
-                                  transition: 'opacity 140ms ease-out',
-                                }}
-                              >
-                                <path
-                                  d="M 0 14 L -28 14 L -52 -58"
-                                  fill="none"
-                                  stroke="#34d399"
-                                  strokeWidth="1.5"
-                                  strokeDasharray="100"
-                                  strokeDashoffset={isActiveStatusHovered ? '0' : '100'}
-                                  style={{
-                                    transition: isActiveStatusHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-                                  }}
-                                />
-                                {/* Starting Dot at Pill */}
-                                <circle
-                                  cx="0"
-                                  cy="14"
-                                  r="3"
-                                  fill="#34d399"
-                                  style={{
-                                    transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '0px 14px',
-                                    transition: 'transform 120ms ease-out',
-                                  }}
-                                />
-                                {/* Elbow Joint Dot Linking Dandi 1 to Dandi 2 */}
-                                <circle
-                                  cx="-28"
-                                  cy="14"
-                                  r="2"
-                                  fill="#34d399"
-                                  style={{
-                                    transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-28px 14px',
-                                    transition: 'transform 120ms ease-out 60ms',
-                                  }}
-                                />
-                                {/* Terminal Corner Dot linked directly to the HUD Box */}
-                                <circle
-                                  cx="-52"
-                                  cy="-58"
-                                  r="2.5"
-                                  fill="#34d399"
-                                  style={{
-                                    transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-52px -58px',
-                                    transition: 'transform 120ms ease-out 110ms',
-                                  }}
-                                />
-                              </svg>
+                            const activeDotX = activeGoRight ? 70 : 0;
+                            const activeMidX = activeGoRight ? 98 : -28;
+                            const activeBoxX = activeGoRight ? 122 : -52;
+                            const activeBoxY = -58;
 
-                              {/* 1:1 InteractiveModelPill Coordinate-Locked HUD Card */}
-                              <div
-                                className="absolute pointer-events-auto z-[100]"
-                                style={{
-                                  left: '-52px',
-                                  top: '-58px',
-                                  transform: `translate(-100%, -50%) ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
-                                  opacity: isActiveStatusHovered ? 1 : 0,
-                                  transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
-                                }}
-                              >
-                                <div className="w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
-                                <div className="flex items-center justify-between gap-1.5 pb-1.5 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[10px] font-bold text-emerald-400 tracking-wider uppercase whitespace-nowrap">
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-                                    <span>Top Active Providers</span>
+                            const offlineDotX = offlineGoRight ? 76 : 0;
+                            const offlineMidX = offlineGoRight ? 104 : -28;
+                            const offlineBoxX = offlineGoRight ? 128 : -52;
+                            const offlineBoxY = -58;
+
+                            return (
+                              <>
+                                {/* Active Providers Pill with Leader-Line HUD Hover */}
+                                <div 
+                                  className="relative"
+                                  onMouseEnter={() => setIsActiveStatusHovered(true)}
+                                  onMouseLeave={() => setIsActiveStatusHovered(false)}
+                                >
+                                  <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/15 rounded-full transition-all duration-150">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                                    <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
                                   </span>
-                                  <span className="text-[8.5px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">telemetry</span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {visibleProviders
-                                    .filter(p => p.enabled !== false && p.status !== 'down')
-                                    .slice(0, 3)
-                                    .map((p, idx) => {
-                                      const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
-                                      const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
-                                      return (
-                                        <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
-                                          <div className="flex items-center justify-between text-[10px]">
-                                            <span className="font-semibold truncate max-w-[85px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
-                                              {p.display_name || p.name || p.id}
-                                            </span>
-                                            <span className="text-[8px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0}m</span>
-                                          </div>
-                                          
-                                          <div className="pt-0.5">
-                                            <InteractiveModelPill
-                                              model={topModel}
-                                              telemetry={tel}
-                                              align={leaderAlign === "auto" ? null : leaderAlign}
-                                              onSelect={() => setSelectedProviderId(p.id)}
-                                            />
-                                          </div>
+
+                                  {/* Apple Cupertino Animated SVG Leader Line & 16:9 Landscape Widescreen HUD Card */}
+                                  <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isActiveStatusHovered ? 'visible' : 'invisible'}`}>
+                                    <svg
+                                      className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+                                      style={{
+                                        opacity: isActiveStatusHovered ? 1 : 0,
+                                        transition: 'opacity 140ms ease-out',
+                                      }}
+                                    >
+                                      <path
+                                        d={`M ${activeDotX} 14 L ${activeMidX} 14 L ${activeBoxX} ${activeBoxY}`}
+                                        fill="none"
+                                        stroke="#34d399"
+                                        strokeWidth="1.5"
+                                        strokeDasharray="120"
+                                        strokeDashoffset={isActiveStatusHovered ? '0' : '120'}
+                                        style={{
+                                          transition: isActiveStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                        }}
+                                      />
+                                      {/* Solid Anchor Dot at the pill edge */}
+                                      <circle
+                                        cx={activeDotX}
+                                        cy="14"
+                                        r="3"
+                                        fill="#34d399"
+                                        style={{
+                                          transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
+                                          transformOrigin: `${activeDotX}px 14px`,
+                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                        }}
+                                      />
+                                      {/* Middle Elbow Link Dot */}
+                                      <circle
+                                        cx={activeMidX}
+                                        cy="14"
+                                        r="2"
+                                        fill="#34d399"
+                                        style={{
+                                          transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
+                                          transformOrigin: `${activeMidX}px 14px`,
+                                          transition: 'transform 140ms cubic-bezier(0.16, 1, 0.3, 1) 60ms',
+                                        }}
+                                      />
+                                      {/* Connection Dot locked directly to the Context Box corner */}
+                                      <circle
+                                        cx={activeBoxX}
+                                        cy={activeBoxY}
+                                        r="2.5"
+                                        fill="#34d399"
+                                        style={{
+                                          transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
+                                          transformOrigin: `${activeBoxX}px ${activeBoxY}px`,
+                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1) 100ms',
+                                        }}
+                                      />
+                                    </svg>
+
+                                    {/* 1:1 InteractiveModelPill Coordinate-Locked HUD Card */}
+                                    <div
+                                      className="absolute pointer-events-auto z-[100]"
+                                      style={{
+                                        left: `${activeBoxX}px`,
+                                        top: `${activeBoxY}px`,
+                                        transform: `${activeGoRight ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
+                                        opacity: isActiveStatusHovered ? 1 : 0,
+                                        transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                      }}
+                                    >
+                                      <div className="w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
+                                        <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[9.5px] font-bold text-emerald-400 tracking-wider uppercase whitespace-nowrap">
+                                          <span className="flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                                            <span>Top Active Providers & Models</span>
+                                          </span>
+                                          <span className="text-[8px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">16:9 landscape telemetry</span>
                                         </div>
-                                      );
-                                    })}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        </div>
-
-                          {/* Divider */}
-                          <span className="w-px h-3.5 bg-white/15 my-auto" />
-
-                          {/* Offline Providers Pill with Leader-Line HUD Hover */}
-                          <div 
-                            className="relative"
-                            onMouseEnter={() => setIsOfflineStatusHovered(true)}
-                            onMouseLeave={() => setIsOfflineStatusHovered(false)}
-                          >
-                            <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/15 rounded-full transition-all duration-150">
-                              <span className="w-2 h-2 rounded-full bg-zinc-500" />
-                              <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
-                            </span>
-
-                            {/* Apple Cupertino Animated SVG Leader Line & Compact HUD Card */}
-                            <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isOfflineStatusHovered ? 'visible' : 'invisible'}`}>
-                              {/* Perfectly Linked Dual-Segment SVG Leader Dandi (Jointed Elbow + Extension) */}
-                              <svg
-                                className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
-                                style={{
-                                  opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transition: 'opacity 140ms ease-out',
-                                }}
-                              >
-                                <path
-                                  d="M 0 14 L -28 14 L -52 -58"
-                                  fill="none"
-                                  stroke="#f43f5e"
-                                  strokeWidth="1.5"
-                                  strokeDasharray="100"
-                                  strokeDashoffset={isOfflineStatusHovered ? '0' : '100'}
-                                  style={{
-                                    transition: isOfflineStatusHovered ? 'stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-                                  }}
-                                />
-                                {/* Starting Dot at Pill */}
-                                <circle
-                                  cx="0"
-                                  cy="14"
-                                  r="3"
-                                  fill="#f43f5e"
-                                  style={{
-                                    transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '0px 14px',
-                                    transition: 'transform 120ms ease-out',
-                                  }}
-                                />
-                                {/* Elbow Joint Dot Linking Dandi 1 to Dandi 2 */}
-                                <circle
-                                  cx="-28"
-                                  cy="14"
-                                  r="2"
-                                  fill="#f43f5e"
-                                  style={{
-                                    transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-28px 14px',
-                                    transition: 'transform 120ms ease-out 60ms',
-                                  }}
-                                />
-                                {/* Terminal Corner Dot linked directly to the HUD Box */}
-                                <circle
-                                  cx="-52"
-                                  cy="-58"
-                                  r="2.5"
-                                  fill="#f43f5e"
-                                  style={{
-                                    transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '-52px -58px',
-                                    transition: 'transform 120ms ease-out 110ms',
-                                  }}
-                                />
-                              </svg>
-
-                              {/* 1:1 InteractiveModelPill Coordinate-Locked HUD Card */}
-                              <div
-                                className="absolute pointer-events-auto z-[100]"
-                                style={{
-                                  left: '-52px',
-                                  top: '-58px',
-                                  transform: `translate(-100%, -50%) ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
-                                  opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
-                                }}
-                              >
-                                <div className="w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
-                                <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[9.5px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                    <span>Offline Providers & Models</span>
-                                  </span>
-                                  <span className="text-[8px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">16:9 landscape telemetry</span>
-                                </div>
-                                {(() => {
-                                  const offlineList = visibleProviders.filter(p => p.enabled === false || p.status === 'down');
-                                  if (offlineList.length === 0) {
-                                    return (
-                                      <div className="text-[10px] text-zinc-400 text-center py-2 bg-[var(--md-sys-color-surface-container-high)]/40 rounded-xl border border-[var(--md-sys-color-outline-variant)]/30 font-mono">
-                                        All providers online ✓
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {visibleProviders
+                                            .filter(p => p.enabled !== false && p.status !== 'down')
+                                            .slice(0, 3)
+                                            .map((p, idx) => {
+                                              const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
+                                              const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
+                                              return (
+                                                <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
+                                                  <div className="flex items-center justify-between text-[10px]">
+                                                    <span className="font-semibold truncate max-w-[85px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
+                                                      {p.display_name || p.name || p.id}
+                                                    </span>
+                                                    <span className="text-[8px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0}m</span>
+                                                  </div>
+                                                  
+                                                  <div className="pt-0.5">
+                                                    <InteractiveModelPill
+                                                      model={topModel}
+                                                      telemetry={tel}
+                                                      align={leaderAlign === "auto" ? null : leaderAlign}
+                                                      onSelect={() => setSelectedProviderId(p.id)}
+                                                    />
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                        </div>
                                       </div>
-                                    );
-                                  }
-                                  return (
-                                    <div className="grid grid-cols-3 gap-2">
-                                      {offlineList.slice(0, 3).map((p, idx) => {
-                                        const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
-                                        const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
-                                        return (
-                                          <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-rose-500/30 transition-all duration-150">
-                                            <div className="flex items-center justify-between text-[10px]">
-                                              <span className="font-semibold truncate max-w-[85px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
-                                                {p.display_name || p.name || p.id}
-                                              </span>
-                                              <span className="text-[8px] text-rose-400 font-mono">Offline</span>
-                                            </div>
-                                            <div className="pt-0.5">
-                                              <InteractiveModelPill
-                                                model={topModel}
-                                                telemetry={tel}
-                                                align="right"
-                                                onSelect={() => setSelectedProviderId(p.id)}
-                                             />
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
                                     </div>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          </div>
+                                  </div>
+                                </div>
+
+                                <span className="w-px h-3.5 bg-white/15 my-auto" />
+
+                                {/* Offline Providers Pill with Leader-Line HUD Hover */}
+                                <div 
+                                  className="relative"
+                                  onMouseEnter={() => setIsOfflineStatusHovered(true)}
+                                  onMouseLeave={() => setIsOfflineStatusHovered(false)}
+                                >
+                                  <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/15 rounded-full transition-all duration-150">
+                                    <span className="w-2 h-2 rounded-full bg-zinc-500" />
+                                    <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
+                                  </span>
+
+                                  {/* Apple Cupertino Animated SVG Leader Line & 16:9 Landscape Widescreen HUD Card */}
+                                  <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isOfflineStatusHovered ? 'visible' : 'invisible'}`}>
+                                    <svg
+                                      className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+                                      style={{
+                                        opacity: isOfflineStatusHovered ? 1 : 0,
+                                        transition: 'opacity 140ms ease-out',
+                                      }}
+                                    >
+                                      <path
+                                        d={`M ${offlineDotX} 14 L ${offlineMidX} 14 L ${offlineBoxX} ${offlineBoxY}`}
+                                        fill="none"
+                                        stroke="#f43f5e"
+                                        strokeWidth="1.5"
+                                        strokeDasharray="120"
+                                        strokeDashoffset={isOfflineStatusHovered ? '0' : '120'}
+                                        style={{
+                                          transition: isOfflineStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                        }}
+                                      />
+                                      {/* Solid Anchor Dot at the pill edge */}
+                                      <circle
+                                        cx={offlineDotX}
+                                        cy="14"
+                                        r="3"
+                                        fill="#f43f5e"
+                                        style={{
+                                          transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
+                                          transformOrigin: `${offlineDotX}px 14px`,
+                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                        }}
+                                      />
+                                      {/* Middle Elbow Link Dot */}
+                                      <circle
+                                        cx={offlineMidX}
+                                        cy="14"
+                                        r="2"
+                                        fill="#f43f5e"
+                                        style={{
+                                          transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
+                                          transformOrigin: `${offlineMidX}px 14px`,
+                                          transition: 'transform 140ms cubic-bezier(0.16, 1, 0.3, 1) 60ms',
+                                        }}
+                                      />
+                                      {/* Connection Dot locked directly to the Context Box corner */}
+                                      <circle
+                                        cx={offlineBoxX}
+                                        cy={offlineBoxY}
+                                        r="2.5"
+                                        fill="#f43f5e"
+                                        style={{
+                                          transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
+                                          transformOrigin: `${offlineBoxX}px ${offlineBoxY}px`,
+                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1) 100ms',
+                                        }}
+                                      />
+                                    </svg>
+
+                                    {/* 1:1 InteractiveModelPill Coordinate-Locked HUD Card */}
+                                    <div
+                                      className="absolute pointer-events-auto z-[100]"
+                                      style={{
+                                        left: `${offlineBoxX}px`,
+                                        top: `${offlineBoxY}px`,
+                                        transform: `${offlineGoRight ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
+                                        opacity: isOfflineStatusHovered ? 1 : 0,
+                                        transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                      }}
+                                    >
+                                      <div className="w-[440px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
+                                        <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[9.5px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
+                                          <span className="flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                            <span>Offline Providers & Models</span>
+                                          </span>
+                                          <span className="text-[8px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">16:9 landscape telemetry</span>
+                                        </div>
+                                        {(() => {
+                                          const offlineList = visibleProviders.filter(p => p.enabled === false || p.status === 'down');
+                                          if (offlineList.length === 0) {
+                                            return (
+                                              <div className="text-[10px] text-zinc-400 text-center py-2 bg-[var(--md-sys-color-surface-container-high)]/40 rounded-xl border border-[var(--md-sys-color-outline-variant)]/30 font-mono">
+                                                All providers online ✓
+                                              </div>
+                                            );
+                                          }
+                                          return (
+                                            <div className="grid grid-cols-3 gap-2">
+                                              {offlineList.slice(0, 3).map((p, idx) => {
+                                                const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
+                                                const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
+                                                return (
+                                                  <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-rose-500/30 transition-all duration-150">
+                                                    <div className="flex items-center justify-between text-[10px]">
+                                                      <span className="font-semibold truncate max-w-[85px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
+                                                        {p.display_name || p.name || p.id}
+                                                      </span>
+                                                      <span className="text-[8px] text-rose-400 font-mono">Offline</span>
+                                                    </div>
+                                                    <div className="pt-0.5">
+                                                      <InteractiveModelPill
+                                                        model={topModel}
+                                                        telemetry={tel}
+                                                        align={leaderAlign === "auto" ? null : leaderAlign}
+                                                        onSelect={() => setSelectedProviderId(p.id)}
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                         {/* 1. Apple Logo Theme Segmented Control */}
                         <button
