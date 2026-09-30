@@ -39,7 +39,9 @@ import {
   Bug,
   Download,
   Trash,
-  Compass
+  Compass,
+  Square,
+  Circle
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
@@ -1204,6 +1206,7 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
     () => currentOverride.logo || getProviderLogoUrl(provider, overrides) || '',
   );
   const [rawImageSrc, setRawImageSrc] = useState(null);
+  const [cropShape, setCropShape] = useState('circle'); // 'circle' | 'square'
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -1238,14 +1241,18 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files && e.target.files[0];
+    const file = e.target && e.target.files && e.target.files[0];
+    nexusLog('ACTION', `File selected for cropper: ${file ? file.name : 'none'}`);
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => loadImage(ev.target.result);
+      reader.onload = (ev) => {
+        const result = ev.target && ev.target.result;
+        if (result) {
+          loadImage(result);
+        }
+      };
       reader.readAsDataURL(file);
     }
-    // Clear the input so re-picking the same file still fires onChange.
-    e.target.value = '';
   };
 
   const handleDrop = (e) => {
@@ -1283,8 +1290,20 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
       );
       if (!geo) return;
 
-      ctx.drawImage(img, geo.drawX, geo.drawY, geo.drawW, geo.drawH);
-      setLogoPreview(canvas.toDataURL('image/png'));
+      if (cropShape === 'circle') {
+        const circleCanvas = document.createElement('canvas');
+        circleCanvas.width = CROP_OUTPUT_PX;
+        circleCanvas.height = CROP_OUTPUT_PX;
+        const cCtx = circleCanvas.getContext('2d');
+        cCtx.beginPath();
+        cCtx.arc(CROP_OUTPUT_PX / 2, CROP_OUTPUT_PX / 2, CROP_OUTPUT_PX / 2, 0, Math.PI * 2);
+        cCtx.closePath();
+        cCtx.clip();
+        cCtx.drawImage(canvas, 0, 0);
+        setLogoPreview(circleCanvas.toDataURL('image/png'));
+      } else {
+        setLogoPreview(canvas.toDataURL('image/png'));
+      }
       setRawImageSrc(null);
       nexusLog('ACTION', `Applied crop to "${id}" logo`, { zoom, pan });
     };
@@ -1359,68 +1378,125 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
           <span className="text-xs font-semibold block">Logo & Visual Brand</span>
 
           {rawImageSrc ? (
-            /* WhatsApp-style interactive Cropper Box */
+            /* WhatsApp Profile Style Lightbox Cropper with Circle/Square Mask */
             <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
-              <div className="text-center text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-                Drag to reposition or adjust zoom. The box shows the exact cropped area.
+              <div className="flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface-variant)] px-1">
+                <span>Drag image to position & use slider to zoom.</span>
+                <div className="flex items-center gap-1 bg-[var(--md-sys-color-surface-container)] p-0.5 rounded-lg border border-[var(--md-sys-color-outline-variant)]">
+                  <button
+                    type="button"
+                    onClick={() => setCropShape('circle')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+                      cropShape === 'circle'
+                        ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                        : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                    }`}
+                  >
+                    <Circle size={10} />
+                    <span>Circle</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCropShape('square')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+                      cropShape === 'square'
+                        ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                        : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                    }`}
+                  >
+                    <Square size={10} />
+                    <span>Square</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Viewport Preview Area - sized from the same constant the export uses */}
+              {/* Viewport Canvas Stage with Dark Lightbox Mask */}
               <div
-                className="relative mx-auto rounded-2xl overflow-hidden border-2 border-[var(--md-sys-color-primary)] shadow-inner select-none touch-none"
-                style={{
-                  width: CROP_BOX_PX,
-                  height: CROP_BOX_PX,
-                  cursor: isDragging ? 'grabbing' : 'grab',
-                }}
+                className="relative w-full h-64 rounded-2xl overflow-hidden bg-[#090a0f] border border-[var(--md-sys-color-outline-variant)] select-none touch-none flex items-center justify-center cursor-grab active:cursor-grabbing shadow-inner"
                 onPointerDown={beginPan}
                 onPointerMove={movePan}
                 onPointerUp={endPan}
                 onPointerCancel={endPan}
               >
-                {/* Rule-of-thirds guide overlay */}
-                <div className="absolute inset-0 pointer-events-none z-10 opacity-40">
-                  <div className="absolute inset-0 border border-white/20" />
-                  <div className="absolute left-1/3 top-0 bottom-0 border-l border-white/20" />
-                  <div className="absolute left-2/3 top-0 bottom-0 border-l border-white/20" />
-                  <div className="absolute top-1/3 left-0 right-0 border-t border-white/20" />
-                  <div className="absolute top-2/3 left-0 right-0 border-t border-white/20" />
-                </div>
+                {/* 1. Underlying Scaled & Panned Raw Image */}
                 <img
                   src={rawImageSrc}
                   alt="Raw crop target"
                   draggable={false}
-                  className="pointer-events-none absolute inset-0"
+                  className="pointer-events-none absolute max-w-none transition-transform"
                   style={{
                     transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                     transformOrigin: 'center center',
-                    width: '100%',
-                    height: '100%',
+                    width: '180px',
+                    height: '180px',
                     objectFit: 'contain',
                   }}
                 />
+
+                {/* 2. WhatsApp Cutout Mask:
+                    Center window is 100% crystal clear.
+                    Everything outside has a massive dark/black 78% opacity box-shadow,
+                    visually hiding the excluded parts exactly as in WhatsApp/phone crop! */}
+                <div
+                  className={`pointer-events-none relative z-10 w-44 h-44 border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.78)] transition-all duration-200 ${
+                    cropShape === 'circle' ? 'rounded-full' : 'rounded-2xl'
+                  }`}
+                >
+                  {/* Subtle Grid Guides inside the active visible area */}
+                  <div className={`absolute inset-0 pointer-events-none opacity-30 grid grid-cols-3 grid-rows-3 ${cropShape === 'circle' ? 'rounded-full overflow-hidden' : ''}`}>
+                    <div className="border-r border-b border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-b border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-b border-white" />
+                    <div className="border-r border-white" />
+                    <div className="border-r border-white" />
+                    <div />
+                  </div>
+
+                  {/* Corner Accent Brackets for that authentic high-end crop tool aesthetic */}
+                  {cropShape === 'square' && (
+                    <>
+                      <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[var(--md-sys-color-primary)]" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[var(--md-sys-color-primary)]" />
+                      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-[var(--md-sys-color-primary)]" />
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-[var(--md-sys-color-primary)]" />
+                    </>
+                  )}
+                </div>
+
+                {/* Status indicator floating at bottom of stage */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-2.5 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-[9.5px] font-mono text-zinc-300 pointer-events-none">
+                  Dark area = Excluded (Hidden) • Clear area = Visible
+                </div>
               </div>
 
               {/* Zoom & Pan Sliders */}
-              <div className="flex items-center justify-center gap-3 pt-1">
-                <ZoomOut size={14} className="text-[var(--md-sys-color-on-surface-variant)]" />
-                <input
-                  type="range"
-                  min="0.5"
-                  max="3"
-                  step="0.05"
-                  value={zoom}
-                  aria-label="Logo zoom"
-                  onChange={(e) => setZoom(parseFloat(e.target.value))}
-                  className="w-48 accent-[var(--md-sys-color-primary)] cursor-pointer"
-                />
-                <ZoomIn size={14} className="text-[var(--md-sys-color-on-surface-variant)]" />
-                <span className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] w-9 text-right">
-                  {zoom.toFixed(2)}x
-                </span>
+              <div className="flex items-center justify-between gap-3 pt-1 px-1">
+                <div className="flex items-center gap-2 flex-1">
+                  <ZoomOut size={13} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                  <input
+                    type="range"
+                    min="0.4"
+                    max="3.5"
+                    step="0.05"
+                    value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    className="flex-1 accent-[var(--md-sys-color-primary)] cursor-pointer h-1.5 bg-[var(--md-sys-color-surface-container)] rounded-lg"
+                  />
+                  <ZoomIn size={13} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+                  className="text-[10px] font-mono text-[var(--md-sys-color-primary)] hover:underline cursor-pointer"
+                >
+                  Reset
+                </button>
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-1">
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--md-sys-color-outline-variant)]/60">
                 <button
                   type="button"
                   onClick={() => {
