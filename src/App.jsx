@@ -500,7 +500,7 @@ const navMicroAnimationStyles = `
     70% { opacity: 1; transform: translate(-2px, 1px) scale(1) rotate(90deg); }
   }
 
-  /* Dashboard tiles shift in sequence, as if a live layout is reflowing. */
+  /* Dashboard tiles shift cleanly on hover without showing visual clutter at rest */
   .nav-overview-cell {
     position: absolute;
     z-index: 1;
@@ -508,8 +508,9 @@ const navMicroAnimationStyles = `
     height: 4px;
     border: 1px solid currentColor;
     border-radius: 1px;
-    opacity: 0.42;
+    opacity: 0;
     pointer-events: none;
+    transition: opacity 200ms ease;
   }
   .nav-overview-cell:nth-child(1) { top: 2px; left: 2px; }
   .nav-overview-cell:nth-child(2) { top: 2px; right: 2px; }
@@ -539,16 +540,40 @@ const navMicroAnimationStyles = `
     100% { opacity: 0.55; transform: translate(0, 0) scale(1); }
   }
 
-  /* Clean coin circle that gracefully ripples on hover/click, followed by a gold metallic shine */
+  /* Cost combines a coin rim with the same spring-loaded tactile response as
+     the 3D Models icon, while keeping the dollar mark readable. */
+  .nav-cost-button.nav-cost-active .nav-cost-icon {
+    transform: rotate(8deg) scale(1.05);
+  }
+  .nav-cost-button:hover .nav-cost-icon,
+  .nav-cost-button:focus-visible .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:hover .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:focus-visible .nav-cost-icon {
+    transform: translateY(-1px) rotate(-16deg) scale(1.13);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-cost-button:active .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:active .nav-cost-icon {
+    animation: nav-cost-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+  @keyframes nav-cost-spring {
+    0% { transform: rotate(8deg) scale(1.05); }
+    22% { transform: translateY(2px) rotate(22deg) scale(0.86, 0.9); }
+    52% { transform: translateY(-2px) rotate(-24deg) scale(1.16); }
+    76% { transform: translateY(0.5px) rotate(-4deg) scale(1.02); }
+    100% { transform: rotate(8deg) scale(1.05); }
+  }
+
+  /* Fully dynamic theme-synchronized coin ring and luminous radial shimmer */
   .nav-cost-icon::before {
     content: '';
     position: absolute;
     inset: -3px;
-    border: 1.5px solid currentColor;
+    border: 1.5px solid var(--md-sys-color-primary);
     border-radius: 50%;
-    opacity: 0.25;
-    transform: scale(0.7);
-    transition: transform 380ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 280ms ease, border-color 280ms ease;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: transform 380ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 280ms ease;
   }
   .nav-cost-icon::after {
     content: '';
@@ -556,7 +581,12 @@ const navMicroAnimationStyles = `
     z-index: 3;
     inset: -2px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), transparent 60%);
+    background: radial-gradient(
+      circle at 35% 35%,
+      color-mix(in srgb, var(--md-sys-color-primary) 70%, white) 0%,
+      var(--md-sys-color-primary) 55%,
+      transparent 85%
+    );
     opacity: 0;
     pointer-events: none;
     transform: scale(0.6);
@@ -564,9 +594,10 @@ const navMicroAnimationStyles = `
   .nav-cost-button:hover .nav-cost-icon::before,
   .nav-cost-button:focus-visible .nav-cost-icon::before,
   .nav-cost-button.nav-cost-active .nav-cost-icon::before {
-    opacity: 0.9;
-    transform: scale(1.15);
-    box-shadow: 0 0 8px currentColor;
+    opacity: 1;
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent),
+                inset 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 40%, white);
     animation: nav-cost-circle-bloom 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
   .nav-cost-button:hover .nav-cost-icon::after,
