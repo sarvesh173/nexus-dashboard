@@ -2814,26 +2814,48 @@ export default function App() {
                               <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
                             </span>
 
-                            {/* Active Popover: Top 3 Active Providers */}
+                            {/* Active Popover: Top 3 Active Providers with Single Top Model + Hover Telemetry Animation */}
                             <div 
-                              className={`absolute left-0 bottom-full mb-2 z-[100] pointer-events-none transition-all duration-200 ease-out transform ${
-                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-1 invisible'
+                              className={`absolute left-0 bottom-full mb-3 z-[100] pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
+                                isActiveStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-2 pointer-events-none invisible'
                               }`}
                             >
-                              <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-2 ring-1 ring-white/10 text-left">
-                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9.5px] font-bold text-emerald-400 tracking-wider uppercase">
-                                  <span>Top Active Providers</span>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <div className="w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left font-mono">
+                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[10px] font-bold text-emerald-400 tracking-wider uppercase">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                                    <span>Top Active Providers & Models</span>
+                                  </span>
+                                  <span className="text-[9px] text-zinc-400 font-normal">hover model for telemetry</span>
                                 </div>
                                 {visibleProviders
                                   .filter(p => p.enabled !== false && p.status !== 'down')
                                   .slice(0, 3)
-                                  .map((p, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-[10.5px] text-[var(--md-sys-color-on-surface)] bg-black/25 px-2.5 py-1.5 rounded-xl border border-white/5">
-                                      <span className="font-semibold truncate max-w-[130px]">{p.display_name || p.name || p.id}</span>
-                                      <span className="text-[9.5px] text-emerald-400/90 font-mono font-medium">{(p.models && p.models.length) || 0} models</span>
-                                    </div>
-                                  ))}
+                                  .map((p, idx) => {
+                                    const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
+                                    const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
+                                    return (
+                                      <div key={idx} className="p-2 rounded-2xl bg-black/30 border border-white/5 space-y-1.5 hover:border-emerald-500/30 transition-all duration-200">
+                                        <div className="flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface)]">
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                            <span className="font-bold truncate max-w-[140px] text-white">{p.display_name || p.name || p.id}</span>
+                                          </div>
+                                          <span className="text-[9.5px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0} models</span>
+                                        </div>
+                                        
+                                        {/* Single Top Model Pill with full Interactive Leader Telemetry */}
+                                        <div className="pt-0.5">
+                                          <InteractiveModelPill
+                                            model={topModel}
+                                            telemetry={tel}
+                                            align="right"
+                                            onSelect={() => setSelectedProviderId(p.id)}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             </div>
                           </div>
@@ -2852,32 +2874,52 @@ export default function App() {
                               <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
                             </span>
 
-                            {/* Offline Popover: Top 3 Offline Providers */}
+                            {/* Offline Popover: Top 3 Offline Providers with Top Model Preview */}
                             <div 
-                              className={`absolute right-0 bottom-full mb-2 z-[100] pointer-events-none transition-all duration-200 ease-out transform ${
-                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-1 invisible'
+                              className={`absolute right-0 bottom-full mb-3 z-[100] pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform ${
+                                isOfflineStatusHovered ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 translate-y-2 pointer-events-none invisible'
                               }`}
                             >
-                              <div className="w-60 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_20px_40px_rgba(0,0,0,0.6)] space-y-2 ring-1 ring-white/10 text-left">
-                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9.5px] font-bold text-rose-400 tracking-wider uppercase">
-                                  <span>Offline Providers</span>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              <div className="w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left font-mono">
+                                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[10px] font-bold text-rose-400 tracking-wider uppercase">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                                    <span>Offline Providers & Models</span>
+                                  </span>
+                                  <span className="text-[9px] text-zinc-400 font-normal">hover model for telemetry</span>
                                 </div>
                                 {(() => {
                                   const offlineList = visibleProviders.filter(p => p.enabled === false || p.status === 'down');
                                   if (offlineList.length === 0) {
                                     return (
-                                      <div className="text-[10px] text-zinc-400 text-center py-1">
+                                      <div className="text-[11px] text-zinc-400 text-center py-2 bg-black/20 rounded-2xl border border-white/5">
                                         All providers online ✓
                                       </div>
                                     );
                                   }
-                                  return offlineList.slice(0, 3).map((p, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-[10.5px] text-[var(--md-sys-color-on-surface)] bg-black/25 px-2.5 py-1.5 rounded-xl border border-white/5">
-                                      <span className="font-semibold truncate max-w-[130px]">{p.display_name || p.name || p.id}</span>
-                                      <span className="text-[9.5px] text-rose-400/90 font-mono font-medium">Offline</span>
-                                    </div>
-                                  ));
+                                  return offlineList.slice(0, 3).map((p, idx) => {
+                                    const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
+                                    const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
+                                    return (
+                                      <div key={idx} className="p-2 rounded-2xl bg-black/30 border border-white/5 space-y-1.5 hover:border-rose-500/30 transition-all duration-200">
+                                        <div className="flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface)]">
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                            <span className="font-bold truncate max-w-[140px] text-white">{p.display_name || p.name || p.id}</span>
+                                          </div>
+                                          <span className="text-[9.5px] text-rose-400 font-mono">Offline</span>
+                                        </div>
+                                        <div className="pt-0.5">
+                                          <InteractiveModelPill
+                                            model={topModel}
+                                            telemetry={tel}
+                                            align="right"
+                                            onSelect={() => setSelectedProviderId(p.id)}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  });
                                 })()}
                               </div>
                             </div>
