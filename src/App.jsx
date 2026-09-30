@@ -620,22 +620,27 @@ const navMicroAnimationStyles = `
   }
 
   .nav-settings-button.nav-settings-active .nav-settings-icon {
-    transform: rotate(20deg) scale(1.05);
+    transform: rotate(45deg) scale(1.05);
   }
   .nav-settings-button:hover .nav-settings-icon,
-  .nav-settings-button:focus-visible .nav-settings-icon,
+  .nav-settings-button:focus-visible .nav-settings-icon {
+    transform: rotate(90deg) scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
   .nav-settings-button.nav-settings-active:hover .nav-settings-icon,
   .nav-settings-button.nav-settings-active:focus-visible .nav-settings-icon {
-    transform: rotate(90deg) scale(1.12);
+    transform: rotate(135deg) scale(1.12);
     filter: drop-shadow(0 0 4px currentColor);
   }
   .nav-overview-button:active .nav-overview-icon,
   .nav-overview-button.nav-overview-active:active .nav-overview-icon,
   .nav-cost-button:active .nav-cost-icon,
-  .nav-cost-button.nav-cost-active:active .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:active .nav-cost-icon {
+    transform: translateY(1px) scale(0.92);
+  }
   .nav-settings-button:active .nav-settings-icon,
   .nav-settings-button.nav-settings-active:active .nav-settings-icon {
-    transform: translateY(1px) rotate(-8deg) scale(0.88);
+    transform: rotate(180deg) scale(0.92);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1815,7 +1820,7 @@ export default function App() {
               {activeCurrency.id === 'USD' ? (
                 <DollarSign size={14} className={location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'} />
               ) : (
-                <span className={`text-[12px] font-bold leading-none select-none ${location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'}`}>
+                <span className={`text-[14px] font-bold leading-none select-none tracking-tight flex items-center justify-center ${location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'}`}>
                   {activeCurrency.symbol}
                 </span>
               )}
