@@ -27,24 +27,31 @@ import {
   RotateCcw,
   Bot,
   Shield,
-  Terminal,
-  CpuIcon,
-  Code2,
   ExternalLink,
   ArrowLeft,
   Edit2,
-  Upload,
   ZoomIn,
   ZoomOut,
   ImagePlus,
   FileQuestion,
   Undo2,
-  X
+  X,
+  Bug,
+  Download,
+  Trash,
+  Compass
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
 import { getModelLogo } from './modelLogos';
 import { useParams } from 'react-router-dom';
+import {
+  nexusLog,
+  subscribeNexusLogs,
+  clearNexusLogs,
+  getNexusLogs,
+  NEXUS_LOG_CATEGORIES,
+} from './nexusLog';
 
 // Dedicated Fullscreen Agent Session Component (URL-Driven, Non-Chat, Mouse & Keyboard)
 function AgentSessionView({ navigate }) {
@@ -218,6 +225,10 @@ function getModelTelemetry(modelId, modelName = '') {
 
 const EMPTY_MODELS = Object.freeze([]);
 const TOP_MODELS_LIMIT = 5;
+// Upper bound for "two taps on the same card" — generous enough for a slow
+// double-tap on touch, tight enough that two deliberate clicks in a row on
+// different cards never register as a double-tap on one card.
+const DOUBLE_TAP_MS = 350;
 const PROVIDER_MODALITIES = [
   { id: 'text', label: 'LLM', description: 'LLM models', color: 'text-amber-400' },
   { id: 'vision', label: 'Vision', description: 'Vision models', color: 'text-indigo-400' },
@@ -1154,32 +1165,87 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 
 
 
-{/* Apple Cupertino Provider Customization & WhatsApp-style Image Cropper Modal */}
+// The crop box is square, and its side length is the single source of truth for
+// both the on-screen preview and the exported bitmap. Deriving both from the
+// same geometry is what makes the preview an exact prediction of the result.
+const CROP_BOX_PX = 176;
+const CROP_OUTPUT_PX = 256;
+const PROVIDER_NAME_MAX = 32;
+
+/**
+ * Placement of the image inside the square crop box.
+ * Mirrors the preview's CSS (contain-fit, scale about the centre, then
+ * translate) so whatever the user frames is what actually gets exported.
+ */
+function getCropGeometry(imgW, imgH, zoom, pan, box = CROP_BOX_PX) {
+  if (!imgW || !imgH) return null;
+  const containScale = Math.min(box / imgW, box / imgH);
+  const drawW = imgW * containScale * zoom;
+  const drawH = imgH * containScale * zoom;
+  return {
+    drawW,
+    drawH,
+    drawX: (box - drawW) / 2 + pan.x,
+    drawY: (box - drawH) / 2 + pan.y,
+  };
+}
+
+/* Apple Cupertino Provider Customization & WhatsApp-style Image Cropper Modal */
 function ProviderEditModal({ provider, overrides, onSave, onClose }) {
-  if (!provider) return null;
-  const id = (provider.id || '').toLowerCase();
-  const currentOverride = overrides[id] || {};
-  const [name, setName] = useState(currentOverride.name || provider.display_name || provider.name || provider.id);
-  const [logoPreview, setLogoPreview] = useState(currentOverride.logo || getProviderLogoUrl(provider, overrides) || '');
+  // The parent only mounts this while a provider is being edited, but the
+  // hooks must still run unconditionally: the early `return null` above them
+  // made the hook order change between renders, which React rejects.
+  const id = (provider?.id || '').toLowerCase();
+  const currentOverride = (overrides && overrides[id]) || {};
+  const [name, setName] = useState(
+    () => currentOverride.name || provider?.display_name || provider?.name || provider?.id || '',
+  );
+  const [logoPreview, setLogoPreview] = useState(
+    () => currentOverride.logo || getProviderLogoUrl(provider, overrides) || '',
+  );
   const [rawImageSrc, setRawImageSrc] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
-  const cropCanvasRef = useRef(null);
+
+  // Pointer events cover mouse, pen and touch with a single code path, so
+  // panning works on a trackpad and on a touchscreen alike.
+  const beginPan = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const movePan = (e) => {
+    if (!isDragging) return;
+    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+
+  const endPan = (e) => {
+    if (!isDragging) return;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    setIsDragging(false);
+  };
+
+  const loadImage = (src) => {
+    setRawImageSrc(src);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    nexusLog('ACTION', `Loaded "${id}" logo into the cropper`);
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        setRawImageSrc(ev.target.result);
-        setZoom(1);
-        setPan({ x: 0, y: 0 });
-      };
+      reader.onload = (ev) => loadImage(ev.target.result);
       reader.readAsDataURL(file);
     }
+    // Clear the input so re-picking the same file still fires onChange.
+    e.target.value = '';
   };
 
   const handleDrop = (e) => {
@@ -1188,62 +1254,59 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
     const file = e.dataTransfer.files && e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        setRawImageSrc(ev.target.result);
-        setZoom(1);
-        setPan({ x: 0, y: 0 });
-      };
+      reader.onload = (ev) => loadImage(ev.target.result);
       reader.readAsDataURL(file);
+    } else if (file) {
+      nexusLog('ERROR', `Rejected non-image drop for "${id}"`, { type: file.type });
     }
   };
 
   const handleApplyCrop = () => {
     if (!rawImageSrc) return;
     const canvas = document.createElement('canvas');
-    const size = 256;
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = CROP_OUTPUT_PX;
+    canvas.height = CROP_OUTPUT_PX;
     const ctx = canvas.getContext('2d');
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload = () => {
-      // Background fill
       ctx.fillStyle = '#141416';
-      ctx.fillRect(0, 0, size, size);
+      ctx.fillRect(0, 0, CROP_OUTPUT_PX, CROP_OUTPUT_PX);
 
-      // Apply zoom & pan:
-      const scaledWidth = img.width * zoom;
-      const scaledHeight = img.height * zoom;
-      const minDimension = Math.min(scaledWidth, scaledHeight);
-      const scaleToFit = size / minDimension;
+      // Identical geometry to the preview, resolved at the output resolution.
+      const geo = getCropGeometry(
+        img.naturalWidth || img.width,
+        img.naturalHeight || img.height,
+        zoom,
+        pan,
+        CROP_OUTPUT_PX,
+      );
+      if (!geo) return;
 
-      const drawW = scaledWidth * scaleToFit;
-      const drawH = scaledHeight * scaleToFit;
-      const drawX = (size - drawW) / 2 + pan.x;
-      const drawY = (size - drawH) / 2 + pan.y;
-
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
-      const croppedDataUrl = canvas.toDataURL('image/png');
-      setLogoPreview(croppedDataUrl);
+      ctx.drawImage(img, geo.drawX, geo.drawY, geo.drawW, geo.drawH);
+      setLogoPreview(canvas.toDataURL('image/png'));
       setRawImageSrc(null);
+      nexusLog('ACTION', `Applied crop to "${id}" logo`, { zoom, pan });
     };
+    img.onerror = () => nexusLog('ERROR', `Could not decode cropped image for "${id}"`);
     img.src = rawImageSrc;
   };
 
   const handleSave = () => {
-    onSave(id, {
-      name: name.slice(0, 32).trim(),
-      logo: logoPreview
-    });
+    onSave(id, { name: name.slice(0, PROVIDER_NAME_MAX).trim(), logo: logoPreview });
     onClose();
   };
 
   const handleReset = () => {
-    setName(provider.display_name || provider.name || provider.id);
-    setLogoPreview(provider.logo || PROVIDER_LOGOS[id] || '');
+    setName(provider?.display_name || provider?.name || provider?.id || '');
+    setLogoPreview(getProviderLogoUrl(provider, overrides) || '');
     setRawImageSrc(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    nexusLog('ACTION', `Reset "${id}" identity to catalog defaults`);
   };
+
+  if (!provider) return null;
 
   return (
     <div
@@ -1277,16 +1340,16 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs font-semibold">
             <span>Provider Display Name</span>
-            <span className={`font-mono text-[10px] ${name.length >= 32 ? 'text-rose-400 font-bold' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>
-              {name.length}/32 chars
+            <span className={`font-mono text-[10px] ${name.length >= PROVIDER_NAME_MAX ? 'text-rose-400 font-bold' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>
+              {name.length}/{PROVIDER_NAME_MAX} chars
             </span>
           </div>
           <input
             type="text"
-            maxLength={32}
+            maxLength={PROVIDER_NAME_MAX}
             value={name}
-            onChange={(e) => setName(e.target.value.slice(0, 32))}
-            placeholder="Enter provider name (max 32 chars)"
+            onChange={(e) => setName(e.target.value.slice(0, PROVIDER_NAME_MAX))}
+            placeholder={`Enter provider name (max ${PROVIDER_NAME_MAX} chars)`}
             className="w-full px-3.5 py-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-xs font-medium text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
           />
         </div>
@@ -1299,43 +1362,41 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
             /* WhatsApp-style interactive Cropper Box */
             <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
               <div className="text-center text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
-                Drag to reposition or adjust zoom. Box shows exact cropped display area:
+                Drag to reposition or adjust zoom. The box shows the exact cropped area.
               </div>
 
-              {/* Viewport Preview Area */}
+              {/* Viewport Preview Area - sized from the same constant the export uses */}
               <div
-                className="relative w-40 h-40 mx-auto rounded-2xl overflow-hidden border-2 border-[var(--md-sys-color-primary)] shadow-inner cursor-grab active:cursor-grabbing bg-black/60 select-none"
-                onMouseDown={(e) => {
-                  setIsDragging(true);
-                  setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+                className="relative mx-auto rounded-2xl overflow-hidden border-2 border-[var(--md-sys-color-primary)] shadow-inner select-none touch-none"
+                style={{
+                  width: CROP_BOX_PX,
+                  height: CROP_BOX_PX,
+                  cursor: isDragging ? 'grabbing' : 'grab',
                 }}
-                onMouseMove={(e) => {
-                  if (!isDragging) return;
-                  setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-                }}
-                onMouseUp={() => setIsDragging(false)}
-                onMouseLeave={() => setIsDragging(false)}
+                onPointerDown={beginPan}
+                onPointerMove={movePan}
+                onPointerUp={endPan}
+                onPointerCancel={endPan}
               >
-                {/* Guide overlay */}
-                <div className="absolute inset-0 pointer-events-none border border-white/20 grid grid-cols-3 grid-rows-3 z-10 opacity-40">
-                  <div className="border-r border-b border-white/20" />
-                  <div className="border-r border-b border-white/20" />
-                  <div className="border-b border-white/20" />
-                  <div className="border-r border-b border-white/20" />
-                  <div className="border-r border-b border-white/20" />
-                  <div className="border-b border-white/20" />
+                {/* Rule-of-thirds guide overlay */}
+                <div className="absolute inset-0 pointer-events-none z-10 opacity-40">
+                  <div className="absolute inset-0 border border-white/20" />
+                  <div className="absolute left-1/3 top-0 bottom-0 border-l border-white/20" />
+                  <div className="absolute left-2/3 top-0 bottom-0 border-l border-white/20" />
+                  <div className="absolute top-1/3 left-0 right-0 border-t border-white/20" />
+                  <div className="absolute top-2/3 left-0 right-0 border-t border-white/20" />
                 </div>
                 <img
                   src={rawImageSrc}
                   alt="Raw crop target"
                   draggable={false}
-                  className="max-w-none transition-transform pointer-events-none"
+                  className="pointer-events-none absolute inset-0"
                   style={{
                     transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                     transformOrigin: 'center center',
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
                   }}
                 />
               </div>
@@ -1349,16 +1410,24 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
                   max="3"
                   step="0.05"
                   value={zoom}
+                  aria-label="Logo zoom"
                   onChange={(e) => setZoom(parseFloat(e.target.value))}
                   className="w-48 accent-[var(--md-sys-color-primary)] cursor-pointer"
                 />
                 <ZoomIn size={14} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                <span className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] w-9 text-right">
+                  {zoom.toFixed(2)}x
+                </span>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-1">
+              <div className="flex items-center justify-between gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => setRawImageSrc(null)}
+                  onClick={() => {
+                    setRawImageSrc(null);
+                    setZoom(1);
+                    setPan({ x: 0, y: 0 });
+                  }}
                   className="px-3 py-1.5 rounded-full text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container)] transition-colors"
                 >
                   Cancel
@@ -1366,7 +1435,7 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
                 <button
                   type="button"
                   onClick={handleApplyCrop}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all"
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
                 >
                   Apply Crop
                 </button>
@@ -1438,25 +1507,13 @@ function ProviderEditModal({ provider, overrides, onSave, onClose }) {
   );
 }
 
-// Apple Liquid Glass Action: Replaced View with Edit button and tactile spring checkbox
-function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onToggleSelect, onOpenEdit, isCompact, isUltraCompact }) {
+// Provider cards carry no action buttons at all. The Edit control lives in the
+// /model/<providerId> header instead, so the grid stays a pure browse surface.
+// The only affordance here is the selection checkbox, and only in selection mode.
+function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onToggleSelect }) {
   return (
     <div className="relative flex items-center justify-end select-none">
-      {/* 1. Sleek Edit Button (Replaced View button as requested) */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenEdit(prov);
-        }}
-        title="Edit provider name and custom logo"
-        className={`${isUltraCompact ? 'px-2.5 py-1 text-[10px]' : isCompact ? 'px-3 py-1 text-[11px]' : 'px-3.5 py-1.5 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-all duration-150 pointer-events-auto flex items-center gap-1.5`}
-      >
-        <Edit2 size={isUltraCompact ? 10 : 12} />
-        <span>Edit</span>
-      </button>
-
-      {/* 2. Apple Tactile Checkbox: visible only when isSelectionMode is active with Apple liquid scale */}
+      {/* Apple Tactile Checkbox: visible only when isSelectionMode is active with Apple liquid scale */}
       {isSelectionMode && (
         <button
           type="button"
@@ -1603,9 +1660,104 @@ function getProviderDisplayName(prov, overrides = {}) {
   return prov.display_name || prov.name || prov.id || '';
 }
 
+
+// Provider identity overrides (name + cropped logo) are a local, per-browser
+// customization. They are stored outside the catalog payload so the upstream
+// provider list is never mutated and Reset can always restore the real data.
+const PROVIDER_OVERRIDES_KEY = 'nexus_provider_overrides';
+
+function readProviderOverrides() {
+  try {
+    const raw = localStorage.getItem(PROVIDER_OVERRIDES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+// Global "Page Not Found" canvas for any route the dashboard does not own.
+function RouteNotFound() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-24 px-6 max-w-lg mx-auto space-y-5">
+      <div className="w-20 h-20 rounded-[28px] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-primary)] flex items-center justify-center shadow-inner">
+        <Compass size={38} />
+      </div>
+      <div className="space-y-2">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-[var(--md-sys-color-primary)] font-bold bg-[var(--md-sys-color-primary)]/10 px-3 py-1 rounded-full border border-[var(--md-sys-color-primary)]/20">
+          404 &bull; Page Not Found
+        </span>
+        <h2 className="text-2xl font-bold text-[var(--md-sys-color-on-surface)]">
+          This page does not exist
+        </h2>
+        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+          Nothing in Nexus Core is mounted at{' '}
+          <code className="font-mono px-1.5 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] break-all">
+            {location.pathname}
+          </code>
+          . It may have been renamed, or the link may be mistyped.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+      >
+        <LayoutDashboard size={14} />
+        <span>Return to Overview</span>
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   // Persisted like the card size controls are, otherwise every reload
   // silently snapped the whole UI back to indigo-violet.
+  const [devModeEnabled, setDevModeEnabled] = useState(
+    () => localStorage.getItem('nexus_dev_mode') === 'true',
+  );
+  const [systemLogs, setSystemLogs] = useState(() => getNexusLogs());
+  const [logFilter, setLogFilter] = useState('ALL');
+
+  useEffect(() => {
+    // subscribeNexusLogs hands back its own unsubscribe, so the effect no
+    // longer has to reach into module internals to clean up.
+    const unsubscribe = subscribeNexusLogs((logs) => setSystemLogs([...logs]));
+    return unsubscribe;
+  }, []);
+
+  const toggleDevMode = () => {
+    setDevModeEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem('nexus_dev_mode', String(next));
+      nexusLog('SETTINGS', `Developer Mode toggled to ${next ? 'ENABLED' : 'DISABLED'}`);
+      return next;
+    });
+  };
+
+  const handleExportLogs = () => {
+    nexusLog('ACTION', 'Exporting developer log file', { entries: systemLogs.length });
+    const blob = new Blob([JSON.stringify(systemLogs, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexus-system-telemetry-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleClearLogs = () => {
+    // clearNexusLogs resets the shared buffer and notifies every subscriber,
+    // so the terminal view updates without a second manual setState.
+    clearNexusLogs();
+    nexusLog('SYSTEM', 'Log history cleared by developer');
+  };
+
   const [theme, setTheme] = useState(() =>
     localStorage.getItem('nexus_theme') || 'indigo-violet');
   const [leaderAlign, setLeaderAlign] = useState(() =>
@@ -1615,9 +1767,27 @@ export default function App() {
   const activeCurrency = CURRENCY_OPTIONS.find(c => c.id === currencyCode) || CURRENCY_OPTIONS[0];
   const [palettePickerOpen, setPalettePickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Selected agent for double-click inspection blank interface modal
-  const [activeCliAgent, setActiveCliAgent] = useState(null);
+
+  // Provider identity overrides live here so both the card grid and the
+  // models header read the same customized name/logo.
+  const [providerOverrides, setProviderOverrides] = useState(readProviderOverrides);
+  const [editingProvider, setEditingProvider] = useState(null);
+
+  const saveProviderOverride = (id, patch) => {
+    setProviderOverrides((prev) => {
+      const key = String(id || '').toLowerCase();
+      if (!key) return prev;
+      const next = { ...prev, [key]: { ...(prev[key] || {}), ...patch } };
+      try {
+        localStorage.setItem(PROVIDER_OVERRIDES_KEY, JSON.stringify(next));
+      } catch {
+        nexusLog('ERROR', 'Could not persist provider override (storage unavailable)', { id: key });
+      }
+      return next;
+    });
+    nexusLog('ACTION', `Saved provider override for "${id}"`, patch);
+  };
+
   const [providersList, setProvidersList] = useState([]);
   const [allProviders, setAllProviders] = useState([]);
   const [showRouters, setShowRouters] = useState(false);
@@ -1635,6 +1805,7 @@ export default function App() {
       try {
         localStorage.setItem('nexus_logo_bg_theme', next);
       } catch {}
+      nexusLog('SETTINGS', `Provider logo background set to ${next}`);
       return next;
     });
   };
@@ -1651,12 +1822,17 @@ export default function App() {
   const [isOfflineStatusHovered, setIsOfflineStatusHovered] = useState(false);
   const [isLogoHovered, setIsLogoHovered] = useState(false);
   const currentSelectionCount = selectedProviderIds.size + selectedModelIds.size;
-  const [isMarqueeActive, setIsMarqueeActive] = useState(false);
-  const [marqueeBox, setMarqueeBox] = useState(null); // { startX, startY, currentX, currentY }
   const marqueeContainerRef = useRef(null);
+  // Resolves a provider card's click gesture from tap timing so a double-tap
+  // opens the model list instead of selecting the card. A plain click stays
+  // inert outside selection mode.
+  const lastCardTapRef = useRef({ id: null, time: 0 });
   // Distinguishes 'no providers configured' from 'the backend is down'.
   // Swallowing the fetch error made an outage look like an empty catalog.
   const [catalogError, setCatalogError] = useState(null);
+  // Only once a fetch has finished (either way) can an unknown provider slug
+  // be called a 404 instead of "still loading".
+  const [catalogSettled, setCatalogSettled] = useState(false);
   const [toast, setToast] = useState(null);
 
   
@@ -1667,8 +1843,12 @@ export default function App() {
     if (e) e.stopPropagation();
     setSelectedProviderIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const adding = !next.has(id);
+      if (adding) next.add(id);
+      else next.delete(id);
+      nexusLog('SELECT', `${adding ? 'Selected' : 'Deselected'} provider "${id}"`, {
+        total: next.size,
+      });
       return next;
     });
   };
@@ -1677,8 +1857,12 @@ export default function App() {
     if (e) e.stopPropagation();
     setSelectedModelIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const adding = !next.has(id);
+      if (adding) next.add(id);
+      else next.delete(id);
+      nexusLog('SELECT', `${adding ? 'Selected' : 'Deselected'} model "${id}"`, {
+        total: next.size,
+      });
       return next;
     });
   };
@@ -1697,6 +1881,7 @@ export default function App() {
     setSelectedProviderIds(new Set());
     setSelectedModelIds(new Set());
     setIsSelectActive(false);
+    nexusLog('SELECT', 'Selection mode exited');
   };
 
   const handleHideSelected = async () => {
@@ -1823,20 +2008,52 @@ export default function App() {
   const isCostNavActive = location.pathname === '/cost';
   const isSettingsNavActive = location.pathname === '/settings';
 
-  // Deep link sync: if URL is /model/:providerId, sync selectedProviderId
-  useEffect(() => {
-    const parts = location.pathname.split('/');
-    if ((parts[1] === 'model' || parts[1] === 'models' || parts[1] === 'modules') && parts[2]) {
-      setSelectedProviderId(parts[2]);
-    }
-  }, [location.pathname]);
-
-  // The URL is the source of truth. Local state made /modules/<id> deep-links render an empty page and left the address bar on /modules,
-  // which broke refresh, back/forward and any shared link.
+  // The URL is the source of truth. Local state made /modules/<id> deep-links
+  // render an empty page and left the address bar on /modules, which broke
+  // refresh, back/forward and any shared link.
   const selectedProviderId =
     (location.pathname.match(/^\/(?:model|models|modules)\/([^/]+)/) || [])[1] || null;
   const setSelectedProviderId = (id) =>
     navigate(id ? '/model/' + id : '/model');
+
+  // Single audit trail for every route change, including the ones that land on
+  // a 404. This is what makes a bad deep link obvious in the live terminal.
+  const isKnownRoute =
+    isOverviewNavActive || isModelsNavActive || isAgentsNavActive
+    || isCostNavActive || isSettingsNavActive;
+  useEffect(() => {
+    nexusLog(
+      isKnownRoute ? 'NAVIGATION' : 'ERROR',
+      isKnownRoute
+        ? `Route changed to ${location.pathname}`
+        : `No route matches ${location.pathname} - rendering 404`,
+      { known: isKnownRoute },
+    );
+  }, [location.pathname, isKnownRoute]);
+
+  // Catch render-time failures (the undefined identifiers this dashboard
+  // shipped with, an unexpected model shape, ...) instead of showing a blank
+  // page with no explanation.
+  useEffect(() => {
+    const onError = (event) => {
+      nexusLog('ERROR', 'Uncaught runtime error', {
+        message: event?.message || String(event?.reason || 'unknown'),
+        source: event?.filename || null,
+        line: event?.lineno ?? null,
+      });
+    };
+    const onRejection = (event) => {
+      nexusLog('ERROR', 'Unhandled promise rejection', {
+        reason: String(event?.reason ?? 'unknown'),
+      });
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, []);
   const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'text' | 'vision' | 'image-gen' | 'video' | 'tts' | 'stt' | 'embedding' | 'decision'
   // Card size — corner-resizable with persistence
   const [cardWidthPx, setCardWidthPx] = useState(() => {
@@ -1879,14 +2096,16 @@ export default function App() {
           navigate('/agents');
         }
         // A provider detail view is just as modal-feeling: ESC should step
-        // back out of it rather than doing nothing.
-        else if (location.pathname.startsWith('/modules/')) {
+        // back out of it rather than doing nothing. All three history prefixes
+        // have to be covered, not just /modules, or ESC does nothing at all
+        // on the /model/<id> route this app actually links to.
+        else if (/^\/(model|models|modules)\/[^/]+/.test(location.pathname)) {
           setSelectedProviderId(null);
         }
       }
       // Alt+1 to Alt+5 navigation
       if (e.altKey && e.key === '1') navigate('/');
-      if (e.altKey && e.key === '2') navigate('/modules');
+      if (e.altKey && e.key === '2') navigate('/model');
       if (e.altKey && e.key === '3') navigate('/agents');
       if (e.altKey && e.key === '4') navigate('/settings');
       if (e.altKey && e.key === '5') navigate('/cost');
@@ -2147,15 +2366,17 @@ export default function App() {
     ]);
 
     let live = [];
+    let failed = false;
     if (liveRes && liveRes.ok) {
       live = await liveRes.json();
       setCatalogError(null);
     } else {
-      setCatalogError(
-        liveRes === null
-          ? 'Cannot reach the Nexus backend (5174).'
-          : 'The provider catalog returned HTTP '
-            + liveRes.status + '.');
+      failed = true;
+      const message = liveRes === null
+        ? 'Cannot reach the Nexus backend (5174).'
+        : 'The provider catalog returned HTTP ' + liveRes.status + '.';
+      setCatalogError(message);
+      nexusLog('ERROR', 'Provider catalog fetch failed', { reason: message });
     }
 
     // Overlay the rich NVIDIA detail (categories, per-model metadata)
@@ -2193,6 +2414,13 @@ export default function App() {
       setProvidersList(live);
       setAllProviders(live);
     }
+    // A settled flag (success *or* failure) is what lets the /model/<slug>
+    // view tell "still loading" apart from "this provider does not exist".
+    setCatalogSettled(true);
+    nexusLog('SYSTEM', 'Provider catalog refreshed', {
+      providers: live.length,
+      failed,
+    });
   };
 
   useEffect(() => {
@@ -2227,18 +2455,32 @@ export default function App() {
 
   // Filter models — guard against undefined model arrays (null safety)
   const currentProvider = providersList.find(p => p.id === selectedProviderId) || null;
-  const isProviderNotFound = Boolean(selectedProviderId && providersList.length > 0 && !currentProvider);
+  // An unknown slug is only a 404 once the catalog has actually answered.
+  // Before that the view shows a loading state - and, crucially, never falls
+  // back to a different provider's models.
+  const isProviderNotFound = Boolean(selectedProviderId && catalogSettled && !currentProvider);
+  const isProviderLoading = Boolean(selectedProviderId && !catalogSettled && !catalogError);
   const activeModelsPool = currentProvider ? (currentProvider.models || []) : [];
 
   const filteredModels = activeModelsPool.filter((m) => {
     const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
     const matchesTier = modelTierFilter === 'all' || m.tier === modelTierFilter;
-    const matchesSearch = searchQuery === '' || 
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      m.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.provider.toLowerCase().includes(searchQuery.toLowerCase());
+    // name/id/provider are optional in the gateway payload; assuming they
+    // exist here used to throw and blank the whole models view.
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = q === ''
+      || (m.name || '').toLowerCase().includes(q)
+      || (m.id || '').toLowerCase().includes(q)
+      || (m.provider || '').toLowerCase().includes(q);
     return matchesCategory && matchesTier && matchesSearch;
   });
+
+  useEffect(() => {
+    if (!isProviderNotFound) return;
+    nexusLog('ERROR', `Provider "${selectedProviderId}" not found in catalog`, {
+      knownProviders: providersList.length,
+    });
+  }, [isProviderNotFound, selectedProviderId, providersList.length]);
 
   
   // Optimized 60FPS Desktop File Manager Marquee Drag & Dual-Direction Auto-Scroll
@@ -2303,43 +2545,58 @@ export default function App() {
       marqueeOverlayEl.style.display = 'block';
     };
 
+    // A marquee is a *drag*, never a click. Arming selection mode straight
+    // from mousedown meant every single click on a card switched the grid into
+    // selection mode, which is exactly what made a double-tap select a card
+    // instead of opening it. The drag only becomes real once the pointer has
+    // travelled past DRAG_THRESHOLD.
+    const DRAG_THRESHOLD = 6;
+    let pendingStart = null;
+
+    const beginDrag = (e) => {
+      isDragging = true;
+      startPoint = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        pageStartX: e.clientX + window.scrollX,
+        pageStartY: e.clientY + window.scrollY,
+      };
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+
+      // Cache absolute item coordinates ONCE at drag start to eliminate reflow during scroll
+      if (marqueeContainerRef.current) {
+        const selectableEls = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
+        cachedCardRects = Array.from(selectableEls).map(el => {
+          const r = el.getBoundingClientRect();
+          return {
+            id: el.getAttribute('data-selectable-id'),
+            pageLeft: r.left + window.scrollX,
+            pageRight: r.right + window.scrollX,
+            pageTop: r.top + window.scrollY,
+            pageBottom: r.bottom + window.scrollY,
+          };
+        });
+      }
+
+      // Fast zero-re-render overlay element
+      marqueeOverlayEl = document.getElementById('nexus-live-marquee-overlay');
+      if (marqueeOverlayEl) {
+        updateMarqueeVisual(e.clientX, e.clientY);
+      }
+      setIsSelectActive(true);
+    };
+
     const onMouseDown = (e) => {
+      if (e.button !== 0) return;
       if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('.cursor-nwse-resize')) {
         return;
       }
-      
+
       if (isSelectionMode || e.target.closest('[data-marquee-trigger="true"]')) {
-        isDragging = true;
-        startPoint = {
-          clientX: e.clientX,
-          clientY: e.clientY,
-          pageStartX: e.clientX + window.scrollX,
-          pageStartY: e.clientY + window.scrollY,
-        };
-        lastClientX = e.clientX;
-        lastClientY = e.clientY;
-
-        // Cache absolute item coordinates ONCE at drag start to eliminate reflow during scroll
-        if (marqueeContainerRef.current) {
-          const selectableEls = marqueeContainerRef.current.querySelectorAll('[data-selectable-id]');
-          cachedCardRects = Array.from(selectableEls).map(el => {
-            const r = el.getBoundingClientRect();
-            return {
-              id: el.getAttribute('data-selectable-id'),
-              pageLeft: r.left + window.scrollX,
-              pageRight: r.right + window.scrollX,
-              pageTop: r.top + window.scrollY,
-              pageBottom: r.bottom + window.scrollY,
-            };
-          });
-        }
-
-        // Fast zero-re-render overlay element
-        marqueeOverlayEl = document.getElementById('nexus-live-marquee-overlay');
-        if (marqueeOverlayEl) {
-          updateMarqueeVisual(e.clientX, e.clientY);
-        }
-        setIsSelectActive(true);
+        pendingStart = { clientX: e.clientX, clientY: e.clientY };
+      } else {
+        pendingStart = null;
       }
     };
 
@@ -2371,7 +2628,18 @@ export default function App() {
     };
 
     const onMouseMove = (e) => {
-      if (!isDragging || !startPoint) return;
+      if (!isDragging) {
+        // Promote the pending press into a real marquee drag, but only after
+        // the pointer has actually moved. A click (including the first half of
+        // a double-tap) never crosses the threshold, so it cannot arm
+        // selection mode.
+        if (!pendingStart) return;
+        const dx = e.clientX - pendingStart.clientX;
+        const dy = e.clientY - pendingStart.clientY;
+        if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+        beginDrag(e);
+      }
+      if (!startPoint) return;
       lastClientX = e.clientX;
       lastClientY = e.clientY;
 
@@ -2391,6 +2659,7 @@ export default function App() {
     };
 
     const onMouseUp = () => {
+      pendingStart = null;
       if (isDragging) {
         isDragging = false;
         startPoint = null;
@@ -2590,7 +2859,7 @@ export default function App() {
           {toast}
         </div>
       )}
-      <main className="flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start">
+      <main className={`flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start ${isKnownRoute ? '' : 'hidden'}`}>
 
         {/* ── Breadcrumb / Location Bar ── */}
         {(() => {
@@ -2614,7 +2883,7 @@ export default function App() {
           } else if (path === '/settings') {
             crumbs.push({ label: 'Settings' });
           } else {
-            crumbs.push({ label: path });
+            crumbs.push({ label: 'Not Found', onClick: () => navigate('/') });
           }
           return (
             <nav className="flex items-center gap-1.5 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] mb-4 px-0.5 select-none">
@@ -2638,7 +2907,11 @@ export default function App() {
         })()}
 
         {/* PERSISTENT KEEP-ALIVE MULTI-CANVAS (0ms Sub-millisecond Instant Transitions) */}
-        
+
+        {/* Unknown top-level route: render the 404 and nothing else, so a
+            mistyped URL can never leave a blank page behind. */}
+        {!isKnownRoute && <RouteNotFound />}
+
         {/* VIEW 1: OVERVIEW CANVAS */}
         <div className={`w-full space-y-6 ${isOverviewNavActive ? 'block' : 'hidden'}`}>
                 
@@ -2888,11 +3161,29 @@ export default function App() {
                         <Boxes size={22} className="text-[var(--md-sys-color-primary)]" />
                         {selectedProviderId ? (isProviderNotFound ? 'Provider Not Found (404)' : `${getProviderDisplayName(currentProvider, providerOverrides)} Models`) : 'Model Providers & Infrastructure'}
                       </h1>
+                      {selectedProviderId && !isProviderNotFound && currentProvider && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
+                            setEditingProvider(currentProvider);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer ml-1"
+                          title="Edit provider name and logo"
+                        >
+                          <Edit2 size={13} />
+                          <span>Edit Provider</span>
+                        </button>
+                      )}
                     </div>
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
-                      {selectedProviderId 
-                        ? `Live models synced directly from ${currentProvider?.display_name || 'Provider'} via Hermes Agent integration.`
-                        : 'Click a provider to inspect live models, token rate limits, and modality allocations.'}
+                      {selectedProviderId
+                        ? isProviderLoading
+                          ? 'Resolving provider from the live catalog…'
+                          : isProviderNotFound
+                            ? `No provider with the id "${selectedProviderId}" exists in the active catalog.`
+                            : `Live models synced directly from ${getProviderDisplayName(currentProvider, providerOverrides) || 'Provider'} via Hermes Agent integration.`
+                        : 'Double-click a provider to open its model list, or use Select for multi-select.'}
                     </p>
                   </div>
 
@@ -2918,20 +3209,11 @@ export default function App() {
                 {!selectedProviderId && (
                   <div
                     className="space-y-4 select-none"
-                    onMouseDown={(e) => {
-                      // Only trigger marquee drag if clicking on background/empty space, not buttons or inputs
-                      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
-                      setIsMarqueeActive(true);
-                      setIsSelectActive(true);
-                      setMarqueeBox({
-                        startX: e.clientX,
-                        startY: e.clientY,
-                        currentX: e.clientX,
-                        currentY: e.clientY,
-                        startScrollX: window.scrollX,
-                        startScrollY: window.scrollY,
-                      });
-                    }}
+                    // Marquee selection is armed from the window-level drag
+                    // effect once the pointer actually moves. Handing mousedown
+                    // to a drag threshold here is what kept a plain click on a
+                    // card from flipping the whole grid into selection mode.
+                    data-marquee-trigger="true"
                   >
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between flex-wrap gap-2">
                       {/* Apple Liquid Glass Selection Action Bar */}
@@ -3541,19 +3823,35 @@ export default function App() {
                         <div
                           key={prov.id}
                           data-selectable-id={prov.id}
-                          onClick={() => {
-                            if (!isResizingCard) {
-                              if (isSelectionMode) {
-                                toggleSelectProvider(prov.id);
-                              } else {
-                                setSelectedProviderId(prov.id);
-                              }
-                            }
-                          }}
-                          onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            if (isSelectionMode) {
+                          onClick={(e) => {
+                            if (isResizingCard) return;
+                            // A single click on a card must never select it
+                            // unless selection mode is already active, and it
+                            // must not consume a double-tap. Both taps of a
+                            // double-tap land here, so the gesture is resolved
+                            // from the tap timing rather than by also wiring
+                            // onDoubleClick (which would fire after the
+                            // selection toggles had already happened).
+                            const now = performance.now();
+                            const last = lastCardTapRef.current;
+                            const isDoubleTap =
+                              last.id === prov.id && now - last.time < DOUBLE_TAP_MS;
+
+                            if (isDoubleTap) {
+                              lastCardTapRef.current = { id: null, time: 0 };
+                              // Leave selection mode first: the two taps above
+                              // may have flipped the checkbox, and navigating
+                              // with stale selections would select the next
+                              // provider's models by surprise.
                               handleCancelAll();
+                              nexusLog('NAVIGATION', `Double-tapped provider "${prov.id}" - opening its model list`);
+                              setSelectedProviderId(prov.id);
+                              return;
+                            }
+
+                            lastCardTapRef.current = { id: prov.id, time: now };
+                            if (isSelectionMode) {
+                              toggleSelectProvider(prov.id);
                             }
                           }}
                           className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
@@ -3619,6 +3917,10 @@ export default function App() {
                           {(() => {
                             const isUltraCompact = (cardHeightPx < 210) || (cardWidthPx > 0 && cardWidthPx < 280);
                             const totalCount = prov.id === 'nvidia' ? (prov.total_models || 0) : (prov.model_count || 0);
+                            // Read through the override map so an edit made on
+                            // the models page is reflected back on the grid.
+                            const cardLogo = getProviderLogoUrl(prov, providerOverrides);
+                            const cardName = getProviderDisplayName(prov, providerOverrides);
 
                             return (
                               <>
@@ -3626,17 +3928,17 @@ export default function App() {
                                   {/* Provider Header */}
                                   <div className="flex items-start justify-between gap-2.5 min-w-0">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                      <div className={`${isUltraCompact ? 'w-8 h-8 rounded-lg' : isCompact ? 'w-9 h-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} ${getProviderLogoUrl(prov) ? 'p-2' : 'p-2'} ${
-                                        getProviderLogoUrl(prov)
+                                      <div className={`${isUltraCompact ? 'w-8 h-8 rounded-lg' : isCompact ? 'w-9 h-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} p-2 ${
+                                        cardLogo
                                           ? (logoBgTheme === 'light'
                                               ? 'bg-[#FFFFFF] border-zinc-200 shadow-sm'
                                               : 'bg-[#121316] border-zinc-800 shadow-inner')
                                           : 'bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)]'
                                       } border flex items-center justify-center shrink-0 overflow-hidden transition-all shadow-inner`}>
-                                        {getProviderLogoUrl(prov) ? (
+                                        {cardLogo ? (
                                           <img
-                                            src={getProviderLogoUrl(prov)}
-                                            alt={prov.name || prov.id}
+                                            src={cardLogo}
+                                            alt={cardName}
                                             className="w-full h-full object-cover block"
                                             onError={(e) => {
                                               e.currentTarget.style.display = 'none';
@@ -3651,10 +3953,10 @@ export default function App() {
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 min-w-0">
                                           <h3
-                                            title={prov.display_name || prov.name || prov.id}
+                                            title={cardName}
                                             className={`font-bold ${isUltraCompact ? 'text-xs' : isCompact ? 'text-sm' : 'text-base'} leading-tight text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors truncate min-w-0 flex-1`}
                                           >
-                                            {prov.display_name || prov.name || prov.id}
+                                            {cardName}
                                           </h3>
                                           {prov.kind === 'router' && !isUltraCompact && (
                                             <span className="text-[9px] px-1.5 py-0.5 rounded-full font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold uppercase shrink-0">
@@ -3683,7 +3985,12 @@ export default function App() {
                                       </div>
                                     </div>
 
-<ProviderHeaderAction prov={prov} isSelected={isProvSelected} isSelectionMode={isSelectionMode} onToggleSelect={toggleSelectProvider} onSelect={setSelectedProviderId} isCompact={isCompact} isUltraCompact={isUltraCompact} />
+                                    <ProviderHeaderAction
+                                      prov={prov}
+                                      isSelected={isProvSelected}
+                                      isSelectionMode={isSelectionMode}
+                                      onToggleSelect={toggleSelectProvider}
+                                    />
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
@@ -3774,26 +4081,41 @@ export default function App() {
                     </div>
                     <div className="space-y-1.5">
                       <span className="text-[11px] font-mono uppercase tracking-widest text-rose-400 font-bold bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
-                        404 • Not Found
+                        404 • Provider Not Found
                       </span>
-                      <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)] pt-2">
-                        Provider "{selectedProviderId}" Not Found
+                      <h2 className="text-xl font-bold text-[var(--md-sys-color-on-surface)] pt-2 break-all px-2">
+                        Provider &quot;{selectedProviderId}&quot; not found
                       </h2>
                       <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-sm mx-auto">
-                        The requested provider endpoint does not exist in your active infrastructure catalog.
+                        {catalogError
+                          ? 'The provider catalog is currently unreachable, so this id cannot be resolved.'
+                          : 'No provider with this id exists in the active infrastructure catalog.'}
                       </p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setSelectedProviderId(null)}
                       className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
                       <ArrowLeft size={14} />
-                      <span>Back to All Providers</span>
+                      <span>All Providers</span>
                     </button>
                   </div>
                 )}
 
-                {selectedProviderId && !isProviderNotFound && (
+                {/* Resolving the slug. Deliberately does not fall back to any
+                    other provider: showing a wrong catalog here would be worse
+                    than showing nothing while the request is in flight. */}
+                {selectedProviderId && isProviderLoading && (
+                  <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+                    <RefreshCw size={22} className="animate-spin text-[var(--md-sys-color-primary)]" />
+                    <p className="text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                      Looking up provider &quot;{selectedProviderId}&quot;…
+                    </p>
+                  </div>
+                )}
+
+                {selectedProviderId && !isProviderNotFound && !isProviderLoading && (
                   <div className="space-y-4">
                     {/* Modality Picker Tabs WITH Corner Paid/Free Tier Filter */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--md-sys-color-outline-variant)] pb-1">
@@ -4215,14 +4537,16 @@ export default function App() {
                         type="button"
                         onClick={async () => {
                           if (hiddenCount === 0) return;
-                          try {
-                            for (const id of Array.from(hiddenIds)) {
-                              await toggleVisibility(id);
-                            }
-                            setToast({ type: 'success', text: 'Restored all items from Trash!' });
-                          } catch (e) {
-                            setToast({ type: 'error', text: 'Failed to restore some items' });
+                          // hiddenItems carries the kind with each id, which is
+                          // what the visibility endpoint needs to restore both
+                          // providers and models.
+                          for (const item of hiddenItems) {
+                            await setVisibility(item.kind, item.id, false);
                           }
+                          setToast(`Restored ${hiddenItems.length} item(s) from Trash`);
+                          nexusLog('ACTION', 'Restored all trashed items', {
+                            count: hiddenItems.length,
+                          });
                         }}
                         disabled={hiddenCount === 0}
                         className={`px-3.5 py-1.5 rounded-full text-xs font-mono font-medium transition-all flex items-center gap-1.5 border active:scale-95 ${
@@ -4243,12 +4567,21 @@ export default function App() {
                           const confirmed = window.confirm(`Permanently delete ${hiddenCount} item(s) from trash? This cannot be undone.`);
                           if (!confirmed) return;
                           try {
-                            // Call permanent purge endpoint or clear local hidden references
-                            setToast({ type: 'success', text: `Permanently deleted ${hiddenCount} item(s) from system.` });
-                            // Clear hidden set
-                            setHiddenIds(new Set());
-                          } catch (e) {
-                            setToast({ type: 'error', text: 'Error executing permanent purge' });
+                            const res = await fetch('/api/visibility/reset', { method: 'POST' });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            setHidden({ providers: [], models: [] });
+                            // The catalog decides which cards render, so the
+                            // local clear alone would leave the grid filtered.
+                            await fetchProviders();
+                            setToast(`Permanently deleted ${hiddenCount} item(s)`);
+                            nexusLog('ACTION', 'Emptied the trash permanently', {
+                              count: hiddenCount,
+                            });
+                          } catch (err) {
+                            setToast(`Purge failed: ${err.message}`);
+                            nexusLog('ERROR', 'Permanent purge failed', {
+                              reason: err.message,
+                            });
                           }
                         }}
                         disabled={hiddenCount === 0}
@@ -4272,17 +4605,17 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
-                        {Array.from(hiddenIds).map(id => (
+                        {hiddenItems.map((item) => (
                           <div
-                            key={id}
-                            className="p-2.5 rounded-xl border border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-between text-xs font-mono"
+                            key={item.kind + ':' + item.id}
+                            className="p-2.5 rounded-xl border border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-between gap-1 text-xs font-mono"
                           >
-                            <span className="truncate">{id}</span>
+                            <span className="truncate" title={item.id}>{item.label}</span>
                             <button
                               type="button"
-                              onClick={() => toggleVisibility(id)}
-                              className="text-[10px] text-[var(--md-sys-color-primary)] hover:underline ml-1 cursor-pointer"
-                              title="Restore this item"
+                              onClick={() => setVisibility(item.kind, item.id, false)}
+                              className="text-[10px] text-[var(--md-sys-color-primary)] hover:underline ml-1 cursor-pointer shrink-0"
+                              title={`Restore ${item.label}`}
                             >
                               Restore
                             </button>
@@ -4317,8 +4650,129 @@ export default function App() {
                     ))}
                   </div>
                 </div>
+
+                {/* Developer Mode & Live System Log Engine */}
+                <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] flex items-center justify-center border border-[var(--md-sys-color-primary)]/30 shadow-xs">
+                        <Bug size={20} />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
+                          <span>Developer Mode & Live Telemetry Logger</span>
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${devModeEnabled ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
+                            {devModeEnabled ? 'ACTIVE' : 'OFF'}
+                          </span>
+                        </h2>
+                        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                          Real-time system telemetry and action event logs for debugging and system diagnostics.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleDevMode}
+                        className={`px-4 py-2 rounded-full text-xs font-semibold font-mono transition-all duration-150 cursor-pointer active:scale-95 border ${
+                          devModeEnabled
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-xs'
+                            : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
+                        }`}
+                      >
+                        {devModeEnabled ? '✓ Developer Mode Enabled' : 'Enable Developer Mode'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Live Log Terminal View */}
+                  {devModeEnabled && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 font-mono">
+                          {['ALL', 'ACTION', 'NAVIGATION', 'SELECT', 'SETTINGS', 'SYSTEM'].map(cat => (
+                            <button
+                              key={cat}
+                              onClick={() => setLogFilter(cat)}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer border ${
+                                logFilter === cat
+                                  ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)]'
+                                  : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)]'
+                              }`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleClearLogs}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash size={12} />
+                            <span>Clear</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleExportLogs}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs"
+                          >
+                            <Download size={12} />
+                            <span>Export JSON</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Terminal Viewport */}
+                      <div className="rounded-2xl bg-[#0d0e12] border border-white/10 p-3.5 font-mono text-[11px] max-h-72 overflow-y-auto space-y-1.5 shadow-inner">
+                        {systemLogs.filter(l => logFilter === 'ALL' || l.type === logFilter).length === 0 ? (
+                          <div className="text-center py-6 text-zinc-500">
+                            No logs captured yet in category [{logFilter}]. Click around or navigate to capture events.
+                          </div>
+                        ) : (
+                          systemLogs
+                            .filter(l => logFilter === 'ALL' || l.type === logFilter)
+                            .map((log) => (
+                              <div key={log.id} className="flex items-start gap-2.5 py-0.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                                <span className="text-zinc-500 shrink-0 text-[10px]">{log.time}</span>
+                                <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold shrink-0 ${
+                                  log.type === 'ACTION' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                  log.type === 'NAVIGATION' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
+                                  log.type === 'SELECT' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                  log.type === 'SETTINGS' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' :
+                                  'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                }`}>
+                                  {log.type}
+                                </span>
+                                <span className="text-zinc-200 flex-1 break-words">{log.message}</span>
+                                {log.details && (
+                                  <span className="text-[10px] text-zinc-500 truncate max-w-xs">{log.details}</span>
+                                )}
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
         </div>
       </main>
+
+      {/* Provider identity editor. Mounted last so it stacks above every
+          canvas, and rendered only for a real provider so the modal's state
+          always matches the provider being edited. */}
+      {editingProvider && (
+        <ProviderEditModal
+          key={editingProvider.id}
+          provider={editingProvider}
+          overrides={providerOverrides}
+          onSave={saveProviderOverride}
+          onClose={() => setEditingProvider(null)}
+        />
+      )}
     </div>
   );
 }
