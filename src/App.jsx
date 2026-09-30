@@ -791,13 +791,8 @@ const InteractiveStatValue = React.memo(function InteractiveStatValue({
       const maxX = window.innerWidth - 12 - rect.left - (goRight ? tooltipWidth : 0);
       diagX = Math.max(minX, Math.min(diagX, maxX));
     }
-    // Dynamic vertical collision avoidance:
-    // If rect.top < 240 (card in the top row under the toolbar), open DOWNWARDS so it NEVER collides with or hides behind the toolbar!
-    const openDownwards = rect.top < 240;
-    const dotY = openDownwards ? rect.height : 1;
-    const vertY = openDownwards ? rect.height + 28 : -31;
-    const diagY = openDownwards ? rect.height + 65 : -71;
-    setCoords({ dotX, dotY, vertX, vertY, diagX, diagY, isRightAligned: goRight, openDownwards });
+    // Signature Upward Animated Badi Dandi restored!
+    setCoords({ dotX, dotY: 1, vertX: dotX, vertY: -31, diagX, diagY: -71, isRightAligned: goRight });
   };
 
   return (
@@ -838,7 +833,7 @@ const InteractiveStatValue = React.memo(function InteractiveStatValue({
 
       {/* Mount the SVG, blurred surface, and model rows only for an open stat. */}
       {coords && (
-        <div className="absolute inset-0 pointer-events-none z-[150] overflow-visible">
+        <div className="absolute inset-0 pointer-events-none z-[999] overflow-visible">
           <svg aria-hidden="true" className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
             <path
               d={`M ${coords.dotX} ${coords.dotY} L ${coords.vertX} ${coords.vertY} L ${coords.diagX} ${coords.diagY}`}
@@ -852,13 +847,11 @@ const InteractiveStatValue = React.memo(function InteractiveStatValue({
           <div
             id={tooltipId}
             role="tooltip"
-            className={`absolute pointer-events-none px-3.5 py-2 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)] z-[200] ${topModels ? 'w-60 max-w-[calc(100vw-24px)]' : ''}`}
+            className={`absolute pointer-events-none px-3.5 py-2 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)] z-[999] ${topModels ? 'w-60 max-w-[calc(100vw-24px)]' : ''}`}
             style={{
               left: coords.diagX,
               top: coords.diagY,
-              transform: coords.openDownwards
-                ? (coords.isRightAligned ? 'translate(0, 0%)' : 'translate(-100%, 0%)')
-                : (coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)'),
+              transform: coords.isRightAligned ? 'translate(0, -100%)' : 'translate(-100%, -100%)',
             }}
           >
             <div className="flex items-center gap-2 whitespace-nowrap">
@@ -3263,7 +3256,7 @@ export default function App() {
                           className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
                               ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-[1.015] z-10'
-                              : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:-translate-y-1.5 hover:scale-[1.012] hover:z-40 focus-within:z-40'
+                              : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:-translate-y-1.5 hover:scale-[1.012] hover:z-[99] focus-within:z-[99]'
                           }`}
                           style={{ minHeight: `${cardHeightPx}px` }}
                         >
