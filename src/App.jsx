@@ -2859,7 +2859,7 @@ export default function App() {
           {toast}
         </div>
       )}
-      <main className={`flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start ${isKnownRoute ? '' : 'hidden'}`}>
+      <main className="flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start">
 
         {/* ── Breadcrumb / Location Bar ── */}
         {(() => {
@@ -2870,7 +2870,8 @@ export default function App() {
           } else if (path.startsWith('/model') || path.startsWith('/models') || path.startsWith('/modules')) {
             crumbs.push({ label: 'Models', onClick: () => { setSelectedProviderId(null); navigate('/model'); } });
             if (selectedProviderId) {
-              crumbs.push({ label: selectedProviderId });
+              const displayName = currentProvider ? getProviderDisplayName(currentProvider, providerOverrides) : selectedProviderId;
+              crumbs.push({ label: displayName });
             }
           } else if (path.startsWith('/agents/')) {
             const aid = path.replace('/agents/', '');
@@ -3825,34 +3826,19 @@ export default function App() {
                           data-selectable-id={prov.id}
                           onClick={(e) => {
                             if (isResizingCard) return;
-                            // A single click on a card must never select it
-                            // unless selection mode is already active, and it
-                            // must not consume a double-tap. Both taps of a
-                            // double-tap land here, so the gesture is resolved
-                            // from the tap timing rather than by also wiring
-                            // onDoubleClick (which would fire after the
-                            // selection toggles had already happened).
-                            const now = performance.now();
-                            const last = lastCardTapRef.current;
-                            const isDoubleTap =
-                              last.id === prov.id && now - last.time < DOUBLE_TAP_MS;
-
-                            if (isDoubleTap) {
-                              lastCardTapRef.current = { id: null, time: 0 };
-                              // Leave selection mode first: the two taps above
-                              // may have flipped the checkbox, and navigating
-                              // with stale selections would select the next
-                              // provider's models by surprise.
-                              handleCancelAll();
-                              nexusLog('NAVIGATION', `Double-tapped provider "${prov.id}" - opening its model list`);
-                              setSelectedProviderId(prov.id);
+                            // If selection mode is active, clicking toggles selection:
+                            if (isSelectionMode) {
+                              toggleSelectProvider(prov.id, e);
                               return;
                             }
-
-                            lastCardTapRef.current = { id: prov.id, time: now };
-                            if (isSelectionMode) {
-                              toggleSelectProvider(prov.id);
-                            }
+                            // In normal mode: single tap OR double tap opens the provider models view directly!
+                            nexusLog('NAVIGATION', `Clicked provider card "${prov.id}" -> opening models view`);
+                            setSelectedProviderId(prov.id);
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            nexusLog('NAVIGATION', `Double-clicked provider card "${prov.id}" -> opening models view`);
+                            setSelectedProviderId(prov.id);
                           }}
                           className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
