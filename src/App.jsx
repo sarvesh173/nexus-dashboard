@@ -1230,6 +1230,27 @@ const PROVIDER_LOGOS = {
   typhoon: '/provider-logos/typhoon.svg',
   groq: '/provider-logos/groq.svg',
   morph: '/provider-logos/morph.svg',
+  // Batch 16 Verified Brand Providers:
+  'jina-ai': '/provider-logos/jina-ai.svg',
+  jina: '/provider-logos/jina-ai.svg',
+  searchapi: '/provider-logos/searchapi.svg',
+  'searchapi-search': '/provider-logos/searchapi.svg',
+  zai: '/provider-logos/zai.svg',
+  inception: '/provider-logos/inception.svg',
+  kilocode: '/provider-logos/kilocode.svg',
+  kc: '/provider-logos/kilocode.svg',
+  openrouter: '/provider-logos/openrouter.svg',
+  anthropic: '/provider-logos/anthropic.svg',
+  arcee: '/provider-logos/arcee.svg',
+  deepseek: '/provider-logos/deepseek.svg',
+  'openai-codex': '/provider-logos/openai-codex.svg',
+  openai: '/provider-logos/openai-codex.svg',
+  huggingface: '/provider-logos/huggingface.svg',
+  replicate: '/provider-logos/replicate.svg',
+  mistral: '/provider-logos/mistral.svg',
+  meta: '/provider-logos/meta.svg',
+  minimax: '/provider-logos/minimax.svg',
+  together: '/provider-logos/together.svg',
 };
 
 function getProviderLogoUrl(prov) {
