@@ -225,8 +225,11 @@ const MODALITY_ALIASES = {
 // Navigation-only motion stays local to App.jsx so the icons can feel tactile
 // without adding a global animation dependency or affecting the rest of the UI.
 const navMicroAnimationStyles = `
+  .nav-overview-icon,
   .nav-model-icon,
-  .nav-agent-icon {
+  .nav-agent-icon,
+  .nav-cost-icon,
+  .nav-settings-icon {
     position: relative;
     display: inline-flex;
     width: 16px;
@@ -238,10 +241,30 @@ const navMicroAnimationStyles = `
     will-change: transform;
   }
 
+  /* Every tab shares the same tactile spring and focus treatment. The
+     illustration inside each icon gives the tab its own identity. */
+  .nav-tab {
+    transition: background-color 240ms ease, color 240ms ease,
+      box-shadow 360ms cubic-bezier(0.22, 1.4, 0.36, 1),
+      transform 360ms cubic-bezier(0.22, 1.4, 0.36, 1);
+  }
+
+  .nav-tab:active { transform: scale(0.96); }
+  .nav-tab:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+  }
+
+  .nav-overview-icon,
+  .nav-cost-icon,
+  .nav-settings-icon,
+  .nav-model-icon,
+  .nav-agent-icon {
+    transition: transform 460ms cubic-bezier(0.22, 1.4, 0.36, 1), filter 240ms ease;
+  }
+
   .nav-model-icon {
     perspective: 520px;
-    transition: transform 420ms cubic-bezier(0.2, 0.85, 0.25, 1),
-      filter 240ms ease;
   }
 
   /* A small raised chassis behind Boxes gives the icon a readable metal block
@@ -294,14 +317,19 @@ const navMicroAnimationStyles = `
     transform: translateX(-10px) rotate(25deg);
   }
 
+  .nav-overview-icon > svg,
   .nav-model-icon > svg,
-  .nav-agent-icon > svg {
+  .nav-agent-icon > svg,
+  .nav-cost-icon > svg,
+  .nav-settings-icon > svg {
     position: relative;
     z-index: 2;
   }
 
   .nav-model-button:hover .nav-model-icon,
-  .nav-model-button:focus-visible .nav-model-icon {
+  .nav-model-button:focus-visible .nav-model-icon,
+  .nav-model-button.nav-model-active:hover .nav-model-icon,
+  .nav-model-button.nav-model-active:focus-visible .nav-model-icon {
     filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.28));
     transform: perspective(520px) rotateX(18deg) rotateY(-22deg)
       translate3d(0, -1px, 3px) scale(1.12);
@@ -333,7 +361,8 @@ const navMicroAnimationStyles = `
       translate3d(0, -0.5px, 2px) scale(1.06);
   }
 
-  .nav-model-button:active .nav-model-icon {
+  .nav-model-button:active .nav-model-icon,
+  .nav-model-button.nav-model-active:active .nav-model-icon {
     animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
   }
 
@@ -368,8 +397,6 @@ const navMicroAnimationStyles = `
 
   .nav-agent-icon {
     --nav-agent-glow: var(--md-sys-color-primary);
-    transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      filter 240ms ease;
   }
 
   /* Layered rings make the Bot feel like it is receiving a small neural
@@ -468,7 +495,8 @@ const navMicroAnimationStyles = `
     animation: nav-agent-spark-b 1.45s 480ms ease-in-out infinite;
   }
 
-  .nav-agent-button:active .nav-agent-icon {
+  .nav-agent-button:active .nav-agent-icon,
+  .nav-agent-button.nav-agent-active:active .nav-agent-icon {
     transform: scale(0.91) rotate(5deg);
   }
 
@@ -496,13 +524,139 @@ const navMicroAnimationStyles = `
     70% { opacity: 1; transform: translate(-2px, 1px) scale(1) rotate(90deg); }
   }
 
+  /* Dashboard tiles shift in sequence, as if a live layout is reflowing. */
+  .nav-overview-cell {
+    position: absolute;
+    z-index: 1;
+    width: 4px;
+    height: 4px;
+    border: 1px solid currentColor;
+    border-radius: 1px;
+    opacity: 0.42;
+    pointer-events: none;
+  }
+  .nav-overview-cell:nth-child(1) { top: 2px; left: 2px; }
+  .nav-overview-cell:nth-child(2) { top: 2px; right: 2px; }
+  .nav-overview-cell:nth-child(3) { bottom: 2px; left: 2px; }
+  .nav-overview-cell:nth-child(4) { bottom: 2px; right: 2px; }
+  .nav-overview-button.nav-overview-active .nav-overview-icon {
+    transform: translateY(-0.5px) scale(1.05);
+  }
+  .nav-overview-button:hover .nav-overview-icon,
+  .nav-overview-button:focus-visible .nav-overview-icon,
+  .nav-overview-button.nav-overview-active:hover .nav-overview-icon,
+  .nav-overview-button.nav-overview-active:focus-visible .nav-overview-icon {
+    transform: translateY(-1px) scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-overview-button:hover .nav-overview-cell,
+  .nav-overview-button:focus-visible .nav-overview-cell,
+  .nav-overview-button.nav-overview-active .nav-overview-cell {
+    animation: nav-overview-grid-pulse 820ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
+  }
+  .nav-overview-cell:nth-child(2) { animation-delay: 70ms !important; }
+  .nav-overview-cell:nth-child(3) { animation-delay: 140ms !important; }
+  .nav-overview-cell:nth-child(4) { animation-delay: 210ms !important; }
+  @keyframes nav-overview-grid-pulse {
+    0% { opacity: 0.3; transform: translate(0, 0) scale(0.7); }
+    45% { opacity: 0.95; transform: translate(1px, -1px) scale(1.35); }
+    100% { opacity: 0.55; transform: translate(0, 0) scale(1); }
+  }
+
+  /* A fine coin rim and a passing glint keep the dollar mark legible. */
+  .nav-cost-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    opacity: 0.38;
+    transform: scale(0.88);
+    transition: transform 460ms cubic-bezier(0.22, 1.4, 0.36, 1), opacity 240ms ease;
+  }
+  .nav-cost-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    top: -3px;
+    left: -3px;
+    width: 4px;
+    height: 4px;
+    background: currentColor;
+    box-shadow: 0 0 5px currentColor;
+    transform: rotate(45deg) scale(0);
+    opacity: 0;
+  }
+  .nav-cost-button.nav-cost-active .nav-cost-icon {
+    transform: rotate(8deg) scale(1.05);
+  }
+  .nav-cost-button:hover .nav-cost-icon,
+  .nav-cost-button:focus-visible .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:hover .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:focus-visible .nav-cost-icon {
+    transform: translateY(-1px) rotate(-16deg) scale(1.13);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-cost-button:hover .nav-cost-icon::before,
+  .nav-cost-button:focus-visible .nav-cost-icon::before,
+  .nav-cost-button.nav-cost-active .nav-cost-icon::before {
+    opacity: 0.75;
+    transform: scale(1.04);
+  }
+  .nav-cost-button:hover .nav-cost-icon::after,
+  .nav-cost-button:focus-visible .nav-cost-icon::after,
+  .nav-cost-button.nav-cost-active .nav-cost-icon::after {
+    animation: nav-cost-shimmer 800ms ease-out both;
+  }
+  @keyframes nav-cost-shimmer {
+    0%, 15% { opacity: 0; transform: translate(0, 2px) rotate(45deg) scale(0); }
+    48% { opacity: 0.95; transform: translate(8px, 0) rotate(100deg) scale(1); }
+    100% { opacity: 0; transform: translate(16px, 5px) rotate(160deg) scale(0); }
+  }
+
+  .nav-settings-button.nav-settings-active .nav-settings-icon {
+    transform: rotate(20deg) scale(1.05);
+  }
+  .nav-settings-button:hover .nav-settings-icon,
+  .nav-settings-button:focus-visible .nav-settings-icon,
+  .nav-settings-button.nav-settings-active:hover .nav-settings-icon,
+  .nav-settings-button.nav-settings-active:focus-visible .nav-settings-icon {
+    transform: rotate(90deg) scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-overview-button:active .nav-overview-icon,
+  .nav-overview-button.nav-overview-active:active .nav-overview-icon,
+  .nav-cost-button:active .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:active .nav-cost-icon,
+  .nav-settings-button:active .nav-settings-icon,
+  .nav-settings-button.nav-settings-active:active .nav-settings-icon {
+    transform: translateY(1px) rotate(-8deg) scale(0.88);
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .nav-tab,
+    .nav-overview-icon,
+    .nav-overview-cell,
     .nav-model-icon,
     .nav-model-icon::before,
-    .nav-agent-icon {
-      transition: none;
+    .nav-agent-icon,
+    .nav-cost-icon,
+    .nav-cost-icon::before,
+    .nav-settings-icon {
+      transition: none !important;
+      animation: none !important;
     }
+    .nav-tab:active { transform: none; }
 
+    .nav-overview-button:hover .nav-overview-icon,
+    .nav-overview-button:focus-visible .nav-overview-icon,
+    .nav-overview-button.nav-overview-active .nav-overview-icon,
+    .nav-cost-button:hover .nav-cost-icon,
+    .nav-cost-button:focus-visible .nav-cost-icon,
+    .nav-cost-button.nav-cost-active .nav-cost-icon,
+    .nav-settings-button:hover .nav-settings-icon,
+    .nav-settings-button:focus-visible .nav-settings-icon,
+    .nav-settings-button.nav-settings-active .nav-settings-icon,
     .nav-model-button:hover .nav-model-icon,
     .nav-model-button:focus-visible .nav-model-icon,
     .nav-model-button.nav-model-active .nav-model-icon,
@@ -514,6 +668,7 @@ const navMicroAnimationStyles = `
     }
 
     .nav-model-icon::after,
+    .nav-cost-icon::after,
     .nav-agent-icon::before,
     .nav-agent-icon::after,
     .nav-agent-pulse,
@@ -1566,17 +1721,21 @@ export default function App() {
         </div>
 
         {/* Center: M3 Segmented Navigation with Metallic UI Fluid Micro-Interactions */}
-        <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto nav-scroll-fade">
+        <nav aria-label="Primary navigation" className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto nav-scroll-fade">
           
           <button
+            type="button"
             onClick={() => navigate('/')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            aria-current={location.pathname === '/' ? 'page' : undefined}
+            className={`nav-tab nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
               location.pathname === '/'
-                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                ? 'nav-overview-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="inline-flex transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5">
+            <span className="nav-overview-icon" aria-hidden="true">
+              <span className="nav-overview-cell" /><span className="nav-overview-cell" />
+              <span className="nav-overview-cell" /><span className="nav-overview-cell" />
               <LayoutDashboard size={14} className={location.pathname === '/' ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Overview</span>
@@ -1586,7 +1745,7 @@ export default function App() {
             type="button"
             onClick={() => navigate('/model')}
             aria-current={isModelsNavActive ? 'page' : undefined}
-            className={`nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            className={`nav-tab nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
               isModelsNavActive
                 ? 'nav-model-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
@@ -1602,7 +1761,7 @@ export default function App() {
             type="button"
             onClick={() => navigate('/agents')}
             aria-current={isAgentsNavActive ? 'page' : undefined}
-            className={`nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            className={`nav-tab nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
               isAgentsNavActive
                 ? 'nav-agent-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
@@ -1618,28 +1777,32 @@ export default function App() {
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/cost')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            aria-current={location.pathname === '/cost' ? 'page' : undefined}
+            className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
               location.pathname === '/cost'
-                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                ? 'nav-cost-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="inline-flex transition-transform duration-300 group-hover:scale-125 group-hover:rotate-6">
+            <span className="nav-cost-icon" aria-hidden="true">
               <DollarSign size={14} className={location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Cost</span>
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/settings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            aria-current={location.pathname === '/settings' ? 'page' : undefined}
+            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
               location.pathname === '/settings'
-                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                ? 'nav-settings-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="inline-flex transition-transform duration-500 group-hover:rotate-90 group-hover:scale-110">
+            <span className="nav-settings-icon" aria-hidden="true">
               <Settings size={14} className={location.pathname === '/settings' ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Settings</span>
@@ -2151,12 +2314,12 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Flexible responsive grid — auto-fills row space with zero empty voids */}
+                    {/* Responsive tracks never exceed the available width, even with a saved card size. */}
                     {!catalogError && visibleProviders.length > 0 && (
                     <div
-                      className="grid gap-3.5 items-stretch justify-start w-full"
+                      className="grid gap-3.5 items-stretch w-full min-w-0"
                       style={{
-                        gridTemplateColumns: `repeat(auto-fill, minmax(${cardWidthPx > 0 ? `${cardWidthPx}px` : '320px'}, 1fr))`,
+                        gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${cardWidthPx > 0 ? cardWidthPx : 320}px), 1fr))`,
                       }}
                     >
                       {visibleProviders.map((prov) => {
@@ -2169,11 +2332,8 @@ export default function App() {
                               setSelectedProviderId(prov.id);
                             }
                           }}
-                          className="group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none"
-                          style={{
-                            width: '100%',
-                            height: 'auto',
-                          }}
+                          className="group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none min-w-0"
+                          style={{ minHeight: `${cardHeightPx}px` }}
                         >
                           {/* Corner resize handle with LIVE GLOBAL synchronization across all cards */}
                           <div
@@ -2313,7 +2473,7 @@ export default function App() {
                                     </div>
                                   )}
 
-                                  {/* 2. Models Preview positioned NICHE (Snug 2-Column Grid Fills 100% Width & Height!) */}
+                                  {/* Model previews flow to one column when a resized card is narrow. */}
                                   {cardHeightPx >= 230 && (
                                     <div className="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex flex-col justify-start">
                                       <div className="flex items-center justify-between mb-1.5">
@@ -2326,7 +2486,7 @@ export default function App() {
                                           onSelect={() => setSelectedProviderId(prov.id)}
                                         />
                                       </div>
-                                      <div className="grid grid-cols-2 gap-1.5 w-full">
+                                      <div className="grid gap-1.5 w-full min-w-0" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 112px), 1fr))' }}>
                                         {((prov.models && prov.models.length > 0) ? prov.models : [
                                           { id: 'default-model', name: `${prov.name || prov.id} Standard` }
                                         ]).slice(0, cardHeightPx > 340 ? 8 : 6).map((m, idx) => {
