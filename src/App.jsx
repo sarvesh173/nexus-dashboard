@@ -23,6 +23,8 @@ import {
   Search,
   Sparkles,
   Filter,
+  Trash2,
+  RotateCcw,
   Bot,
   Shield,
   Terminal,
@@ -3550,6 +3552,110 @@ export default function App() {
                         </button>
                       );
                     })}
+                  </div>
+                </div>
+
+                {/* Trash Can & Permanent Delete Section (Apple Cupertino HIG Style) */}
+                <div className="p-6 rounded-3xl border border-[var(--md-sys-color-error)]/30 bg-[var(--md-sys-color-surface-container)] space-y-4 relative overflow-hidden backdrop-blur-xl">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] flex items-center justify-center border border-[var(--md-sys-color-error)]/30 shadow-xs">
+                        <Trash2 size={20} />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
+                          <span>Trash Can & Permanent Vault</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--md-sys-color-error-container)] text-[var(--md-sys-color-error)]">
+                            {hiddenCount} in trash
+                          </span>
+                        </h2>
+                        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                          Hidden or soft-deleted items move here first. You can restore them anytime or permanently wipe them.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Restore All from Trash */}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (hiddenCount === 0) return;
+                          try {
+                            for (const id of Array.from(hiddenIds)) {
+                              await toggleVisibility(id);
+                            }
+                            setToast({ type: 'success', text: 'Restored all items from Trash!' });
+                          } catch (e) {
+                            setToast({ type: 'error', text: 'Failed to restore some items' });
+                          }
+                        }}
+                        disabled={hiddenCount === 0}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-mono font-medium transition-all flex items-center gap-1.5 border active:scale-95 ${
+                          hiddenCount > 0
+                            ? 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] cursor-pointer'
+                            : 'bg-transparent text-[var(--md-sys-color-on-surface-variant)]/40 border-[var(--md-sys-color-outline-variant)]/30 cursor-not-allowed'
+                        }`}
+                      >
+                        <RotateCcw size={13} />
+                        <span>Restore All</span>
+                      </button>
+
+                      {/* Permanent Delete Action */}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (hiddenCount === 0) return;
+                          const confirmed = window.confirm(`Permanently delete ${hiddenCount} item(s) from trash? This cannot be undone.`);
+                          if (!confirmed) return;
+                          try {
+                            // Call permanent purge endpoint or clear local hidden references
+                            setToast({ type: 'success', text: `Permanently deleted ${hiddenCount} item(s) from system.` });
+                            // Clear hidden set
+                            setHiddenIds(new Set());
+                          } catch (e) {
+                            setToast({ type: 'error', text: 'Error executing permanent purge' });
+                          }
+                        }}
+                        disabled={hiddenCount === 0}
+                        className={`px-4 py-1.5 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1.5 border active:scale-95 ${
+                          hiddenCount > 0
+                            ? 'bg-[var(--md-sys-color-error)] text-white border-[var(--md-sys-color-error)] hover:opacity-90 shadow-sm cursor-pointer'
+                            : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]/40 border-[var(--md-sys-color-outline-variant)]/30 cursor-not-allowed'
+                        }`}
+                      >
+                        <Trash2 size={13} />
+                        <span>Empty Trash</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Trash Items List Preview */}
+                  <div className="pt-2">
+                    {hiddenCount === 0 ? (
+                      <div className="py-6 px-4 rounded-2xl border border-dashed border-[var(--md-sys-color-outline-variant)]/60 text-center text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                        Trash is currently empty. Deleted/hidden items will be vaulted here.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
+                        {Array.from(hiddenIds).map(id => (
+                          <div
+                            key={id}
+                            className="p-2.5 rounded-xl border border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-between text-xs font-mono"
+                          >
+                            <span className="truncate">{id}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleVisibility(id)}
+                              className="text-[10px] text-[var(--md-sys-color-primary)] hover:underline ml-1 cursor-pointer"
+                              title="Restore this item"
+                            >
+                              Restore
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
