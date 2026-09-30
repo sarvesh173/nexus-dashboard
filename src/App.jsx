@@ -3003,45 +3003,48 @@ export default function App() {
                                   transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
-                                <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10 text-[10px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
+                                <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-[var(--md-sys-color-outline-variant)]/60 text-[9.5px] font-bold text-rose-400 tracking-wider uppercase whitespace-nowrap">
                                   <span className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                                    <span>Offline Providers</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                    <span>Offline Providers & Models</span>
                                   </span>
-                                  <span className="text-[8.5px] text-zinc-400 font-normal normal-case">telemetry preview</span>
+                                  <span className="text-[8px] text-[var(--md-sys-color-on-surface-variant)] font-mono normal-case">16:9 landscape telemetry</span>
                                 </div>
                                 {(() => {
                                   const offlineList = visibleProviders.filter(p => p.enabled === false || p.status === 'down');
                                   if (offlineList.length === 0) {
                                     return (
-                                      <div className="text-[11px] text-zinc-400 text-center py-2 bg-black/20 rounded-2xl border border-white/5">
+                                      <div className="text-[10px] text-zinc-400 text-center py-2 bg-[var(--md-sys-color-surface-container-high)]/40 rounded-xl border border-[var(--md-sys-color-outline-variant)]/30 font-mono">
                                         All providers online ✓
                                       </div>
                                     );
                                   }
-                                  return offlineList.slice(0, 3).map((p, idx) => {
-                                    const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
-                                    const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
-                                    return (
-                                      <div key={idx} className="p-2 rounded-2xl bg-black/30 border border-white/5 space-y-1.5 hover:border-rose-500/30 transition-all duration-200">
-                                        <div className="flex items-center justify-between text-[11px] text-[var(--md-sys-color-on-surface)]">
-                                          <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                            <span className="font-bold truncate max-w-[140px] text-white">{p.display_name || p.name || p.id}</span>
+                                  return (
+                                    <div className="grid grid-cols-3 gap-2">
+                                      {offlineList.slice(0, 3).map((p, idx) => {
+                                        const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
+                                        const tel = getModelTelemetry(topModel.id || '', topModel.name || '');
+                                        return (
+                                          <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-rose-500/30 transition-all duration-150">
+                                            <div className="flex items-center justify-between text-[10px]">
+                                              <span className="font-semibold truncate max-w-[85px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
+                                                {p.display_name || p.name || p.id}
+                                              </span>
+                                              <span className="text-[8px] text-rose-400 font-mono">Offline</span>
+                                            </div>
+                                            <div className="pt-0.5">
+                                              <InteractiveModelPill
+                                                model={topModel}
+                                                telemetry={tel}
+                                                align="right"
+                                                onSelect={() => setSelectedProviderId(p.id)}
+                                             />
+                                            </div>
                                           </div>
-                                          <span className="text-[9.5px] text-rose-400 font-mono">Offline</span>
-                                        </div>
-                                        <div className="pt-0.5">
-                                          <InteractiveModelPill
-                                            model={topModel}
-                                            telemetry={tel}
-                                            align="right"
-                                            onSelect={() => setSelectedProviderId(p.id)}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  });
+                                        );
+                                      })}
+                                    </div>
+                                  );
                                 })()}
                               </div>
                             </div>
