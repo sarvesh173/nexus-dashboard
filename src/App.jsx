@@ -1142,19 +1142,46 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 }
 
 
-// Provider Header View Action: Rock-solid original button without cut button
-function ProviderHeaderAction({ prov, onSelect, isCompact, isUltraCompact }) {
+// Apple Liquid Glass Action: Overlapping View button with tactile spring checkbox
+function ProviderHeaderAction({ prov, isSelected, onToggleSelect, onSelect, isCompact, isUltraCompact }) {
   return (
-    <div className="flex items-center justify-end select-none">
+    <div className="relative flex items-center justify-end select-none">
+      {/* 1. Rock-solid View Button with active scale feedback */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onSelect(prov.id);
         }}
-        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 pointer-events-auto`}
+        className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-all duration-150 pointer-events-auto flex items-center gap-1.5`}
       >
-        View →
+        <span>View</span>
+        <span className="text-[11px] opacity-70">→</span>
+      </button>
+
+      {/* 2. Apple Tactile Checkbox: positioned right on corner/overlap */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSelect(prov.id, e);
+        }}
+        aria-label={isSelected ? `Deselect ${prov.name || prov.id}` : `Select ${prov.name || prov.id}`}
+        className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-90 ${
+          isSelected
+            ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm scale-100 ring-2 ring-[var(--md-sys-color-primary)]/40'
+            : 'bg-[var(--md-sys-color-surface-container-highest)]/80 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] opacity-40 hover:opacity-100 hover:border-[var(--md-sys-color-primary)] group-hover:opacity-90'
+        }`}
+        title={isSelected ? "Deselect" : "Select"}
+      >
+        <svg
+          viewBox="0 0 16 16"
+          className={`w-3 h-3 stroke-current stroke-2 fill-none transition-transform duration-150 ${
+            isSelected ? 'scale-100' : 'scale-75 opacity-0 hover:opacity-50'
+          }`}
+        >
+          <polyline points="3.5 8.5 6.5 11.5 12.5 5" />
+        </svg>
       </button>
     </div>
   );
@@ -2513,43 +2540,53 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      {/* Apple-style Translucent Segmented Glass Toolbar */}
+                      <div className="flex items-center gap-2 p-1 rounded-full bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)]/60 shadow-xs">
+                        {/* 1. Apple Logo Theme Segmented Control */}
                         <button
                           onClick={toggleLogoBgTheme}
                           title="Toggle provider logo backdrop between Dark (#141416) and Light (#FFFFFF)"
-                          className={`px-2.5 py-1 rounded-full border text-[11px] font-mono transition-all flex items-center gap-1.5 shadow-sm ${
+                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-200 flex items-center gap-1.5 active:scale-95 ${
                             logoBgTheme === 'light'
-                              ? 'bg-white text-zinc-900 border-zinc-300 font-semibold'
-                              : 'bg-zinc-900 text-zinc-200 border-zinc-700 font-semibold'
+                              ? 'bg-white text-zinc-900 shadow-sm font-semibold border border-zinc-200'
+                              : 'bg-zinc-800/90 text-zinc-200 font-semibold border border-zinc-700/60'
                           }`}
                         >
-                          <span className={`w-2 h-2 rounded-full ${logoBgTheme === 'light' ? 'bg-amber-500 shadow-sm' : 'bg-indigo-400'}`}></span>
-                          <span>Logo BG: {logoBgTheme === 'light' ? 'White' : 'Black'}</span>
+                          <span className={`w-2 h-2 rounded-full transition-transform ${logoBgTheme === 'light' ? 'bg-amber-500 scale-110 shadow-xs' : 'bg-indigo-400'}`}></span>
+                          <span>Logo: {logoBgTheme === 'light' ? 'White' : 'Black'}</span>
                         </button>
+
+                        {/* 2. Apple Glass Router Filter Switch */}
                         <button
                           onClick={() => setShowRouters((v) => !v)}
-                          className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] text-[11px] font-mono normal-case hover:border-[var(--md-sys-color-primary)] transition-colors"
+                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-150 active:scale-95 border ${
+                            showRouters
+                              ? 'bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)]/30 font-semibold'
+                              : 'bg-transparent text-[var(--md-sys-color-on-surface-variant)] border-transparent hover:text-[var(--md-sys-color-on-surface)]'
+                          }`}
                         >
-                          {showRouters ? 'Hide routers' : 'Show routers'}
+                          {showRouters ? 'Routers Visible' : 'Routers Hidden'}
                         </button>
-                        {/* Hiding a card used to be a one-way door: the card
-                            left the grid and nothing on screen could bring
-                            it back. This rail is the way out. */}
+
+                        {/* 3. Apple Liquid Vault/Hidden Pill with indicator dot */}
                         <button
                           onClick={() => setShowHidden((v) => !v)}
                           aria-pressed={showHidden}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-colors ${
-                            showHidden || hiddenCount
-                              ? 'border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)]'
-                              : 'border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)]'
+                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-150 active:scale-95 flex items-center gap-1.5 border ${
+                            showHidden
+                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold'
+                              : hiddenCount > 0
+                              ? 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border-[var(--md-sys-color-outline-variant)]'
+                              : 'bg-transparent text-[var(--md-sys-color-on-surface-variant)] border-transparent hover:text-[var(--md-sys-color-on-surface)]'
                           }`}
                         >
-                          {hiddenCount
-                            ? 'Hidden · {hiddenCount}'.replace('{hiddenCount}', String(hiddenCount))
-                            : 'Hidden · 0'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${hiddenCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-zinc-500'}`} />
+                          <span>Vault ({hiddenCount})</span>
                         </button>
-                        <span className="font-mono text-[11px] text-[var(--md-sys-color-primary)]">
-                          {visibleProviders.length} Connected
+
+                        {/* 4. Connected Badge */}
+                        <span className="font-mono text-[11px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] font-semibold border border-[var(--md-sys-color-primary)]/20">
+                          {visibleProviders.length} Live
                         </span>
                       </div>
                     </div>
@@ -2645,15 +2682,25 @@ export default function App() {
                     >
                       {visibleProviders.map((prov) => {
                         const isCompact = (cardHeightPx < 290) || (cardWidthPx > 0 && cardWidthPx < 330);
+                        const isProvSelected = selectedProviderIds.has(prov.id);
                         return (
                         <div
                           key={prov.id}
+                          data-selectable-id={prov.id}
                           onClick={() => {
                             if (!isResizingCard) {
-                              setSelectedProviderId(prov.id);
+                              if (isSelectionMode) {
+                                toggleSelectProvider(prov.id);
+                              } else {
+                                setSelectedProviderId(prov.id);
+                              }
                             }
                           }}
-                          className="group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none min-w-0"
+                          className={`group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none min-w-0 ${
+                            isProvSelected
+                              ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-md'
+                              : 'border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
+                          }`}
                           style={{ minHeight: `${cardHeightPx}px` }}
                         >
                           {/* Corner resize handle with LIVE GLOBAL synchronization across all cards */}
@@ -2776,7 +2823,7 @@ export default function App() {
                                       </div>
                                     </div>
 
-<ProviderHeaderAction prov={prov} onSelect={setSelectedProviderId} isCompact={isCompact} isUltraCompact={isUltraCompact} />
+<ProviderHeaderAction prov={prov} isSelected={isProvSelected} onToggleSelect={toggleSelectProvider} onSelect={setSelectedProviderId} isCompact={isCompact} isUltraCompact={isUltraCompact} />
                                   </div>
 
                                   {/* 1. Modality Chips (LLM, Vision, Embed, STT, TTS) positioned UPAR */}
