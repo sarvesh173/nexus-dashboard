@@ -2824,7 +2824,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 10 14 L -20 14 L -40 2"
+                                  d="M 35 0 L 35 -14 L 10 -28"
                                   fill="none"
                                   stroke="#34d399"
                                   strokeWidth="1.5"
@@ -2835,24 +2835,24 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="10"
-                                  cy="14"
+                                  cx="35"
+                                  cy="0"
                                   r="2.5"
                                   fill="#34d399"
                                   style={{
                                     transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '10px 14px',
+                                    transformOrigin: '35px 0px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                               </svg>
 
-                              {/* Top Active Providers Floating HUD Box docked into horizontal gap */}
+                              {/* Top Active Providers Floating HUD Box UPWARDS above toolbar */}
                               <div
-                                className="absolute right-[calc(100%+32px)] top-[-10px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
+                                className="absolute left-[-100px] bottom-[calc(100%+16px)] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-emerald-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
                                 style={{
                                   opacity: isActiveStatusHovered ? 1 : 0,
-                                  transform: isActiveStatusHovered ? 'translateX(0) scale(1)' : 'translateX(10px) scale(0.96)',
+                                  transform: isActiveStatusHovered ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
@@ -2918,7 +2918,7 @@ export default function App() {
                                 }}
                               >
                                 <path
-                                  d="M 10 14 L -20 14 L -40 2"
+                                  d="M 35 0 L 35 -14 L 60 -28"
                                   fill="none"
                                   stroke="#f43f5e"
                                   strokeWidth="1.5"
@@ -2929,24 +2929,24 @@ export default function App() {
                                   }}
                                 />
                                 <circle
-                                  cx="10"
-                                  cy="14"
+                                  cx="35"
+                                  cy="0"
                                   r="2.5"
                                   fill="#f43f5e"
                                   style={{
                                     transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
-                                    transformOrigin: '10px 14px',
+                                    transformOrigin: '35px 0px',
                                     transition: 'transform 120ms ease-out',
                                   }}
                                 />
                               </svg>
 
-                              {/* Offline Providers Floating HUD Box docked into horizontal gap */}
+                              {/* Offline Providers Floating HUD Box UPWARDS above toolbar */}
                               <div
-                                className="absolute right-[calc(100%+32px)] top-[-10px] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto"
+                                className="absolute right-[-20px] bottom-[calc(100%+16px)] z-[100] w-80 p-3.5 rounded-3xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-rose-500/30 shadow-[0_24px_50px_rgba(0,0,0,0.65)] space-y-2.5 ring-1 ring-white/10 text-left pointer-events-auto overflow-hidden"
                                 style={{
                                   opacity: isOfflineStatusHovered ? 1 : 0,
-                                  transform: isOfflineStatusHovered ? 'translateX(0) scale(1)' : 'translateX(10px) scale(0.96)',
+                                  transform: isOfflineStatusHovered ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
                                   transition: 'opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
                                 }}
                               >
