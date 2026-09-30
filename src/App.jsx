@@ -1208,6 +1208,20 @@ const CURRENCY_OPTIONS = [
   { id: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬', rank: '#32 GDP' },
 ];
 
+
+// Provider Official Compressed Vector Logos (Instant crisp UI load)
+const PROVIDER_LOGOS = {
+  nvidia: '/provider-logos/nvidia.svg',
+};
+
+function getProviderLogoUrl(prov) {
+  if (!prov) return null;
+  if (prov.logo) return prov.logo;
+  const id = (prov.id || '').toLowerCase();
+  if (PROVIDER_LOGOS[id]) return PROVIDER_LOGOS[id];
+  return null;
+}
+
 export default function App() {
   // Persisted like the card size controls are, otherwise every reload
   // silently snapped the whole UI back to indigo-violet.
@@ -2440,17 +2454,16 @@ export default function App() {
                                   <div className="flex items-start justify-between gap-2.5 min-w-0">
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                       <div className={`${isUltraCompact ? 'w-8 h-8 p-1 rounded-lg' : isCompact ? 'w-9 h-9 p-1 rounded-xl' : 'w-12 h-12 p-2 rounded-2xl'} bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center shrink-0 overflow-hidden transition-all`}>
-                                        {prov.logo ? (
+                                        {getProviderLogoUrl(prov) ? (
                                           <img
-                                            src={prov.logo}
+                                            src={getProviderLogoUrl(prov)}
                                             alt={prov.name || prov.id}
                                             className="w-full h-full object-contain"
                                             onError={(e) => {
                                               e.currentTarget.style.display = 'none';
                                             }}
                                           />
-                                        ) : null}
-                                        {!prov.logo && (
+                                        ) : (
                                           <span className={`${isUltraCompact ? 'text-[10px]' : isCompact ? 'text-[11px]' : 'text-sm'} font-bold font-mono uppercase text-[var(--md-sys-color-primary)]`}>
                                             {(prov.id || '?').slice(0, 2)}
                                           </span>
