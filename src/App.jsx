@@ -1226,6 +1226,7 @@ const PROVIDER_LOGOS = {
   ollamacloud: '/provider-logos/ollama-cloud.svg',
   ollama: '/provider-logos/ollama-cloud.svg',
   // Official Brand Assets directly fetched:
+  upstage: '/provider-logos/upstage.svg',
   typhoon: '/provider-logos/typhoon.svg',
   groq: '/provider-logos/groq.svg',
   morph: '/provider-logos/morph.svg',
