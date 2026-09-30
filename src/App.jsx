@@ -516,11 +516,13 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
   const badgeRef = useRef(null);
 
   const rawModels = provider.models && provider.models.length > 0 ? provider.models : [];
-  const sortedModels = [...rawModels].sort((a, b) => {
-    const nameA = (a.name || a.id || '').toLowerCase();
-    const nameB = (b.name || b.id || '').toLowerCase();
-    return nameA.localeCompare(nameB);
-  }).slice(0, 4);
+  const sortedModels = React.useMemo(() => {
+    return [...rawModels].sort((a, b) => {
+      const nameA = (a.name || a.id || '').toLowerCase();
+      const nameB = (b.name || b.id || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    }).slice(0, 4);
+  }, [rawModels]);
 
   const displayCount = rawModels.length || totalCount;
 
