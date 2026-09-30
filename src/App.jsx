@@ -267,33 +267,9 @@ const navMicroAnimationStyles = `
     perspective: 520px;
   }
 
-  /* A small raised chassis behind Boxes gives the icon a readable metal block
-     silhouette before the isometric twist even starts. */
+  /* Clean 3D rotation without weird background chassis artifacts */
   .nav-model-icon::before {
-    content: '';
-    position: absolute;
-    z-index: 0;
-    top: 3px;
-    left: 2px;
-    width: 12px;
-    height: 10px;
-    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 58%, var(--md-sys-color-outline-variant));
-    border-radius: 3px;
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--md-sys-color-on-surface) 30%, var(--md-sys-color-surface-container-highest)),
-      var(--md-sys-color-surface-container-high) 48%,
-      var(--md-sys-color-surface-container)
-    );
-    box-shadow:
-      inset 1px 1px 0 rgb(255 255 255 / 0.24),
-      inset -2px -2px 0 rgb(0 0 0 / 0.2),
-      2px 3px 0 color-mix(in srgb, var(--md-sys-color-primary) 42%, var(--md-sys-color-surface-container)),
-      3px 5px 7px rgb(0 0 0 / 0.24);
-    transform: translate3d(1px, 1px, -4px) rotateX(54deg) rotateZ(-5deg);
-    transform-origin: center;
-    transition: transform 420ms cubic-bezier(0.2, 0.85, 0.25, 1),
-      box-shadow 240ms ease;
+    display: none;
   }
 
   /* The moving highlight is deliberately brief: each hover feels like a
@@ -563,55 +539,55 @@ const navMicroAnimationStyles = `
     100% { opacity: 0.55; transform: translate(0, 0) scale(1); }
   }
 
-  /* A fine coin rim and a passing glint keep the dollar mark legible. */
+  /* Clean coin circle that gracefully ripples on hover/click, followed by a gold metallic shine */
   .nav-cost-icon::before {
     content: '';
     position: absolute;
-    inset: 0;
-    border: 1px solid currentColor;
+    inset: -3px;
+    border: 1.5px solid currentColor;
     border-radius: 50%;
-    opacity: 0.38;
-    transform: scale(0.88);
-    transition: transform 460ms cubic-bezier(0.22, 1.4, 0.36, 1), opacity 240ms ease;
+    opacity: 0.25;
+    transform: scale(0.7);
+    transition: transform 380ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 280ms ease, border-color 280ms ease;
   }
   .nav-cost-icon::after {
     content: '';
     position: absolute;
     z-index: 3;
-    top: -3px;
-    left: -3px;
-    width: 4px;
-    height: 4px;
-    background: currentColor;
-    box-shadow: 0 0 5px currentColor;
-    transform: rotate(45deg) scale(0);
+    inset: -2px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), transparent 60%);
     opacity: 0;
-  }
-  .nav-cost-button.nav-cost-active .nav-cost-icon {
-    transform: rotate(8deg) scale(1.05);
-  }
-  .nav-cost-button:hover .nav-cost-icon,
-  .nav-cost-button:focus-visible .nav-cost-icon,
-  .nav-cost-button.nav-cost-active:hover .nav-cost-icon,
-  .nav-cost-button.nav-cost-active:focus-visible .nav-cost-icon {
-    transform: translateY(-1px) rotate(-16deg) scale(1.13);
-    filter: drop-shadow(0 0 4px currentColor);
+    pointer-events: none;
+    transform: scale(0.6);
   }
   .nav-cost-button:hover .nav-cost-icon::before,
   .nav-cost-button:focus-visible .nav-cost-icon::before,
   .nav-cost-button.nav-cost-active .nav-cost-icon::before {
-    opacity: 0.75;
-    transform: scale(1.04);
+    opacity: 0.9;
+    transform: scale(1.15);
+    box-shadow: 0 0 8px currentColor;
+    animation: nav-cost-circle-bloom 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
   .nav-cost-button:hover .nav-cost-icon::after,
   .nav-cost-button:focus-visible .nav-cost-icon::after,
   .nav-cost-button.nav-cost-active .nav-cost-icon::after {
-    animation: nav-cost-shimmer 800ms ease-out both;
+    animation: nav-cost-shine-reveal 700ms 180ms ease-out forwards;
   }
-  @keyframes nav-cost-shimmer {
-    0%, 15% { opacity: 0; transform: translate(0, 2px) rotate(45deg) scale(0); }
-    48% { opacity: 0.95; transform: translate(8px, 0) rotate(100deg) scale(1); }
-    100% { opacity: 0; transform: translate(16px, 5px) rotate(160deg) scale(0); }
+  .nav-cost-button:active .nav-cost-icon::before {
+    transform: scale(1.3);
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+  @keyframes nav-cost-circle-bloom {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.22); opacity: 0.95; }
+    100% { transform: scale(1.12); opacity: 0.85; }
+  }
+  @keyframes nav-cost-shine-reveal {
+    0% { opacity: 0; transform: scale(0.6) rotate(0deg); }
+    40% { opacity: 1; transform: scale(1.1) rotate(45deg); filter: drop-shadow(0 0 6px rgba(255,255,255,0.9)); }
+    100% { opacity: 0.35; transform: scale(1) rotate(90deg); filter: drop-shadow(0 0 2px currentColor); }
   }
 
   .nav-settings-button.nav-settings-active .nav-settings-icon {
