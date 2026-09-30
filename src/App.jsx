@@ -2520,9 +2520,9 @@ export default function App() {
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-between flex-wrap gap-2">
                       {/* Apple Liquid Glass Selection Action Bar */}
                       <div className="flex items-center gap-2">
-                        {/* 1. Primary "Select" Toggle Button with Apple Liquid Glass Hover Tooltip */}
+                        {/* 1. Primary "Select" Toggle Button with Interactive Leader Line Animation */}
                         <div
-                          className="relative inline-block"
+                          className="relative inline-block select-none"
                           onMouseEnter={() => setIsSelectHovered(true)}
                           onMouseLeave={() => setIsSelectHovered(false)}
                         >
@@ -2549,21 +2549,56 @@ export default function App() {
                             <span>{isSelectionMode ? 'Done' : 'Select'}</span>
                           </button>
 
-                          {/* Smooth Apple Spring Tooltip Popup */}
-                          {isSelectHovered && (
-                            <div
-                              className="absolute left-0 bottom-full mb-2 z-50 px-2.5 py-1.5 rounded-lg bg-[var(--md-sys-color-surface-container-highest)]/95 text-[var(--md-sys-color-on-surface)] text-[10px] font-mono shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-[var(--md-sys-color-outline-variant)]/60 backdrop-blur-xl whitespace-nowrap pointer-events-none animate-in fade-in zoom-in-95 duration-200"
+                          {/* Leader Line (Badi Dandi) Overlay Animated Path */}
+                          <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isSelectHovered ? 'visible' : 'invisible'}`}>
+                            <svg
+                              className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                               style={{
-                                transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                                opacity: isSelectHovered ? 1 : 0,
+                                transition: 'opacity 140ms ease-out',
+                              }}
+                            >
+                              <path
+                                d="M 38 0 L 38 -14 L 64 -24"
+                                fill="none"
+                                stroke="var(--md-sys-color-primary)"
+                                strokeWidth="1.5"
+                                strokeDasharray="90"
+                                strokeDashoffset={isSelectHovered ? '0' : '90'}
+                                style={{
+                                  transition: isSelectHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                }}
+                              />
+                              <circle
+                                cx="38"
+                                cy="0"
+                                r="2.5"
+                                fill="var(--md-sys-color-primary)"
+                                style={{
+                                  transform: isSelectHovered ? 'scale(1)' : 'scale(0)',
+                                  transformOrigin: '38px 0px',
+                                  transition: 'transform 120ms ease-out',
+                                }}
+                              />
+                            </svg>
+
+                            {/* Animated Leader Box Floating Above */}
+                            <div
+                              className="absolute left-10 bottom-full mb-3 z-50 px-3 py-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-highest)]/95 text-[var(--md-sys-color-on-surface)] text-[10px] font-mono shadow-[0_12px_32px_rgba(0,0,0,0.5)] border border-[var(--md-sys-color-primary)]/40 backdrop-blur-2xl whitespace-nowrap pointer-events-none"
+                              style={{
+                                opacity: isSelectHovered ? 1 : 0,
+                                transform: isSelectHovered ? 'translateY(0) scale(1)' : 'translateY(4px) scale(0.96)',
+                                transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
                               }}
                             >
                               <div className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] animate-pulse" />
-                                <span>{isSelectionMode ? "Click to exit selection mode" : "Click to select or drag across cards"}</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--md-sys-color-primary)] shadow-[0_0_8px_var(--md-sys-color-primary)]" />
+                                <span className="font-semibold text-[var(--md-sys-color-primary)]">{isSelectionMode ? "Mode: Active" : "Selection Tool"}</span>
+                                <span className="opacity-40">|</span>
+                                <span className="text-[var(--md-sys-color-on-surface-variant)]">{isSelectionMode ? "Tap Done or double-click to exit" : "Click to select or drag marquee"}</span>
                               </div>
-                              <div className="absolute left-3 top-full w-2 h-2 -mt-1 rotate-45 bg-[var(--md-sys-color-surface-container-highest)] border-r border-b border-[var(--md-sys-color-outline-variant)]/60" />
                             </div>
-                          )}
+                          </div>
                         </div>
 
                         {/* 2. Liquid Glass Reveal Capsule (Smooth Apple spring expand) */}
@@ -2577,14 +2612,24 @@ export default function App() {
                             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
                           }}
                         >
-                          {/* Select All Pill */}
+                          {/* Select All Pill with Tactile Mini Checkbox */}
                           <button
                             type="button"
                             onClick={handleSelectAll}
-                            className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                            className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1.5 active:scale-95 whitespace-nowrap cursor-pointer"
                             title=""
                           >
-                            <span className="text-[10px]">✓✓</span>
+                            <span className={`w-3.5 h-3.5 rounded-sm flex items-center justify-center border transition-all ${
+                              currentSelectionCount === (visibleProviders.length || 1)
+                                ? 'bg-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] text-white'
+                                : 'border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container-highest)]'
+                            }`}>
+                              {currentSelectionCount === (visibleProviders.length || 1) && (
+                                <svg viewBox="0 0 16 16" className="w-2.5 h-2.5 stroke-current stroke-2 fill-none">
+                                  <polyline points="3 8 6.5 11.5 13 4" />
+                                </svg>
+                              )}
+                            </span>
                             <span>Select All</span>
                           </button>
 
@@ -2602,9 +2647,9 @@ export default function App() {
                               type="button"
                               onClick={handleHideSelected}
                               disabled={currentSelectionCount === 0}
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1 border ${
+                              className={`px-3 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1 border ${
                                 currentSelectionCount > 0
-                                  ? 'bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)] hover:text-white border-[var(--md-sys-color-error)]/30 cursor-pointer'
+                                  ? 'bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)] hover:text-white border-[var(--md-sys-color-error)]/30 cursor-pointer shadow-xs'
                                   : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]/40 border-[var(--md-sys-color-outline-variant)]/40 cursor-not-allowed'
                               }`}
                             >
@@ -2630,26 +2675,6 @@ export default function App() {
                               <div className="w-2 h-2 bg-[var(--md-sys-color-surface-container-highest)] border-r border-b border-white/20 rotate-45 mx-auto -mt-1" />
                             </div>
                           </div>
-
-                          {/* Cancel All */}
-                          <button
-                            type="button"
-                            onClick={handleCancelAll}
-                            className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-outline)] text-[11px] font-mono transition-all active:scale-95 whitespace-nowrap"
-                            title="Deselect all items"
-                          >
-                            Cancel
-                          </button>
-
-                          {/* Close & Clear Zip Button */}
-                          <button
-                            type="button"
-                            onClick={handleCancelAll}
-                            className="w-6 h-6 rounded-full flex items-center justify-center bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error-container)] border border-[var(--md-sys-color-outline-variant)] text-xs transition-transform active:scale-90"
-                            title="Close selection mode"
-                          >
-                            ✕
-                          </button>
                         </div>
                       </div>
                       {/* Apple-style Translucent Segmented Glass Toolbar */}
@@ -2807,6 +2832,12 @@ export default function App() {
                               } else {
                                 setSelectedProviderId(prov.id);
                               }
+                            }
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            if (isSelectionMode) {
+                              handleCancelAll();
                             }
                           }}
                           className={`group p-4 rounded-2xl bg-[var(--md-sys-color-surface-container)] border transition-all cursor-pointer shadow-xs hover:shadow-lg hover:z-20 focus-within:z-20 relative flex flex-col justify-between select-none min-w-0 ${
