@@ -679,6 +679,43 @@ const navMicroAnimationStyles = `
       opacity: 0;
     }
   }
+
+  /* Provider Header Action Morph: View shrinks to yield space for X; hovering View directly hides X */
+  .provider-view-btn {
+    transition: all 200ms cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .group:hover .provider-view-btn {
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
+  .provider-view-btn:hover {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .provider-x-cut {
+    transition: width 200ms cubic-bezier(0.2, 0.9, 0.25, 1),
+                opacity 160ms ease,
+                transform 200ms cubic-bezier(0.2, 0.9, 0.25, 1);
+    width: 0;
+    opacity: 0;
+    transform: scale(0.7) translateX(4px);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .group:hover .provider-x-cut {
+    width: 1.75rem;
+    opacity: 1;
+    transform: scale(1) translateX(0);
+    pointer-events: auto;
+    overflow: visible;
+  }
+  .group:hover:has(.provider-view-btn:hover) .provider-x-cut {
+    width: 0 !important;
+    opacity: 0 !important;
+    transform: scale(0.7) translateX(4px) !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+  }
 `;
 
 function getProviderModalityStats(provider) {
@@ -1105,32 +1142,27 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 }
 
 
-// Apple Fluid Action: Anti-Loop Hysteresis Envelope & Static Bounding Box (Emil Kowalski Apple Design Spec)
+// Apple Fluid Action: Adaptive Morphing Capsule (Emil Kowalski Apple Design Spec)
 function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact }) {
   return (
     <div
       className="relative flex items-center justify-end h-8 z-20 overflow-visible py-2 -my-2 px-2 -mx-2 select-none"
     >
       <div className="flex items-center gap-1.5">
-        {/* 1. View Button (Always rock-solid, zero layout shift) */}
+        {/* 1. View Button (Morphs/Shrinks to make room for X on card hover; expands & suppresses X when hovered directly) */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onSelect(prov.id);
           }}
-          className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 pointer-events-auto`}
+          className={`provider-view-btn ${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap pointer-events-auto`}
         >
           View →
         </button>
 
-        {/* 2. Apple Liquid Metallic Glass '✕' Cut (Smooth CSS Reveal, Never Oscillates or Shifts View Button) */}
-        <div
-          className="flex items-center transition-all duration-200 w-0 opacity-0 scale-75 pointer-events-none translate-x-1 overflow-hidden group-hover:w-7 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:overflow-visible"
-          style={{
-            transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
-          }}
-        >
+        {/* 2. Apple Liquid Metallic Glass '✕' Cut (Appears on card hover; suppressed when View button is hovered) */}
+        <div className="provider-x-cut flex items-center">
           <button
             title={hidden.providers.includes(prov.id) ? 'Restore this provider' : 'Hide this provider'}
             aria-label={hidden.providers.includes(prov.id) ? 'Restore ' + prov.id : 'Hide ' + prov.id}
