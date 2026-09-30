@@ -1107,45 +1107,26 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
 
 // Apple Fluid Action: Anti-Loop Hysteresis Envelope & Static Bounding Box (Emil Kowalski Apple Design Spec)
 function ProviderHeaderMorphAction({ prov, hidden, setVisibility, onSelect, isCompact, isUltraCompact }) {
-  const [hoverTarget, setHoverTarget] = useState('none'); // 'none' | 'view' | 'x'
-  const clusterRef = useRef(null);
-
   return (
     <div
-      ref={clusterRef}
-      onMouseLeave={() => setHoverTarget('none')}
-      className="relative flex items-center justify-end h-8 z-20 overflow-visible py-3 -my-3 px-3 -mx-3"
+      className="relative flex items-center justify-end h-8 z-20 overflow-visible py-2 -my-2 px-2 -mx-2 select-none"
     >
-      <div className="flex items-center gap-2">
-        {/* 1. View Button with 360-degree Hitbox Protective Envelope (Left, Top, Bottom, Up-Left) */}
-        <div 
-          className="relative inline-flex items-center justify-center p-2.5 -m-2.5 cursor-pointer z-10"
-          onMouseEnter={() => setHoverTarget('view')}
+      <div className="flex items-center gap-1.5">
+        {/* 1. View Button (Always rock-solid, zero layout shift) */}
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onSelect(prov.id);
           }}
+          className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 pointer-events-auto`}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(prov.id);
-            }}
-            className={`${isUltraCompact ? 'px-3 py-1.5 text-[10px]' : isCompact ? 'px-3.5 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} rounded-full font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] shadow-xs cursor-pointer active:scale-95 whitespace-nowrap transition-colors duration-150 select-none pointer-events-auto`}
-          >
-            View →
-          </button>
-        </div>
+          View →
+        </button>
 
-        {/* 2. Apple Liquid Metallic Glass '✕' Cut with Generous Aura Envelope */}
+        {/* 2. Apple Liquid Metallic Glass '✕' Cut (Smooth CSS Reveal, Never Oscillates or Shifts View Button) */}
         <div
-          onMouseEnter={() => setHoverTarget('x')}
-          className={`flex items-center transition-all duration-200 w-0 opacity-0 scale-75 pointer-events-none translate-x-1 overflow-hidden ${
-            hoverTarget !== 'view'
-              ? 'group-hover:w-7 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:overflow-visible'
-              : ''
-          }`}
+          className="flex items-center transition-all duration-200 w-0 opacity-0 scale-75 pointer-events-none translate-x-1 overflow-hidden group-hover:w-7 group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:overflow-visible"
           style={{
             transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)'
           }}
