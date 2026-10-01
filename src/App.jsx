@@ -2594,56 +2594,126 @@ function usdBase(usdAmount) {
  * the provider's published USD rate — this says so, and shows the base figure
  * next to the converted one so the arithmetic is visible rather than implied.
  */
-function CostBreakdownTooltip({ baseUsd, currency, rows, label }) {
+/**
+ * Cost breakdown tooltip, viewport-aware.
+ *
+ * Geometry mirrors the provider-stat tooltip already used on the Overview cards:
+ * measure on hover, flip to whichever side has room, then clamp so the panel can
+ * never fall off a narrow or high-DPI display. Mounted on demand — no hidden DOM
+ * sitting in the tree, and no CSS-only hover that breaks when a card sits near
+ * the right or bottom edge.
+ */
+function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
+  const [coords, setCoords] = useState(null);
+  const anchorRef = useRef(null);
+  const tooltipId = React.useId();
+
+  const showTooltip = () => {
+    if (coords || !anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    const panelWidth = Math.min(260, window.innerWidth - 24);
+    // Open to the side with the most room, then clamp inside the viewport.
+    const openRight = window.innerWidth - rect.right >= panelWidth + 12;
+    const left = openRight
+      ? Math.min(rect.right + 12, window.innerWidth - panelWidth - 12)
+      : Math.max(rect.left - 12 - panelWidth, 12);
+    const above = rect.top >= 180;
+    setCoords({
+      left: Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12)),
+      top: above ? rect.top - 10 : rect.bottom + 10,
+      panelWidth,
+      below: !above,
+    });
+  };
+
+  const hideTooltip = (event) => {
+    if (event.currentTarget.contains(document.activeElement)) return;
+    setCoords(null);
+  };
+
+  // The anchor IS the trigger: it wraps the figure itself so it has real size
+  // to measure and hover. A separate empty span has no box and cannot be hit.
   return (
-    <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-xl shadow-2xl p-3.5 text-left opacity-0 invisible translate-y-1 pointer-events-none group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 ease-out">
-      <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[var(--md-sys-color-outline-variant)]">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
-          {label}
-        </span>
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]">
-          {currency.flag} {currency.id}
-        </span>
-      </div>
-
-      <div className="space-y-2">
-        {rows.map((row) => (
-          <div key={row.label} className="flex items-baseline justify-between gap-3">
-            <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">{row.label}</span>
-            <span className="font-mono text-[11px] font-bold text-[var(--md-sys-color-on-surface)]">
-              {row.value}
+    <>
+      <span
+        ref={anchorRef}
+        tabIndex={0}
+        aria-label={`${label}: ${convertFromUsd(baseUsd, currency)}`}
+        aria-describedby={coords ? tooltipId : undefined}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={() => setCoords(null)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            setCoords(null);
+          }
+        }}
+        className={`cursor-default select-none rounded-md outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords ? 'relative z-50' : ''}`}
+      >
+        {trigger}
+      </span>
+      {coords && (
+        <div
+          id={tooltipId}
+          role="tooltip"
+          className="fixed z-[999] pointer-events-none px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
+          style={{
+            left: coords.left,
+            top: coords.top,
+            width: coords.panelWidth,
+            transform: coords.below ? 'translateY(0)' : 'translateY(-100%)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[var(--md-sys-color-outline-variant)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+              {label}
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]">
+              {currency.flag} {currency.id}
             </span>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-3 pt-2 border-t border-[var(--md-sys-color-outline-variant)] space-y-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">Published (USD)</span>
-          <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-on-surface-variant)]">
-            ${usdBase(baseUsd).toFixed(2)}
-          </span>
+          <div className="space-y-2">
+            {rows.map((row) => (
+              <div key={row.label} className="flex items-baseline justify-between gap-3">
+                <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">{row.label}</span>
+                <span className="font-mono text-[11px] font-bold text-[var(--md-sys-color-on-surface)]">
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-[var(--md-sys-color-outline-variant)] space-y-1">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">Published (USD)</span>
+              <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+                ${usdBase(baseUsd).toFixed(2)}
+              </span>
+            </div>
+            {currency.id !== 'USD' && (
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+                  1 USD = {USD_RATES[currency.id] ?? 1} {currency.id}
+                </span>
+                <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-primary)]">
+                  {convertFromUsd(baseUsd, currency)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-2.5 text-[10px] leading-relaxed text-[var(--md-sys-color-on-surface-variant)]">
+            Providers publish pricing in US dollars. The figure you see is that
+            USD rate converted at the reference rate above.
+          </p>
         </div>
-        {currency.id !== 'USD' && (
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
-              1 USD = {USD_RATES[currency.id] ?? 1} {currency.id}
-            </span>
-            <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-primary)]">
-              {convertFromUsd(baseUsd, currency)}
-            </span>
-          </div>
-        )}
-      </div>
-
-      <p className="mt-2.5 text-[10px] leading-relaxed text-[var(--md-sys-color-on-surface-variant)]">
-        Providers publish pricing in US dollars. The figure you see is that USD
-        rate converted at the reference rate above.
-      </p>
-    </div>
+      )}
+    </>
   );
 }
-
 
 // Provider Official Compressed Vector Logos (Instant crisp UI load)
 const PROVIDER_LOGOS = {
@@ -4408,25 +4478,23 @@ export default function App() {
                         </div>
                       </div>
                       <div className="my-1">
-                        <div className="group relative">
-                        <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {convertFromUsd(costOverview.total_accrued, activeCurrency)}
-                        </div>
-                          <CostBreakdownTooltip
-                            baseUsd={costOverview.total_accrued}
-                            currency={activeCurrency}
-                            label="Total Cost"
-                            rows={[
-                              { label: 'Input Token', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
-                              { label: 'Output Token', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
-                            ]}
-                          />
-                        </div>
+                        <CostBreakdownTooltip
+                          baseUsd={costOverview.total_accrued}
+                          currency={activeCurrency}
+                          label="Total Cost"
+                          rows={[
+                            { label: 'Input Token', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
+                            { label: 'Output Token', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
+                          ]}
+                          trigger={
+                            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)] inline-block">
+                              {convertFromUsd(costOverview.total_accrued, activeCurrency)}
+                            </span>
+                          }
+                        />
                         
                         <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs font-mono">
-                          <div className="group relative bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] transition-colors hover:border-[var(--md-sys-color-primary)]">
-                            <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Input Token</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.input_token_price, activeCurrency)}</span>
+                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <CostBreakdownTooltip
                               baseUsd={costOverview.input_token_price}
                               currency={activeCurrency}
@@ -4435,11 +4503,15 @@ export default function App() {
                                 { label: 'Per 1M tokens', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
                                 { label: 'Basis', value: 'USD published' },
                               ]}
+                              trigger={
+                                <span>
+                                  <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Input Token</span>
+                                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.input_token_price, activeCurrency)}</span>
+                                </span>
+                              }
                             />
                           </div>
-                          <div className="group relative bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] transition-colors hover:border-[var(--md-sys-color-primary)]">
-                            <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Output Token</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.output_token_price, activeCurrency)}</span>
+                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <CostBreakdownTooltip
                               baseUsd={costOverview.output_token_price}
                               currency={activeCurrency}
@@ -4448,6 +4520,12 @@ export default function App() {
                                 { label: 'Per 1M tokens', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
                                 { label: 'Basis', value: 'USD published' },
                               ]}
+                              trigger={
+                                <span>
+                                  <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Output Token</span>
+                                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.output_token_price, activeCurrency)}</span>
+                                </span>
+                              }
                             />
                           </div>
                         </div>
