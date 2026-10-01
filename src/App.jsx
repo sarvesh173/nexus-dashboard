@@ -2559,6 +2559,91 @@ const CURRENCY_OPTIONS = [
   { id: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬', rank: '#32 GDP' },
 ];
 
+// Reference rates against USD. Provider pricing is published in USD, so every
+// other currency is a conversion of that. Static on purpose: these only need to
+// be directionally right to explain the number, and a live FX feed is not
+// available here. Replace with a rates endpoint when one exists.
+const USD_RATES = {
+  USD: 1, CNY: 7.24, EUR: 0.92, JPY: 149.5, INR: 83.4, GBP: 0.79,
+  CAD: 1.36, BRL: 5.42, RUB: 92.5, KRW: 1338, AUD: 1.51, CHF: 0.88,
+  AED: 3.6725, SGD: 1.35,
+};
+
+/** Convert a USD amount into the active currency and format it. */
+function convertFromUsd(usdAmount, currency) {
+  const rate = USD_RATES[currency.id] ?? 1;
+  // Token prices arrive as "0.00 / 0.00" — take the first figure, and never
+  // let a malformed value surface as NaN in the UI.
+  const base = parseFloat(String(usdAmount ?? '').split('/')[0]);
+  if (!Number.isFinite(base)) return `${currency.symbol}0.00`;
+  const value = base * rate;
+  return `${currency.symbol}${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/** The numeric USD half of a value that may be a "x / y" pair. */
+function usdBase(usdAmount) {
+  const base = parseFloat(String(usdAmount ?? '').split('/')[0]);
+  return Number.isFinite(base) ? base : 0;
+}
+
+/**
+ * Hover card explaining a cost figure. Every displayed price is converted from
+ * the provider's published USD rate — this says so, and shows the base figure
+ * next to the converted one so the arithmetic is visible rather than implied.
+ */
+function CostBreakdownTooltip({ baseUsd, currency, rows, label }) {
+  return (
+    <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-xl shadow-2xl p-3.5 text-left opacity-0 invisible translate-y-1 pointer-events-none group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 ease-out">
+      <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[var(--md-sys-color-outline-variant)]">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">
+          {label}
+        </span>
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)]">
+          {currency.flag} {currency.id}
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-baseline justify-between gap-3">
+            <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">{row.label}</span>
+            <span className="font-mono text-[11px] font-bold text-[var(--md-sys-color-on-surface)]">
+              {row.value}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-[var(--md-sys-color-outline-variant)] space-y-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">Published (USD)</span>
+          <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+            ${usdBase(baseUsd).toFixed(2)}
+          </span>
+        </div>
+        {currency.id !== 'USD' && (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+              1 USD = {USD_RATES[currency.id] ?? 1} {currency.id}
+            </span>
+            <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-primary)]">
+              {convertFromUsd(baseUsd, currency)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-2.5 text-[10px] leading-relaxed text-[var(--md-sys-color-on-surface-variant)]">
+        Providers publish pricing in US dollars. The figure you see is that USD
+        rate converted at the reference rate above.
+      </p>
+    </div>
+  );
+}
+
 
 // Provider Official Compressed Vector Logos (Instant crisp UI load)
 const PROVIDER_LOGOS = {
@@ -4323,18 +4408,47 @@ export default function App() {
                         </div>
                       </div>
                       <div className="my-1">
+                        <div className="group relative">
                         <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {activeCurrency.symbol}{costOverview.total_accrued}
+                          {convertFromUsd(costOverview.total_accrued, activeCurrency)}
+                        </div>
+                          <CostBreakdownTooltip
+                            baseUsd={costOverview.total_accrued}
+                            currency={activeCurrency}
+                            label="Total Cost"
+                            rows={[
+                              { label: 'Input Token', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
+                              { label: 'Output Token', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
+                            ]}
+                          />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs font-mono">
-                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                          <div className="group relative bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] transition-colors hover:border-[var(--md-sys-color-primary)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Input Token</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{costOverview.input_token_price}</span>
+                            <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.input_token_price, activeCurrency)}</span>
+                            <CostBreakdownTooltip
+                              baseUsd={costOverview.input_token_price}
+                              currency={activeCurrency}
+                              label="Input Token"
+                              rows={[
+                                { label: 'Per 1M tokens', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
+                                { label: 'Basis', value: 'USD published' },
+                              ]}
+                            />
                           </div>
-                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                          <div className="group relative bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] transition-colors hover:border-[var(--md-sys-color-primary)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Output Token</span>
-                            <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{costOverview.output_token_price}</span>
+                            <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.output_token_price, activeCurrency)}</span>
+                            <CostBreakdownTooltip
+                              baseUsd={costOverview.output_token_price}
+                              currency={activeCurrency}
+                              label="Output Token"
+                              rows={[
+                                { label: 'Per 1M tokens', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
+                                { label: 'Basis', value: 'USD published' },
+                              ]}
+                            />
                           </div>
                         </div>
                       </div>
