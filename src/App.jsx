@@ -18,16 +18,10 @@ import {
   Mic,
   Brain,
   Eye,
-  Video,
   MessageSquare,
   Search,
   Sparkles,
-  Filter,
   Bot,
-  Shield,
-  Terminal,
-  CpuIcon,
-  Code2,
   ExternalLink,
   ArrowLeft
 } from 'lucide-react';
@@ -610,7 +604,7 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Selected agent for double-click inspection blank interface modal
-  const [activeCliAgent, setActiveCliAgent] = useState(null);
+  const [_activeCliAgent, _setActiveCliAgent] = useState(null);
   const [providersList, setProvidersList] = useState([]);
   const [allProviders, setAllProviders] = useState([]);
   const [showRouters, setShowRouters] = useState(false);
@@ -673,7 +667,7 @@ export default function App() {
     // optimistic: apply locally first so the click feels instant
     setHidden((h) => {
       const set = new Set(h[kind === 'providers' ? 'providers' : 'models']);
-      shouldHide ? set.add(id) : set.delete(id);
+      if (shouldHide) { set.add(id); } else { set.delete(id); }
       return { ...h, [kind === 'providers' ? 'providers' : 'models']:
                [...set] };
     });
@@ -712,7 +706,7 @@ export default function App() {
 
   // Card count is measured from the real grid width so the layout always fills
   // the viewport exactly: more providers -> more columns, not more scrolling.
-  const [cols, setCols] = useState(5);
+  const [_cols, setCols] = useState(5);
   const gridRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -836,7 +830,7 @@ export default function App() {
     nexus_mem_mb: 16.0,
   });
 
-  const [costOverview, setCostOverview] = useState({
+  const [costOverview] = useState({
     total_accrued: '0.00',
     scan_cadence: '1h - 24h background sync',
     last_synced: 'Just now',
@@ -845,7 +839,7 @@ export default function App() {
   });
 
   // Industry Standard Model Catalog Structure
-  const [modelCatalog, setModelCatalog] = useState([
+  const [_modelCatalog] = useState([
     // Text Models
     {
       id: 'gemini-2.5-pro',
@@ -1186,69 +1180,89 @@ export default function App() {
           </div>
         </div>
 
-        {/* Center: M3 Segmented Navigation (Overview, Models, Cost, Settings) */}
+        {/* Center: M3 Segmented Navigation (Overview, Models, Agents, Playground, Cost, Settings) */}
         <nav className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1 bg-[var(--md-sys-color-surface-container)] p-1 rounded-full border border-[var(--md-sys-color-outline-variant)] shadow-xs overflow-x-auto nav-scroll-fade">
           
           <button
             onClick={() => navigate('/')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
-              location.pathname === '/'
+            className={`nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+              location.pathname === '/' || location.pathname === '/overview'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <LayoutDashboard size={14} />
+            <span className="overview-icon inline-flex">
+              <LayoutDashboard size={14} />
+            </span>
             <span>Overview</span>
           </button>
 
           <button
             onClick={() => navigate('/model')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+            className={`nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
               location.pathname.startsWith('/model') || location.pathname.startsWith('/models') || location.pathname.startsWith('/modules')
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <Boxes size={14} />
+            <span className="model-icon inline-flex">
+              <Boxes size={14} />
+            </span>
             <span>Models</span>
           </button>
 
           <button
             onClick={() => navigate('/agents')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
-              location.pathname === '/agents'
+            className={`nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+              location.pathname.startsWith('/agents')
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <Bot size={14} />
+            <span className="agent-icon inline-flex">
+              <Bot size={14} />
+            </span>
             <span>Agents</span>
           </button>
 
           <button
+            onClick={() => navigate('/playground')}
+            className={`nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+              location.pathname === '/playground'
+                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+            }`}
+          >
+            <span className="playground-icon inline-flex">
+              <Sparkles size={14} />
+            </span>
+            <span>Playground</span>
+          </button>
+
+          <button
             onClick={() => navigate('/cost')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            className={`nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
               location.pathname === '/cost'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <span className="inline-flex animate-subtle-glow">
-              <DollarSign size={14} className="text-[var(--md-sys-color-primary)] group-hover:scale-110 transition-transform" />
+            <span className="cost-icon inline-flex">
+              <DollarSign size={14} />
             </span>
             <span>Cost</span>
           </button>
 
           <button
             onClick={() => navigate('/settings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            className={`nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
               location.pathname === '/settings'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <span className="inline-flex group-hover:rotate-45 transition-transform duration-300">
-              <Settings size={14} className="text-[var(--md-sys-color-primary)]" />
+            <span className="settings-icon inline-flex">
+              <Settings size={14} />
             </span>
             <span>Settings</span>
           </button>
@@ -1352,6 +1366,21 @@ export default function App() {
 
         <Routes>
           {/* OVERVIEW ROUTE */}
+          <Route
+            path="/overview"
+            element={
+              <div className="w-full space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--md-sys-color-outline-variant)]">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
+                      System Telemetry & Controls
+                    </h1>
+                  </div>
+                </div>
+              </div>
+            }
+          />
+          {/* OVERVIEW ROUTE (HOME) */}
           <Route
             path="/"
             element={
@@ -1851,7 +1880,7 @@ export default function App() {
                           </button>
                           {(() => {
                             const isUltraCompact = (cardHeightPx < 210) || (cardWidthPx > 0 && cardWidthPx < 280);
-                            const isTall = (cardHeightPx >= 280) && (cardWidthPx > 0 && cardWidthPx < 360);
+                            const _isTall = (cardHeightPx >= 280) && (cardWidthPx > 0 && cardWidthPx < 360);
                             // Auto-derive categories if backend sent empty object so NO provider ever has empty gap
                             const cats = (prov.categories && Object.keys(prov.categories).length > 0)
                               ? prov.categories
@@ -1866,7 +1895,7 @@ export default function App() {
                             const ttsCount = cats.tts ?? 0;
                             const embeddingCount = cats.embedding ?? cats.embeddings ?? 0;
                             const textCount = cats.text ?? cats.llm ?? Math.max(0, totalCount - visionCount - sttCount - ttsCount - embeddingCount);
-                            const displayModels = (prov.models || []).slice(0, 8);
+                            const _displayModels = (prov.models || []).slice(0, 8);
 
                             return (
                               <>
@@ -2322,6 +2351,21 @@ export default function App() {
             element={<AgentSessionView navigate={navigate} />}
           />
 
+          {/* PLAYGROUND ROUTE */}
+          <Route
+            path="/playground"
+            element={
+              <div className="w-full space-y-6">
+                <div className="p-6 rounded-3xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] space-y-4">
+                  <h2 className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">Model Playground</h2>
+                  <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                    Interactive chat and testing interface for gateway models.
+                  </p>
+                </div>
+              </div>
+            }
+          />
+
           {/* SETTINGS ROUTE */}
           <Route
             path="/settings"
@@ -2340,7 +2384,7 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                     {[
                       { id: 'right', name: 'Right Side (Default)', desc: 'Vertical (^) then diagonal (/) branching right' },
-                      { id: 'left', name: 'Left Side', desc: 'Vertical (^) then diagonal (\) branching left' },
+                      { id: 'left', name: 'Left Side', desc: 'Vertical (^) then diagonal (\\) branching left' },
                       { id: 'auto', name: 'Automatic Mirror', desc: 'Dynamically adapts to available viewport margin' }
                     ].map(opt => {
                       const isSelected = leaderAlign === opt.id;

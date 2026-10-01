@@ -210,3 +210,26 @@ body {
   background: var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-full);
 }
+/* Nav tab icon hover animations */
+.nav-overview-button:hover .overview-icon {
+  transform: scale(1.08) rotate(6deg);
+}
+.nav-model-button:hover .model-icon {
+  transform: scale(1.12) rotate(-8deg);
+}
+.nav-agent-button:hover .agent-icon {
+  transform: scale(1.16) translateY(-2px);
+}
+.nav-playground-button:hover .playground-icon {
+  transform: scale(1.14) rotate(15deg);
+}
+.nav-cost-button:hover .cost-icon {
+  transform: scale(1.10) rotate(-12deg);
+}
+.nav-settings-button:hover .settings-icon {
+  transform: scale(1.20) rotate(45deg);
+}
+
+.overview-icon, .model-icon, .agent-icon, .playground-icon, .cost-icon, .settings-icon {
+  transition: transform 0.3s ease;
+}
