@@ -775,7 +775,18 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 if not model_id:
                     return self.send_json({'ok': False, 'error': 'Missing model ID', 'latency_ms': 0}, 400)
 
-                key = hermes_gateway._key() if hermes_gateway else ''
+                # Read master OMNIROUTE_API_KEY directly from /home/kira/.omniroute/.env or fallback to hermes_gateway
+                key = ''
+                try:
+                    import re
+                    with open('/home/kira/.omniroute/.env', 'r', encoding='utf-8') as ef:
+                        m_env = re.search(r'OMNIROUTE_API_KEY\s*=\s*["\']?([^"\'\r\n]+)', ef.read())
+                        if m_env:
+                            key = m_env.group(1).strip()
+                except Exception:
+                    pass
+                if not key and hermes_gateway:
+                    key = hermes_gateway._key()
                 gw_url = 'http://127.0.0.1:20128/v1/chat/completions'
 
                 headers = {
@@ -783,10 +794,11 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'Authorization': f'Bearer {key}' if key else ''
                 }
 
+                prompt_text = body.get('prompt') or 'hi'
                 payload = {
                     'model': model_id,
-                    'messages': [{'role': 'user', 'content': 'hi'}],
-                    'max_tokens': 16,
+                    'messages': [{'role': 'user', 'content': prompt_text}],
+                    'max_tokens': 64,
                     'stream': False
                 }
 
@@ -798,7 +810,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     if res.status_code == 200:
                         data = res.json()
                         choices = data.get('choices', [])
-                        reply = choices[0].get('message', {}).get('content', '') if choices else ''
+                        msg = choices[0].get('message', {}) if choices else {}
+                        reply = msg.get('content') or msg.get('reasoning_content') or msg.get('reasoning') or 'Model responded successfully'
                         return self.send_json({
                             'ok': True,
                             'status': 200,

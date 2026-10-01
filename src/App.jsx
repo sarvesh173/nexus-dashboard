@@ -338,6 +338,56 @@ const navMicroAnimationStyles = `
     animation: addPlusRotate 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
+  
+  @keyframes playgroundWandGlow {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 0px rgba(99, 102, 241, 0));
+    }
+    30% {
+      transform: scale(1.18) rotate(-14deg);
+      filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.7));
+    }
+    70% {
+      transform: scale(1.1) rotate(8deg);
+      filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
+    }
+  }
+
+  @keyframes sparkFloatA {
+    0%, 100% {
+      transform: translate(0, 0) scale(0.8);
+      opacity: 0.2;
+    }
+    50% {
+      transform: translate(2px, -3px) scale(1.3);
+      opacity: 1;
+    }
+  }
+
+  @keyframes sparkFloatB {
+    0%, 100% {
+      transform: translate(0, 0) scale(1.1);
+      opacity: 0.9;
+    }
+    50% {
+      transform: translate(-2px, 2px) scale(0.6);
+      opacity: 0.3;
+    }
+  }
+
+  .nav-tab:hover .svg-anim-playground-main {
+    animation: playgroundWandGlow 750ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  .nav-playground-button:hover .nav-sparkle-a {
+    animation: sparkFloatA 600ms ease-in-out infinite;
+  }
+
+  .nav-playground-button:hover .nav-sparkle-b {
+    animation: sparkFloatB 600ms ease-in-out infinite 200ms;
+  }
+
   .apple-view-pane {
     animation: appleViewEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -2280,6 +2330,52 @@ export default function App() {
   });
   const [isTestingAll, setIsTestingAll] = useState(false);
   const [testAllProgress, setTestAllProgress] = useState({ current: 0, total: 0 });
+  const [playgroundInput, setPlaygroundInput] = useState('');
+  const [playgroundMessages, setPlaygroundMessages] = useState([]);
+  const [isPlaygroundSending, setIsPlaygroundSending] = useState(false);
+
+  const handleSendPlaygroundMessage = async (e) => {
+    if (e) e.preventDefault();
+    const prompt = playgroundInput.trim();
+    if (!prompt || isPlaygroundSending) return;
+
+    const userMsg = { role: 'user', content: prompt };
+    setPlaygroundMessages((prev) => [...prev, userMsg]);
+    setPlaygroundInput('');
+    setIsPlaygroundSending(true);
+
+    try {
+      const res = await fetch('/api/model/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'auto/best-free', // Live gateway tested default
+          kind: 'text',
+          prompt: prompt
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPlaygroundMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: data.reply || 'Response received.', latency_ms: data.latency_ms }
+        ]);
+      } else {
+        setPlaygroundMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: `[Error: ${data.error || 'Request failed'}]`, isError: true }
+        ]);
+      }
+    } catch (err) {
+      setPlaygroundMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `[Network Error: ${err.message}]`, isError: true }
+      ]);
+    } finally {
+      setIsPlaygroundSending(false);
+    }
+  };
+
 
   const toggleAutoHideOnFail = () => {
     setAutoHideOnFail((prev) => {
@@ -3511,19 +3607,30 @@ export default function App() {
             <span>Agents</span>
           </button>
 
-          {/* Top Navbar Playground Button with Fluid Animation */}
+          {/* Top Navbar Playground Button with Apple Micro-Animated SVG */}
           <button
             type="button"
             onClick={() => navigate('/playground')}
             aria-current={isPlaygroundNavActive ? 'page' : undefined}
-            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isPlaygroundNavActive
                 ? 'nav-playground-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="nav-playground-icon" aria-hidden="true">
-              <Play size={14} className={`svg-anim-play ${isPlaygroundNavActive ? 'fill-current' : 'text-[var(--md-sys-color-primary)]'}`} />
+            <span className="nav-playground-icon relative inline-flex items-center justify-center w-4 h-4" aria-hidden="true">
+              {/* Primary SVG: Wand / Sparkle */}
+              <Sparkles
+                size={14}
+                className={`svg-anim-playground-main transition-transform ${
+                  isPlaygroundNavActive
+                    ? 'text-[var(--md-sys-color-on-primary)] fill-current'
+                    : 'text-indigo-400 group-hover:text-indigo-300'
+                }`}
+              />
+              {/* Micro-spark dots */}
+              <span className="nav-sparkle-a absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-cyan-400 opacity-60 pointer-events-none" />
+              <span className="nav-sparkle-b absolute -bottom-0.5 -left-0.5 w-1 h-1 rounded-full bg-indigo-400 opacity-60 pointer-events-none" />
             </span>
             <span>Playground</span>
           </button>
@@ -5298,44 +5405,83 @@ export default function App() {
 
           {/* Apple Cupertino Frosted Chat Window */}
           <div className="rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-3xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.15)] overflow-hidden flex flex-col h-[560px]">
-            {/* Chat Messages Viewport (Empty / Welcome State) */}
-            <div className="flex-1 p-6 overflow-y-auto flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] flex items-center justify-center border border-[var(--md-sys-color-primary)]/20 shadow-sm animate-in zoom-in-95 duration-200">
-                <Sparkles size={24} />
-              </div>
-              <div className="max-w-md space-y-1.5">
-                <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)]">
-                  Welcome to Model Playground
-                </h3>
-                <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-                  Select a model from the top selector or browse the catalog via <span className="font-mono text-[var(--md-sys-color-primary)]">/model</span> to start interactive testing.
-                </p>
-              </div>
+            {/* Chat Messages Viewport */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-4">
+              {playgroundMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 my-auto">
+                  <div className="w-14 h-14 rounded-2xl bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] flex items-center justify-center border border-[var(--md-sys-color-primary)]/20 shadow-sm">
+                    <Sparkles size={24} />
+                  </div>
+                  <div className="max-w-md space-y-1.5">
+                    <h3 className="text-base font-bold text-[var(--md-sys-color-on-surface)]">
+                      Welcome to Model Playground
+                    </h3>
+                    <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                      Select a model from the top selector or browse the catalog via <span className="font-mono text-[var(--md-sys-color-primary)]">/model</span> to start interactive testing.
+                    </p>
+                  </div>
 
-              {/* Sample Prompt Chips */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2 max-w-lg">
-                {[
-                  'Explain quantum superposition simply',
-                  'Write a clean React hook for debouncing',
-                  'Compare Llama 3.3 vs DeepSeek R1',
-                ].map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--md-sys-color-surface-container-high)]/80 hover:bg-[var(--md-sys-color-primary)]/15 hover:text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)]/40 transition-all apple-pressable cursor-pointer text-[var(--md-sys-color-on-surface-variant)]"
+                  {/* Sample Prompt Chips */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2 max-w-lg">
+                    {[
+                      'Explain quantum superposition simply',
+                      'Write a clean React hook for debouncing',
+                      'Hello, who are you?',
+                    ].map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => {
+                          setPlaygroundInput(prompt);
+                        }}
+                        className="px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--md-sys-color-surface-container-high)]/80 hover:bg-[var(--md-sys-color-primary)]/15 hover:text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)]/40 transition-all apple-pressable cursor-pointer text-[var(--md-sys-color-on-surface-variant)]"
+                      >
+                        "{prompt}"
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                playgroundMessages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} space-y-1`}
                   >
-                    "{prompt}"
-                  </button>
-                ))}
-              </div>
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-sm ${
+                        msg.role === 'user'
+                          ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-br-xs font-medium'
+                          : msg.isError
+                          ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30 rounded-bl-xs'
+                          : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-white/5 rounded-bl-xs'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                    {msg.latency_ms && (
+                      <span className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] px-1">
+                        ⚡ {msg.latency_ms}ms
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+              {isPlaygroundSending && (
+                <div className="flex items-center gap-2 text-xs text-[var(--md-sys-color-primary)] font-mono animate-pulse">
+                  <Sparkles size={14} className="animate-spin" />
+                  <span>Generating response…</span>
+                </div>
+              )}
             </div>
 
             {/* Apple Floating Chat Input Bar */}
             <div className="p-4 sm:p-5 bg-[var(--md-sys-color-surface-container-high)]/40 border-t border-[var(--md-sys-color-outline-variant)]/30 backdrop-blur-xl">
-              <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2.5 max-w-4xl mx-auto">
+              <form onSubmit={handleSendPlaygroundMessage} className="flex items-center gap-2.5 max-w-4xl mx-auto">
                 <div className="relative flex-1">
                   <input
                     type="text"
+                    value={playgroundInput}
+                    onChange={(e) => setPlaygroundInput(e.target.value)}
                     placeholder="Send a message to test model…"
                     className="w-full pl-4 pr-10 py-3 text-xs rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-white/10 text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)]/60 focus:ring-2 focus:ring-[var(--md-sys-color-primary)]/15 transition-all shadow-inner"
                   />
@@ -5343,7 +5489,8 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-10 h-10 rounded-2xl bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all apple-pressable cursor-pointer shadow-md shrink-0"
+                  disabled={!playgroundInput.trim() || isPlaygroundSending}
+                  className="w-10 h-10 rounded-2xl bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all apple-pressable cursor-pointer shadow-md shrink-0 disabled:opacity-40"
                   title="Send Test Message"
                 >
                   <Send size={15} />
