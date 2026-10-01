@@ -41,7 +41,9 @@ import {
   Trash,
   Compass,
   Square,
-  Circle
+  Circle,
+  DownloadCloud,
+  Plus,
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
@@ -2818,18 +2820,48 @@ export default function App() {
                         {selectedProviderId ? (isProviderNotFound ? 'Provider Not Found (404)' : `${getProviderDisplayName(currentProvider, providerOverrides)} Models`) : 'Model Providers & Infrastructure'}
                       </h1>
                       {selectedProviderId && !isProviderNotFound && currentProvider && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
-                            setEditingProvider(currentProvider);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer ml-1"
-                          title="Edit provider name and logo"
-                        >
-                          <Edit2 size={13} />
-                          <span>Edit Provider</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
+                              setEditingProvider(currentProvider);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer"
+                            title="Edit provider name and logo"
+                          >
+                            <Edit2 size={13} />
+                            <span>Edit Provider</span>
+                          </button>
+
+                          {/* Fetch Button (UI ready, awaiting backend connection) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              nexusLog('ACTION', `Fetch new models clicked for ${currentProvider.id} (awaiting pipeline connection)`);
+                              setToast(`Fetch pipeline for ${getProviderDisplayName(currentProvider, providerOverrides)} ready to connect`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
+                            title="Fetch newly released models for this provider"
+                          >
+                            <DownloadCloud size={13} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                            <span>Fetch</span>
+                          </button>
+
+                          {/* Add Button (UI ready, awaiting backend connection) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              nexusLog('ACTION', `Add custom model clicked for ${currentProvider.id} (awaiting pipeline connection)`);
+                              setToast(`Manual model injection for ${getProviderDisplayName(currentProvider, providerOverrides)} ready to connect`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
+                            title="Add model manually by name"
+                          >
+                            <Plus size={13} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                            <span>Add</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
