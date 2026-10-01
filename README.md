@@ -1,71 +1,69 @@
-# Nexus Dashboard
+# Nexus Agent Telemetry & Model Engine (Nexus-Dashboard)
 
-A control surface for a self-hosted AI gateway. It sits in front of whatever
-models you have access to and tells you the truth about them — which ones are
-actually live, which ones respond, what they cost, and which provider serves
-each one cheapest.
+> **Status:** Staging / Active Development
+> **Target:** High-performance, low-overhead agentic telemetry runtime and multi-provider model routing dashboard.
 
-Not a monitoring page. Not a model list. An instrument panel.
+Nexus Dashboard is an agentic telemetry and observability cockpit engineered to track live inference, multi-provider model catalogs (81 providers, 834 live models), cost intelligence, and hardware health metrics in real-time.
 
 ---
 
-## What it does
+## ⚡ Core Features
 
-**Catalog** — every provider the gateway can reach, with the models each one
-currently serves. Live, not read from a config file. Rename a provider, add a
-model by hand, or import a provider's published catalog.
-
-**Test** — press `Test` on any model and see the actual response and how long it
-took. A model that doesn't answer within 12 seconds says so instead of hanging.
-`Test All` works through the list one at a time.
-
-**Hide** — anything broken gets out of the way. Auto-hide on failure, or hide by
-section. Hiding never deletes anything, so a bad afternoon doesn't cost you the
-catalog.
-
-**Playground** — a chat canvas for trying a model directly. Real response, real
-latency, nothing mocked.
-
-**Cost** — where the tokens went.
-
-**Agents** — the CLI agents wired to the gateway, and what each one runs on.
+- **Dynamic Fluid Model Grid:** Proportional auto-fill grid layout with responsive zero-gap card architecture, native bidirectional resizing, and compact modality tiering.
+- **5-Modality Breakdown Engine:** Instant categorization across `LLM`, `Vision`, `Embedding`, `STT` (Speech-to-Text), and `TTS` (Text-to-Speech) for all connected providers.
+- **Provider & Model Catalog (`/model` & `/model/:providerId`):** Deep inspection interface with live upstream fetch, custom model injection, model-level hide/restore rails, active modality filters, and capability telemetry.
+- **Live Model Test Runner:** Per-model probe returning real response text and latency, with a 12-second deadline, sequential `Test All`, and auto-hide on failure.
+- **Real Context Window Resolution:** Context lengths resolved per model from upstream metadata instead of assumed defaults.
+- **Interactive Playground (`/playground`):** Cupertino-style frosted chat canvas for direct model interaction with live latency badges.
+- **Price & Cost Scanner (`/cost`):** Live model cost scanner tracking input/output token pricing across foundational providers.
+- **Hardware & Telemetry Overview (`/`):** Real-time monitoring of CPU, RAM, swap, disk, active agent sessions, and routing latency.
 
 ---
 
-## Interface
+## 🛠️ Tech Stack
 
-Material 3 surfaces over a dark, high-contrast palette. Spring physics on every
-transition (`cubic-bezier(0.16, 1, 0.3, 1)`), tactile press feedback, and
-per-tab motion — each navigation tab animates differently on hover rather than
-sharing one generic effect.
-
-No component library. Every surface is hand-built.
+- **Frontend:** React 19, Tailwind CSS v4, Vite, Lucide Icons, React Router v7.
+- **Backend Telemetry:** Lightweight Python async server streaming live provider catalogs and hardware telemetry.
+- **Design System:** Material Design 3 (M3) tokenized themes with persistent palette switching, spring easing, and per-tab micro-animations.
 
 ---
 
-## Running it
+## 🚀 Getting Started
 
+### Prerequisites
+- Node.js (v20+)
+- Python 3.10+
+
+### Setup & Run
 ```bash
+# Clone the repository
+git clone git@github.com:sarvesh173/nexus-dashboard.git
+cd nexus-dashboard
+
+# Install frontend dependencies
 npm install
+
+# Start development server
+npm run dev
+
+# Build for production
 npm run build
-systemctl --user restart nexus-dashboard
-systemctl --user restart nexus-telemetry
-```
-
-Frontend on `:5173`, backend on `:5174`.
-
-```bash
-systemctl --user list-units | grep nexus
-curl -s localhost:5174/api/health
 ```
 
 ---
 
-## Stack
+## 📌 Development Roadmap
 
-React 19 · Vite 8 · Tailwind 4 · lucide-react · react-router 7
-Python 3.13 standard library · Playwright for UI verification
+- [x] Zero-gap proportional card grid layout with 2-column live model stream.
+- [x] Full-bleed widescreen canvas with dynamic column balancing.
+- [x] Client-side auto-derivation of modalities across 80+ providers.
+- [x] Live model test runner with latency reporting and failure auto-hide.
+- [x] Interactive playground with real-time inference and latency badges.
+- [x] Upstream model catalog fetch and custom model injection.
+- [ ] Real-time WebSocket sync for live inference sessions and token streaming.
+- [ ] Autonomous model health and failover metrics.
+- [ ] Early-access model intelligence: automated attribution and cheapest-provider resolution.
 
-## License
+---
 
-MIT
+*Engineered by [@sarvesh173](https://github.com/sarvesh173).*
