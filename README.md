@@ -1,66 +1,74 @@
-# Nexus Agent Telemetry & Model Engine (Nexus-Dashboard)
+# Nexus
 
-> **Status:** Staging / Active Development
-> **Target:** High-performance, low-overhead agentic telemetry runtime and multi-provider model routing dashboard.
+An operations console for a self-hosted model gateway.
 
-Nexus Dashboard is an agentic telemetry and observability cockpit engineered to track live inference, multi-provider model catalogs (80+ providers, 800+ live models), cost intelligence, and hardware health metrics in real-time.
-
----
-
-## ⚡ Core Features
-
-- **Dynamic Fluid Model Grid:** Proportional auto-fill grid layout with responsive zero-gap card architecture, native bidirectional resizing, and compact modality tiering.
-- **5-Modality Breakdown Engine:** Instant categorization across `LLM`, `Vision`, `Embedding`, `STT` (Speech-to-Text), and `TTS` (Text-to-Speech) for all connected providers.
-- **Provider & Model Catalog (`/model` & `/model/:providerId`):** Deep inspection interface with live upstream catalog fetch, custom model injection, per-model testing with latency reporting, model-level hide/restore rails, active modality filters, and capability telemetry.
-- **Interactive Playground (`/playground`):** Cupertino-style frosted chat canvas for direct model interaction with live latency badges.
-- **Price & Cost Scanner (`/cost`):** Live model cost scanner tracking input/output token pricing across foundational providers.
-- **Hardware & Telemetry Overview (`/`):** Real-time monitoring of CPU, RAM, active agent sessions, and routing latency.
+One screen tells you which providers are reachable, which models answer, what
+they cost, and which agent is doing what. Everything here is measured against
+the gateway itself — not read from a config file.
 
 ---
 
-## 🛠️ Tech Stack
+## What it does
 
-- **Frontend:** React 19, Tailwind CSS v4, Vite, Lucide Icons, React Router v7.
-- **Backend Telemetry:** Lightweight Python async server streaming live provider catalogs and hardware telemetry.
-- **Design System:** Material Design 3 (M3) tokenized themes with persistent palette switching.
+**Browse** — the live catalog, grouped by provider, filterable by modality.
+What the gateway can actually reach right now.
+
+**Probe** — press `Test` on any model and get a real reply with real latency.
+Twelve-second cutoff, so a dead endpoint reports itself instead of hanging the
+page. `Test All` walks the list sequentially.
+
+**Prune** — dead models get flagged and hidden in bulk. Hiding is reversible;
+nothing is ever deleted.
+
+**Talk** — a chat canvas for hands-on work with any model in the catalog.
+Live latency readout, no mocked data.
+
+**Price** — input and output token rates across providers, side by side.
+
+**Watch** — CPU, memory, disk, and active agent sessions on the overview.
+
+**Route** — registered CLI agents, each pinned to a specific gateway endpoint,
+all tracked from one place.
 
 ---
 
-## 🚀 Getting Started
+## Built with
 
-### Prerequisites
-- Node.js (v20+)
-- Python 3.10+
+React 19 · Tailwind 4 · Vite · React Router 7 · lucide-react
 
-### Setup & Run
+Python 3 standard library for the telemetry service — async, no dependencies.
+
+The interface follows Material Design 3, with theme persistence and spring-eased
+motion across every surface.
+
+---
+
+## Run it
+
 ```bash
-# Clone the repository
 git clone git@github.com:sarvesh173/nexus-dashboard.git
 cd nexus-dashboard
-
-# Install frontend dependencies
 npm install
 
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
+npm run dev      # development
+npm run build    # production bundle
 ```
 
----
-
-## 📌 Development Roadmap
-
-- [x] Zero-gap proportional card grid layout with 2-column live model stream.
-- [x] Full-bleed widescreen canvas with dynamic column balancing.
-- [x] Client-side auto-derivation of modalities across 80+ providers.
-- [x] Per-model test runner with latency reporting and failure auto-hide.
-- [x] Interactive playground with live inference and latency badges.
-- [x] Upstream model catalog fetch and custom model injection.
-- [ ] Real-time WebSocket sync for live inference sessions and token streaming.
-- [ ] Autonomous model health and failover metrics.
+Needs Node 20+ and Python 3.10+.
 
 ---
 
-*Engineered by [@sarvesh173](https://github.com/sarvesh173).*
+## In progress
+
+- [x] Fluid proportional grid with zero-gap cards
+- [x] Full-bleed canvas with live column balancing
+- [x] Modality detection across every connected provider
+- [x] Per-model probe with latency, and auto-hide on failure
+- [x] Live chat playground
+- [x] Upstream catalog sync and manual model entry
+- [ ] Streaming inference over a persistent socket
+- [ ] Health scoring and automatic failover
+
+---
+
+Built by [@sarvesh173](https://github.com/sarvesh173).
