@@ -366,6 +366,42 @@ const navMicroAnimationStyles = `
     transform: scale(0.96);
   }
 
+  /* Apple HIG Fluid Springs & Tactile Feedback */
+  .apple-pressable {
+    transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    will-change: transform;
+  }
+  .apple-pressable:hover {
+    transform: translateY(-1px);
+  }
+  .apple-pressable:active {
+    transform: scale(0.96) translateY(0);
+    transition-duration: 80ms;
+  }
+
+  .apple-segmented-item {
+    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, background-color, color;
+  }
+  .apple-segmented-item:active {
+    transform: scale(0.95);
+  }
+
+  @keyframes applePillGlow {
+    0%, 100% {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.03);
+    }
+  }
+
+  .apple-pulse-subtle {
+    animation: applePillGlow 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
   .nav-tab:hover .nav-overview-icon,
   .nav-tab:hover .nav-model-icon,
   .nav-tab:hover .nav-agent-icon,
@@ -861,7 +897,7 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
 
   if (!model) return null;
 
-  // Auto fetch / resolve context using 9Router algorithm
+  // Auto fetch / resolve context using 9Router algorithm with fluid feedback
   const handleAutoDetect = () => {
     setIsFetchingAuto(true);
     setTimeout(() => {
@@ -876,7 +912,7 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
       }
       setAutoResolvedBadge(detected);
       setIsFetchingAuto(false);
-    }, 450);
+    }, 380);
   };
 
   const handleSave = (e) => {
@@ -902,44 +938,44 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-2xl animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4 p-6"
+        className="w-full max-w-lg rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-3xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4.5 p-6 sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[var(--md-sys-color-outline-variant)]/60">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/30">
-              <Sliders size={16} />
+        <div className="flex items-center justify-between pb-3.5 border-b border-[var(--md-sys-color-outline-variant)]/40">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] flex items-center justify-center border border-[var(--md-sys-color-primary)]/25 shadow-xs">
+              <Sliders size={16} className="svg-anim-config" />
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight">Configure Context Window & Tokens</h2>
+              <h2 className="text-base font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">Configure Context & Tokens</h2>
               <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">{model.id}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition-all apple-pressable cursor-pointer"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Upstream default telemetry badge + Auto Fetch button */}
-        <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 flex items-center justify-between text-xs gap-3">
+        <div className="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 flex items-center justify-between text-xs gap-3">
           <div>
-            <span className="text-[10px] uppercase font-mono text-[var(--md-sys-color-on-surface-variant)] block font-semibold">Catalog Original Context</span>
-            <span className="font-semibold text-emerald-400 font-mono">{originalUpstream}</span>
+            <span className="text-[10px] uppercase font-mono text-[var(--md-sys-color-on-surface-variant)] block font-semibold tracking-wider">Catalog Original Context</span>
+            <span className="font-semibold text-emerald-400 font-mono text-sm">{originalUpstream}</span>
           </div>
 
           <button
             type="button"
             onClick={handleAutoDetect}
             disabled={isFetchingAuto}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
             title="Automatically query and resolve official context window from 9Router engine"
           >
             <RefreshCw size={12} className={isFetchingAuto ? 'animate-spin' : ''} />
@@ -948,71 +984,81 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
         </div>
 
         {autoResolvedBadge && (
-          <div className="text-[11px] font-mono px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 flex items-center justify-between">
-            <span>9Router Auto Resolved:</span>
-            <span className="font-bold">{autoResolvedBadge}</span>
+          <div className="text-[11px] font-mono px-3.5 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 flex items-center justify-between animate-in fade-in duration-200">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              9Router Auto Resolved
+            </span>
+            <span className="font-bold text-xs bg-cyan-500/20 px-2 py-0.5 rounded-lg border border-cyan-500/30">{autoResolvedBadge}</span>
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-4">
           {/* Context Window Selector (200k / 120k / Custom) */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
-              Context Window Capacity
-            </label>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+                Context Window Capacity
+              </label>
+              {contextMode === 'custom' && (
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Custom Mode Active
+                </span>
+              )}
+            </div>
 
-            {/* Segmented Control Buttons */}
-            <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/40">
+            {/* Apple Fluid Segmented Control */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50">
               <button
                 type="button"
                 onClick={() => setContextMode('200k')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono apple-segmented-item cursor-pointer flex items-center justify-center gap-1.5 ${
                   contextMode === '200k'
-                    ? 'bg-amber-500 text-black shadow-md scale-[1.02]'
+                    ? 'bg-emerald-500 text-black shadow-[0_2px_12px_rgba(16,185,129,0.35)] scale-[1.02]'
                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
                 }`}
               >
-                200k
+                <span>200k</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setContextMode('120k')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono apple-segmented-item cursor-pointer flex items-center justify-center gap-1.5 ${
                   contextMode === '120k'
-                    ? 'bg-amber-500 text-black shadow-md scale-[1.02]'
+                    ? 'bg-emerald-500 text-black shadow-[0_2px_12px_rgba(16,185,129,0.35)] scale-[1.02]'
                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
                 }`}
               >
-                120k
+                <span>120k</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setContextMode('custom')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono apple-segmented-item cursor-pointer flex items-center justify-center gap-1.5 ${
                   contextMode === 'custom'
-                    ? 'bg-amber-500 text-black shadow-md scale-[1.02]'
+                    ? 'bg-emerald-500 text-black shadow-[0_2px_12px_rgba(16,185,129,0.35)] scale-[1.02]'
                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
                 }`}
               >
-                Custom
+                <span>Custom</span>
               </button>
             </div>
 
-            {/* Custom Input Field (Only visible when Custom is active) */}
+            {/* Custom Input Field with Apple Glass Focus */}
             {contextMode === 'custom' && (
-              <div className="pt-2 animate-in fade-in duration-150">
+              <div className="pt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
                 <input
                   type="text"
                   value={customValue}
                   onChange={(e) => setCustomValue(e.target.value)}
                   placeholder="Enter exact context (e.g. 1M, 500k, 64k, 1048576)"
-                  className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-amber-500 transition-all"
+                  className="w-full px-4 py-2.5 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-emerald-500/40 text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   autoFocus
                 />
-                <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1 font-mono">
-                  Type any custom limit. Supports shorthand like 1M, 500k, or exact numbers.
+                <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5 font-mono">
+                  Shorthands like 1M, 500k, 64k or exact tokens will be mapped seamlessly.
                 </p>
               </div>
             )}
@@ -1028,17 +1074,18 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
               value={outputTokens}
               onChange={(e) => setOutputTokens(e.target.value)}
               placeholder="e.g. 8192 or 16384 or 65536"
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-amber-500 transition-all"
+              className="w-full px-4 py-2.5 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
             />
           </div>
 
           {/* Modal Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-[var(--md-sys-color-outline-variant)]/60">
+          <div className="flex items-center justify-between pt-3.5 border-t border-[var(--md-sys-color-outline-variant)]/40">
+            {/* Reset Original: Stays distinct red/rose for safety */}
             <button
               type="button"
               onClick={handleReset}
               title="Restore catalog original context & token limits"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-rose-400/90 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 active:scale-95 transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium text-rose-400/90 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs"
             >
               <Undo2 size={13} />
               <span>Reset Original</span>
@@ -1047,13 +1094,14 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-full text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all cursor-pointer"
+                className="px-4 py-2 rounded-full text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all apple-pressable cursor-pointer"
               >
                 Cancel
               </button>
+              {/* Apply Specs: System Primary / Emerald Theme */}
               <button
                 type="submit"
-                className="px-4 py-2 rounded-full text-xs font-semibold bg-amber-500 text-black hover:bg-amber-400 transition-all active:scale-95 shadow-xs cursor-pointer"
+                className="px-5 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer apple-pressable"
               >
                 Apply Specs
               </button>
@@ -1064,7 +1112,6 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
     </div>
   );
 }
-
 function AddCustomModelModal({ isOpen, provider, onSave, onClose }) {
   const [modelId, setModelId] = useState('');
   const [displayName, setDisplayName] = useState('');
