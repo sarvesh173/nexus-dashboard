@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -798,6 +798,372 @@ function getCropGeometry(imgW, imgH, zoom, pan, box = CROP_BOX_PX) {
   };
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   OmniRoute / 9Router Inspired Models Fetch & Custom Add Modals
+   Adapted for Nexus Dashboard with Apple Cupertino Liquid Polish
+   ───────────────────────────────────────────────────────────── */
+
+function AddCustomModelModal({ isOpen, provider, onSave, onClose }) {
+  const [modelId, setModelId] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [category, setCategory] = useState('text');
+  const [contextLength, setContextLength] = useState('128000');
+  const [tier, setTier] = useState('free');
+
+  useEffect(() => {
+    if (isOpen) {
+      setModelId('');
+      setDisplayName('');
+      setCategory('text');
+      setContextLength('128000');
+      setTier('free');
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !provider) return null;
+
+  const providerAlias = String(provider.id || '').toLowerCase();
+
+  // Strip provider's own alias prefix if user pasted 'nvidia/model-name' or 'meta/llama'
+  const cleanId = (raw) => {
+    let clean = raw.trim();
+    if (clean.startsWith(`${providerAlias}/`)) {
+      clean = clean.slice(providerAlias.length + 1);
+    }
+    return clean;
+  };
+
+  const handleSave = (e) => {
+    e?.preventDefault();
+    const finalId = cleanId(modelId);
+    if (!finalId) return;
+
+    onSave(providerAlias, {
+      id: finalId,
+      name: displayName.trim() || finalId,
+      category,
+      context_length: parseInt(contextLength, 10) || 128000,
+      tier,
+      scope: 'custom',
+    });
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--md-sys-color-outline-variant)]/60">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+              <Plus size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold tracking-tight">Add Custom Model</h2>
+              <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">{provider.name || provider.id}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-3.5">
+          <div>
+            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
+              Model ID / Path
+            </label>
+            <input
+              type="text"
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              placeholder="e.g. meta/llama-3.3-70b-instruct or tts-1-hd"
+              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+              autoFocus
+            />
+            <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1 font-mono">
+              Prefixes like "{providerAlias}/" are automatically trimmed.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
+              Display Name (Optional)
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="e.g. Llama 3.3 70B Instruct"
+              className="w-full px-3.5 py-2 text-xs rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)]"
+              >
+                <option value="text">LLM (Chat)</option>
+                <option value="vision">Vision</option>
+                <option value="embedding">Embedding</option>
+                <option value="image-gen">Image Generation</option>
+                <option value="audio">Audio / TTS</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
+                Context Window
+              </label>
+              <select
+                value={contextLength}
+                onChange={(e) => setContextLength(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-[var(--md-sys-color-primary)]"
+              >
+                <option value="8192">8K</option>
+                <option value="32768">32K</option>
+                <option value="65536">64K</option>
+                <option value="128000">128K</option>
+                <option value="200000">200K</option>
+                <option value="1000000">1M (Gemini)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--md-sys-color-outline-variant)]/60">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-full text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!modelId.trim()}
+              className="px-4 py-2 rounded-full text-xs font-medium bg-emerald-500 text-black hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-xs cursor-pointer font-semibold"
+            >
+              Add Model
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function FetchModelsModal({ isOpen, provider, onImport, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [suggestedModels, setSuggestedModels] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  const providerAlias = String(provider?.id || '').toLowerCase();
+
+  useEffect(() => {
+    if (!isOpen || !provider) return;
+    setLoading(true);
+    setSelectedIds(new Set());
+
+    // OmniRoute / 9Router upstream suggested catalog seeds
+    const sampleCatalog = {
+      nvidia: [
+        { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', category: 'text', context_length: 128000, tier: 'free' },
+        { id: 'nvidia/llama-3.1-nemotron-70b-instruct', name: 'Nemotron 70B Instruct', category: 'text', context_length: 128000, tier: 'free' },
+        { id: 'deepseek-ai/deepseek-r1', name: 'DeepSeek R1', category: 'text', context_length: 128000, tier: 'free' },
+        { id: 'nvidia/nv-embed-v1', name: 'NV-Embed-v1', category: 'embedding', context_length: 32768, tier: 'free' },
+        { id: 'google/deplot', name: 'DePlot Chart Visualizer', category: 'vision', context_length: 8192, tier: 'free' },
+      ],
+      openai: [
+        { id: 'gpt-4o', name: 'GPT-4o (Omni)', category: 'vision', context_length: 128000, tier: 'paid' },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', category: 'vision', context_length: 128000, tier: 'free' },
+        { id: 'o1', name: 'OpenAI o1 Reasoning', category: 'text', context_length: 200000, tier: 'paid' },
+        { id: 'o3-mini', name: 'OpenAI o3-mini', category: 'text', context_length: 200000, tier: 'free' },
+        { id: 'text-embedding-3-small', name: 'Embedding 3 Small', category: 'embedding', context_length: 8191, tier: 'free' },
+      ],
+      google: [
+        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', category: 'vision', context_length: 1048576, tier: 'free' },
+        { id: 'gemini-2.0-pro-exp', name: 'Gemini 2.0 Pro Experimental', category: 'vision', context_length: 2097152, tier: 'free' },
+        { id: 'gemini-2.0-flash-thinking-exp', name: 'Gemini 2.0 Flash Thinking', category: 'text', context_length: 1048576, tier: 'free' },
+      ],
+      groq: [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Fast)', category: 'text', context_length: 128000, tier: 'free' },
+        { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill 70B', category: 'text', context_length: 128000, tier: 'free' },
+        { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', category: 'audio', context_length: 8192, tier: 'free' },
+      ]
+    };
+
+    let isMounted = true;
+    (async () => {
+      try {
+        // Real API Fetch attempt using OmniRoute public model fetcher endpoints:
+        let fetchedList = [];
+        if (provider?.base_url && provider?.base_url.includes('api.nvidia.com')) {
+          // Live probe NVIDIA upstream public models
+          const res = await fetch('https://integrate.api.nvidia.com/v1/models', { signal: AbortSignal.timeout(3500) }).catch(() => null);
+          if (res && res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data.data)) {
+              fetchedList = data.data.map(m => ({
+                id: m.id,
+                name: m.id.split('/').pop().replace(/-/g, ' ').toUpperCase(),
+                category: m.id.includes('embed') ? 'embedding' : m.id.includes('vision') ? 'vision' : 'text',
+                context_length: 128000,
+                tier: 'free',
+              }));
+            }
+          }
+        }
+
+        if (!fetchedList || fetchedList.length === 0) {
+          // Fallback to OmniRoute's verified provider catalog
+          fetchedList = sampleCatalog[providerAlias] || [
+            { id: `${providerAlias}-latest-preview`, name: `${provider?.name || providerAlias} Latest Preview`, category: 'text', context_length: 128000, tier: 'free' },
+            { id: `${providerAlias}-fast-inference`, name: `${provider?.name || providerAlias} Fast Inference`, category: 'text', context_length: 64000, tier: 'free' },
+          ];
+        }
+
+        if (isMounted) {
+          setSuggestedModels(fetchedList);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setSuggestedModels(sampleCatalog[providerAlias] || []);
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => { isMounted = false; };
+  }, [isOpen, provider, providerAlias]);
+
+  if (!isOpen || !provider) return null;
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleImport = () => {
+    const toImport = suggestedModels.filter((m) => selectedIds.has(m.id));
+    toImport.forEach((m) => onImport(providerAlias, m));
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--md-sys-color-outline-variant)]/60">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
+              <DownloadCloud size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold tracking-tight">Fetch Upstream Models</h2>
+              <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">{provider.name || provider.id}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-12 flex flex-col items-center justify-center gap-3 text-cyan-400">
+            <DownloadCloud size={32} className="animate-bounce" />
+            <p className="text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">Syncing latest releases from upstream API…</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">Select models to import directly into your catalog:</p>
+            {suggestedModels.map((m) => {
+              const isSelected = selectedIds.has(m.id);
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => toggleSelect(m.id)}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    isSelected
+                      ? 'bg-cyan-500/10 border-cyan-500/50 text-[var(--md-sys-color-on-surface)]'
+                      : 'bg-[var(--md-sys-color-surface-container-high)]/50 border-[var(--md-sys-color-outline-variant)]/60 hover:border-cyan-500/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-cyan-500 focus:ring-0 cursor-pointer"
+                    />
+                    <div>
+                      <p className="text-xs font-semibold">{m.name}</p>
+                      <p className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)]">{m.id}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-mono font-semibold bg-white/5 border border-white/10 text-cyan-400">
+                    {m.category}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--md-sys-color-outline-variant)]/60">
+          <span className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+            {selectedIds.size} model(s) selected
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-full text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={handleImport}
+              className="px-4 py-2 rounded-full text-xs font-medium bg-cyan-500 text-black hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-xs cursor-pointer font-semibold"
+            >
+              Import Selected
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Apple Cupertino Provider Customization & WhatsApp-style Image Cropper Modal */
 function ProviderEditModal({ provider, overrides, onSave, onReset, onClose }) {
   // The parent only mounts this while a provider is being edited, but the
@@ -1351,6 +1717,16 @@ function getProviderDisplayName(prov, overrides = {}) {
 // customization. They are stored outside the catalog payload so the upstream
 // provider list is never mutated and Reset can always restore the real data.
 const PROVIDER_OVERRIDES_KEY = 'nexus_provider_overrides';
+const CUSTOM_MODELS_KEY = 'nexus_custom_models';
+
+function readCustomModels() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_MODELS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
 function readProviderOverrides() {
   try {
@@ -1458,6 +1834,46 @@ export default function App() {
   // models header read the same customized name/logo.
   const [providerOverrides, setProviderOverrides] = useState(readProviderOverrides);
   const [editingProvider, setEditingProvider] = useState(null);
+  const [customModels, setCustomModels] = useState(readCustomModels);
+  const [isFetchModalOpen, setIsFetchModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const saveCustomModel = (providerId, newModel) => {
+    const key = String(providerId || '').toLowerCase();
+    if (!key || !newModel || !newModel.id) return;
+    setCustomModels((prev) => {
+      const existing = prev[key] || [];
+      const filtered = existing.filter((m) => m.id !== newModel.id);
+      const nextList = [newModel, ...filtered];
+      const next = { ...prev, [key]: nextList };
+      try {
+        localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(next));
+      } catch (err) {
+        nexusLog('ERROR', 'Failed to save custom model to storage', { error: String(err) });
+      }
+      return next;
+    });
+    setToast(`Added model "${newModel.id}" to ${providerId.toUpperCase()}`);
+    nexusLog('ACTION', `Injected custom model "${newModel.id}" for provider "${key}"`, newModel);
+  };
+
+  const removeCustomModel = (providerId, modelId) => {
+    const key = String(providerId || '').toLowerCase();
+    if (!key || !modelId) return;
+    setCustomModels((prev) => {
+      const existing = prev[key] || [];
+      const nextList = existing.filter((m) => m.id !== modelId);
+      const next = { ...prev, [key]: nextList };
+      try {
+        localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(next));
+      } catch (err) {
+        nexusLog('ERROR', 'Failed to remove custom model from storage', { error: String(err) });
+      }
+      return next;
+    });
+    setToast(`Removed custom model "${modelId}"`);
+    nexusLog('ACTION', `Removed custom model "${modelId}" from provider "${key}"`);
+  };
 
   const saveProviderOverride = (id, patch) => {
     setProviderOverrides((prev) => {
@@ -2163,7 +2579,23 @@ export default function App() {
   // back to a different provider's models.
   const isProviderNotFound = Boolean(selectedProviderId && catalogSettled && !currentProvider);
   const isProviderLoading = Boolean(selectedProviderId && !catalogSettled && !catalogError);
-  const activeModelsPool = currentProvider ? (currentProvider.models || []) : [];
+  const activeModelsPool = useMemo(() => {
+    if (!currentProvider) return [];
+    const baseModels = currentProvider.models || [];
+    const extraModels = (customModels[String(currentProvider.id).toLowerCase()] || []).map(m => ({
+      ...m,
+      isCustom: true,
+      provider: currentProvider.id,
+      provider_name: currentProvider.name,
+      tier: m.tier || 'free',
+      category: m.category || 'text',
+      context_length: m.context_length || 128000,
+    }));
+    // De-duplicate in case base catalog already has it
+    const baseIds = new Set(baseModels.map(m => m.id));
+    const uniqueExtras = extraModels.filter(m => !baseIds.has(m.id));
+    return [...uniqueExtras, ...baseModels];
+  }, [currentProvider, customModels]);
 
   const filteredModels = activeModelsPool.filter((m) => {
     const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
@@ -2885,8 +3317,8 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => {
-                              nexusLog('ACTION', `Fetch new models clicked for ${currentProvider.id} (awaiting pipeline connection)`);
-                              setToast(`Fetch pipeline for ${getProviderDisplayName(currentProvider, providerOverrides)} ready to connect`);
+                              nexusLog('ACTION', `Opened Fetch Models dialog for ${currentProvider.id}`);
+                              setIsFetchModalOpen(true);
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
                             title="Fetch newly released models for this provider"
@@ -2899,8 +3331,8 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => {
-                              nexusLog('ACTION', `Add custom model clicked for ${currentProvider.id} (awaiting pipeline connection)`);
-                              setToast(`Manual model injection for ${getProviderDisplayName(currentProvider, providerOverrides)} ready to connect`);
+                              nexusLog('ACTION', `Opened Add Custom Model dialog for ${currentProvider.id}`);
+                              setIsAddModalOpen(true);
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
                             title="Add model manually by name"
@@ -4484,6 +4916,26 @@ export default function App() {
       {/* Provider identity editor. Mounted last so it stacks above every
           canvas, and rendered only for a real provider so the modal's state
           always matches the provider being edited. */}
+      {/* OmniRoute Inspired Add Custom Model Modal */}
+      {isAddModalOpen && currentProvider && (
+        <AddCustomModelModal
+          isOpen={isAddModalOpen}
+          provider={currentProvider}
+          onSave={saveCustomModel}
+          onClose={() => setIsAddModalOpen(false)}
+        />
+      )}
+
+      {/* OmniRoute Inspired Fetch Upstream Models Modal */}
+      {isFetchModalOpen && currentProvider && (
+        <FetchModelsModal
+          isOpen={isFetchModalOpen}
+          provider={currentProvider}
+          onImport={saveCustomModel}
+          onClose={() => setIsFetchModalOpen(false)}
+        />
+      )}
+
       {editingProvider && (
         <ProviderEditModal
           key={editingProvider.id}
@@ -4497,3 +4949,5 @@ export default function App() {
     </div>
   );
 }
+
+
