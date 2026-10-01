@@ -62,7 +62,6 @@ npm run build
 - [x] Upstream model catalog fetch and custom model injection.
 - [ ] Real-time WebSocket sync for live inference sessions and token streaming.
 - [ ] Autonomous model health and failover metrics.
-- [ ] Early-access model intelligence: automated attribution and cheapest-provider resolution.
 
 ---
 
