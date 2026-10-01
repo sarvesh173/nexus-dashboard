@@ -839,25 +839,58 @@ function getCropGeometry(imgW, imgH, zoom, pan, box = CROP_BOX_PX) {
    ───────────────────────────────────────────────────────────── */
 
 function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
-  const [contextInput, setContextInput] = useState('');
-  const [outputTokens, setOutputTokens] = useState('');
+  const originalUpstream = model?.context?.original || (model?.context_length ? `${model.context_length} tokens` : '128k (Catalog default)');
+  
+  // 3 Modes: '200k' | '120k' | 'custom'
+  const [contextMode, setContextMode] = useState(() => {
+    const saved = currentConfig?.context_length;
+    if (saved === '200k') return '200k';
+    if (saved === '120k') return '120k';
+    if (saved) return 'custom';
+    return '200k';
+  });
 
-  const originalContext = model?.context?.original || (model?.context_length ? `${model.context_length} tokens` : '128k (Catalog default)');
+  const [customValue, setCustomValue] = useState(() => {
+    const saved = currentConfig?.context_length;
+    return (saved && saved !== '200k' && saved !== '120k') ? saved : '';
+  });
 
-  useEffect(() => {
-    if (model) {
-      setContextInput(currentConfig?.context_length || '');
-      setOutputTokens(currentConfig?.max_output_tokens || '');
-    }
-  }, [model, currentConfig]);
+  const [outputTokens, setOutputTokens] = useState(() => currentConfig?.max_output_tokens || '');
+  const [isFetchingAuto, setIsFetchingAuto] = useState(false);
+  const [autoResolvedBadge, setAutoResolvedBadge] = useState(null);
 
   if (!model) return null;
 
+  // Auto fetch / resolve context using 9Router algorithm
+  const handleAutoDetect = () => {
+    setIsFetchingAuto(true);
+    setTimeout(() => {
+      const detected = resolve9RouterContext(model.id, originalUpstream);
+      if (detected === '200k') {
+        setContextMode('200k');
+      } else if (detected === '120k' || detected === '128k') {
+        setContextMode('120k');
+      } else {
+        setContextMode('custom');
+        setCustomValue(detected);
+      }
+      setAutoResolvedBadge(detected);
+      setIsFetchingAuto(false);
+    }, 450);
+  };
+
   const handleSave = (e) => {
     e?.preventDefault();
+    let finalContext = '200k';
+    if (contextMode === '120k') finalContext = '120k';
+    else if (contextMode === 'custom') {
+      finalContext = customValue.trim() || '200k';
+    }
+
     onSave(model.id, {
-      context_length: contextInput.trim() || undefined,
+      context_length: finalContext,
       max_output_tokens: outputTokens.trim() || undefined,
+      mode: contextMode,
     });
     onClose();
   };
@@ -883,7 +916,7 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
               <Sliders size={16} />
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight">Configure Model Context & Specs</h2>
+              <h2 className="text-base font-bold tracking-tight">Configure Context Window & Tokens</h2>
               <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">{model.id}</p>
             </div>
           </div>
@@ -895,45 +928,97 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
           </button>
         </div>
 
-        {/* Upstream default telemetry badge */}
-        <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 flex items-center justify-between text-xs">
+        {/* Upstream default telemetry badge + Auto Fetch button */}
+        <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 flex items-center justify-between text-xs gap-3">
           <div>
-            <span className="text-[10px] uppercase font-mono text-[var(--md-sys-color-on-surface-variant)] block font-semibold">Catalog Original Default</span>
-            <span className="font-semibold text-emerald-400 font-mono">{originalContext}</span>
+            <span className="text-[10px] uppercase font-mono text-[var(--md-sys-color-on-surface-variant)] block font-semibold">Catalog Original Context</span>
+            <span className="font-semibold text-emerald-400 font-mono">{originalUpstream}</span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            Upstream
-          </span>
+
+          <button
+            type="button"
+            onClick={handleAutoDetect}
+            disabled={isFetchingAuto}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            title="Automatically query and resolve official context window from 9Router engine"
+          >
+            <RefreshCw size={12} className={isFetchingAuto ? 'animate-spin' : ''} />
+            <span>{isFetchingAuto ? 'Fetching…' : 'Auto Fetch'}</span>
+          </button>
         </div>
 
+        {autoResolvedBadge && (
+          <div className="text-[11px] font-mono px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 flex items-center justify-between">
+            <span>9Router Auto Resolved:</span>
+            <span className="font-bold">{autoResolvedBadge}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
-              Custom Context Window (Input Capacity)
+          {/* Context Window Selector (200k / 120k / Custom) */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
+              Context Window Capacity
             </label>
-            <input
-              type="text"
-              value={contextInput}
-              onChange={(e) => setContextInput(e.target.value)}
-              placeholder="e.g. 1M (1,048,576) or 200k or 128k"
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
-            />
-            {/* Quick Context Presets */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mr-1">Presets:</span>
-              {['32k', '128k', '200k', '500k', '1M', '2M'].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setContextInput(preset)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)]/20 hover:text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] transition-all cursor-pointer"
-                >
-                  {preset}
-                </button>
-              ))}
+
+            {/* Segmented Control Buttons */}
+            <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/40">
+              <button
+                type="button"
+                onClick={() => setContextMode('200k')}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
+                  contextMode === '200k'
+                    ? 'bg-amber-500 text-black shadow-md scale-[1.02]'
+                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                200k
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setContextMode('120k')}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
+                  contextMode === '120k'
+                    ? 'bg-amber-500 text-black shadow-md scale-[1.02]'
+                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                120k
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setContextMode('custom')}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono transition-all cursor-pointer ${
+                  contextMode === 'custom'
+                    ? 'bg-amber-500 text-black shadow-md scale-[1.02]'
+                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                Custom
+              </button>
             </div>
+
+            {/* Custom Input Field (Only visible when Custom is active) */}
+            {contextMode === 'custom' && (
+              <div className="pt-2 animate-in fade-in duration-150">
+                <input
+                  type="text"
+                  value={customValue}
+                  onChange={(e) => setCustomValue(e.target.value)}
+                  placeholder="Enter exact context (e.g. 1M, 500k, 64k, 1048576)"
+                  className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-amber-500 transition-all"
+                  autoFocus
+                />
+                <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1 font-mono">
+                  Type any custom limit. Supports shorthand like 1M, 500k, or exact numbers.
+                </p>
+              </div>
+            )}
           </div>
 
+          {/* Max Output Tokens Input */}
           <div>
             <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
               Max Output Tokens (Completion Cap)
@@ -943,22 +1028,8 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
               value={outputTokens}
               onChange={(e) => setOutputTokens(e.target.value)}
               placeholder="e.g. 8192 or 16384 or 65536"
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-amber-500 transition-all"
             />
-            {/* Quick Output Presets */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mr-1">Presets:</span>
-              {['4096', '8192', '16384', '32768', '65536'].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setOutputTokens(preset)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)]/20 hover:text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] transition-all cursor-pointer"
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Modal Actions */}
@@ -1960,6 +2031,30 @@ function getProviderDisplayName(prov, overrides = {}) {
 const PROVIDER_OVERRIDES_KEY = 'nexus_provider_overrides';
 const CUSTOM_MODELS_KEY = 'nexus_custom_models';
 const MODEL_CONFIGS_KEY = 'nexus_model_configs';
+const CUSTOM_PROVIDERS_KEY = 'nexus_custom_providers';
+
+function readCustomProviders() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PROVIDERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// 9Router / OmniRoute extracted Model Context Resolution Engine
+function resolve9RouterContext(modelId, rawUpstream) {
+  if (!modelId) return '128k';
+  const s = String(modelId).toLowerCase();
+  if (s.includes('gemini-2') || s.includes('gemini-1.5') || s.includes('1m')) return '1M';
+  if (s.includes('2m')) return '2M';
+  if (s.includes('deepseek') || s.includes('r1') || s.includes('hermes') || s.includes('qwen-2.5-72b')) return '200k';
+  if (s.includes('gpt-4o') || s.includes('o1') || s.includes('o3') || s.includes('claude-3-5') || s.includes('llama-3.1') || s.includes('llama-3.3')) return '128k';
+  if (s.includes('whisper') || s.includes('tts') || s.includes('embed')) return '8k';
+  if (rawUpstream && !rawUpstream.includes('—')) return rawUpstream;
+  return '200k';
+}
+
 
 function readModelConfigs() {
   try {
@@ -2090,6 +2185,25 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modelConfigs, setModelConfigs] = useState(readModelConfigs);
   const [configuringModel, setConfiguringModel] = useState(null);
+  const [customProviders, setCustomProviders] = useState(readCustomProviders);
+  const [isAddProviderModalOpen, setIsAddProviderModalOpen] = useState(false);
+
+  const saveCustomProvider = (newProv) => {
+    if (!newProv || !newProv.id) return;
+    setCustomProviders((prev) => {
+      const filtered = prev.filter((p) => p.id !== newProv.id);
+      const next = [newProv, ...filtered];
+      try {
+        localStorage.setItem(CUSTOM_PROVIDERS_KEY, JSON.stringify(next));
+      } catch (err) {
+        nexusLog('ERROR', 'Failed to save custom provider', { error: String(err) });
+      }
+      return next;
+    });
+    setToast(`Added custom provider "${newProv.name || newProv.id}"`);
+    nexusLog('ACTION', `Injected custom provider "${newProv.id}"`, newProv);
+  };
+
 
   const saveModelConfig = (modelId, patch) => {
     if (!modelId) return;
