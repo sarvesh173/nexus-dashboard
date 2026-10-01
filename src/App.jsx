@@ -2563,6 +2563,9 @@ const CURRENCY_OPTIONS = [
 // other currency is a conversion of that. Static on purpose: these only need to
 // be directionally right to explain the number, and a live FX feed is not
 // available here. Replace with a rates endpoint when one exists.
+// Half-height of the cost tooltip panel, used only to keep it on screen.
+const PANEL_HALF_H = 110;
+
 const USD_RATES = {
   USD: 1, CNY: 7.24, EUR: 0.92, JPY: 149.5, INR: 83.4, GBP: 0.79,
   CAD: 1.36, BRL: 5.42, RUB: 92.5, KRW: 1338, AUD: 1.51, CHF: 0.88,
@@ -2648,33 +2651,43 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
     if (coords || !anchorRef.current) return;
     const rect = anchorRef.current.getBoundingClientRect();
     const panelWidth = Math.min(260, window.innerWidth - 24);
-    // Open to the side with the most room, then clamp inside the viewport.
-    const openRight = window.innerWidth - rect.right >= panelWidth + 12;
-    const left = openRight
-      ? Math.min(rect.right + 12, window.innerWidth - panelWidth - 12)
-      : Math.max(rect.left - 12 - panelWidth, 12);
-    const above = rect.top >= 180;
-    const top = above ? rect.top - 10 : rect.bottom + 10;
 
-    // Badi Dandi geometry: anchor dot on the figure's near edge, one horizontal
-    // run, then a diagonal into the panel corner. Same three-point path the
-    // model-pill leader uses, so the two tooltips draw identically.
-    const dotX = openRight ? rect.right : rect.left;
-    const dotY = rect.top + rect.height / 2;
-    const midX = dotX + (openRight ? 14 : -14);
+    // Same three-point path as the model-pill leader: dot on the figure's edge,
+    // horizontal run, diagonal into the panel. The panel itself is positioned
+    // from boxX/boxY with translate(-50%) so its edge sits exactly where the
+    // diagonal lands - keeping both in one coordinate system is what stops the
+    // leader from detaching from the box.
+    const goRight = window.innerWidth - rect.right >= panelWidth + 48;
+
+    // The overlay is absolutely positioned inside the anchor, so every point is
+    // expressed relative to the anchor's own box. Working in the same
+    // coordinate space as the panel is what keeps the leader attached to it.
+    const ox = rect.left;
+    const oy = rect.top;
+    const dotX = goRight ? rect.width : 0;
+    const dotY = rect.height / 2;
+    const midX = dotX + (goRight ? 28 : -28);
     const midY = dotY;
-    setCoords({
-      left: Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12)),
-      top,
-      panelWidth,
-      below: !above,
-      dotX,
-      dotY,
-      midX,
-      midY,
-      boxX: openRight ? Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12)) : Math.min(window.innerWidth - 12, Math.max(left, 12) + panelWidth),
-      boxY: above ? top : top,
-    });
+    let boxX = midX + (goRight ? 24 : -24);
+    let boxY = midY - 26;
+
+    // Keep the panel on screen, then bring the coordinates back into the
+    // anchor's space so the leader moves with it.
+    const half = panelWidth / 2;
+    const desiredViewportX = ox + boxX;
+    const clampedViewportX = Math.max(
+      half + 12,
+      Math.min(desiredViewportX, window.innerWidth - half - 12)
+    );
+    const desiredViewportY = oy + boxY;
+    const clampedViewportY = Math.max(
+      PANEL_HALF_H + 12,
+      Math.min(desiredViewportY, window.innerHeight - PANEL_HALF_H - 12)
+    );
+    boxX = clampedViewportX - ox;
+    boxY = clampedViewportY - oy;
+
+    setCoords({ dotX, dotY, midX, midY, boxX, boxY, panelWidth, isRightAligned: goRight });
   };
 
   const hideTooltip = (event) => {
@@ -2704,15 +2717,14 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
         className={`cursor-default select-none rounded-md outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords ? 'relative z-50' : ''}`}
       >
         {trigger}
-      </span>
-      {coords && (
+        {coords && (
         <>
           {/* Badi Dandi: signature leader drawn from the figure to the panel.
               200ms dash draw + 160ms dot scale + 140ms fade, matching the
               model-pill tooltip exactly. */}
           <svg
             aria-hidden="true"
-            className="fixed inset-0 w-full h-full overflow-visible pointer-events-none z-[998]"
+            className="absolute inset-0 w-full h-full overflow-visible pointer-events-none z-[998]"
             style={{
               opacity: drawn ? 1 : 0,
               transition: 'opacity 140ms ease-out',
@@ -2755,12 +2767,14 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
           <div
           id={tooltipId}
           role="tooltip"
-          className="fixed z-[999] pointer-events-none px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
+          className="absolute z-[999] pointer-events-none px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
           style={{
-            left: coords.left,
-            top: coords.top,
+            left: coords.boxX,
+            top: coords.boxY,
             width: coords.panelWidth,
-            transform: coords.below ? 'translateY(0)' : 'translateY(-100%)',
+            transform: `${coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} scale(${drawn ? 1 : 0.92})`,
+            opacity: drawn ? 1 : 0,
+            transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
           <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -2837,7 +2851,8 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
           </p>
         </div>
         </>
-      )}
+        )}
+      </span>
     </>
   );
 }
