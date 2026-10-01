@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/model-section-apple-wow-overhaul]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - run: pip install playwright && python -m playwright install --with-deps chromium
+
+      # The nav test drives a real browser against a running dashboard, so CI
+      # has to serve the built app itself. Nothing in this repo runs it.
+      - name: Serve the built app
+        run: |
+          npx vite preview --port 5173 --host 127.0.0.1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:5173/ >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:5173/ >/dev/null || { echo "preview never came up"; exit 1; }
+
+      - name: Nav animation tests
+        run: python3 tests/test_nav_animations.py
