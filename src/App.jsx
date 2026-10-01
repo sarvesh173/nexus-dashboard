@@ -44,6 +44,8 @@ import {
   Circle,
   DownloadCloud,
   Plus,
+  Play,
+  Sliders,
 } from 'lucide-react';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
@@ -301,6 +303,32 @@ const navMicroAnimationStyles = `
   .group:hover .svg-anim-edit {
     animation: editPenTilt 700ms ease-in-out infinite;
     transform-origin: bottom left;
+  }
+
+  @keyframes playPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2) translateX(1px);
+    }
+  }
+
+  @keyframes configGearSpin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(60deg);
+    }
+  }
+
+  .group:hover .svg-anim-play {
+    animation: playPulse 800ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  .group:hover .svg-anim-config {
+    animation: configGearSpin 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .group:hover .svg-anim-add {
@@ -804,12 +832,225 @@ function getCropGeometry(imgW, imgH, zoom, pan, box = CROP_BOX_PX) {
    Adapted for Nexus Dashboard with Apple Cupertino Liquid Polish
    ───────────────────────────────────────────────────────────── */
 
+
+/* ─────────────────────────────────────────────────────────────
+   Apple Cupertino Custom Model Context & Output Limit Configurator
+   Allows overriding inaccurate context windows or setting explicit token caps
+   ───────────────────────────────────────────────────────────── */
+
+function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
+  const [contextInput, setContextInput] = useState('');
+  const [outputTokens, setOutputTokens] = useState('');
+
+  const originalContext = model?.context?.original || (model?.context_length ? `${model.context_length} tokens` : '128k (Catalog default)');
+
+  useEffect(() => {
+    if (model) {
+      setContextInput(currentConfig?.context_length || '');
+      setOutputTokens(currentConfig?.max_output_tokens || '');
+    }
+  }, [model, currentConfig]);
+
+  if (!model) return null;
+
+  const handleSave = (e) => {
+    e?.preventDefault();
+    onSave(model.id, {
+      context_length: contextInput.trim() || undefined,
+      max_output_tokens: outputTokens.trim() || undefined,
+    });
+    onClose();
+  };
+
+  const handleReset = () => {
+    onReset(model.id);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-2xl animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--md-sys-color-outline-variant)]/60">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <Sliders size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold tracking-tight">Configure Model Context & Specs</h2>
+              <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">{model.id}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Upstream default telemetry badge */}
+        <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 flex items-center justify-between text-xs">
+          <div>
+            <span className="text-[10px] uppercase font-mono text-[var(--md-sys-color-on-surface-variant)] block font-semibold">Catalog Original Default</span>
+            <span className="font-semibold text-emerald-400 font-mono">{originalContext}</span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Upstream
+          </span>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
+              Custom Context Window (Input Capacity)
+            </label>
+            <input
+              type="text"
+              value={contextInput}
+              onChange={(e) => setContextInput(e.target.value)}
+              placeholder="e.g. 1M (1,048,576) or 200k or 128k"
+              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+            />
+            {/* Quick Context Presets */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mr-1">Presets:</span>
+              {['32k', '128k', '200k', '500k', '1M', '2M'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setContextInput(preset)}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)]/20 hover:text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] transition-all cursor-pointer"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] mb-1 block">
+              Max Output Tokens (Completion Cap)
+            </label>
+            <input
+              type="text"
+              value={outputTokens}
+              onChange={(e) => setOutputTokens(e.target.value)}
+              placeholder="e.g. 8192 or 16384 or 65536"
+              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
+            />
+            {/* Quick Output Presets */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mr-1">Presets:</span>
+              {['4096', '8192', '16384', '32768', '65536'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setOutputTokens(preset)}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)]/20 hover:text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] transition-all cursor-pointer"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="flex items-center justify-between pt-3 border-t border-[var(--md-sys-color-outline-variant)]/60">
+            <button
+              type="button"
+              onClick={handleReset}
+              title="Restore catalog original context & token limits"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-rose-400/90 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 active:scale-95 transition-all cursor-pointer shadow-xs"
+            >
+              <Undo2 size={13} />
+              <span>Reset Original</span>
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-full text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-full text-xs font-semibold bg-amber-500 text-black hover:bg-amber-400 transition-all active:scale-95 shadow-xs cursor-pointer"
+              >
+                Apply Specs
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function AddCustomModelModal({ isOpen, provider, onSave, onClose }) {
   const [modelId, setModelId] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [category, setCategory] = useState('text');
   const [contextLength, setContextLength] = useState('128000');
+  const [outputTokens, setOutputTokens] = useState('8192');
   const [tier, setTier] = useState('free');
+  const [autoDetected, setAutoDetected] = useState(false);
+
+  // Smart Model Classifier & Spec Engine
+  const autoDetectSpecs = (rawName) => {
+    const s = rawName.toLowerCase();
+    let detectedCat = 'text';
+    let detectedCtx = '128000';
+    let detectedOut = '8192';
+
+    // 1. Detect Category
+    if (s.includes('vision') || s.includes('vl') || s.includes('4o') || s.includes('image-gen') || s.includes('deplot')) {
+      detectedCat = 'vision';
+    } else if (s.includes('embed') || s.includes('bge') || s.includes('e5')) {
+      detectedCat = 'embedding';
+    } else if (s.includes('whisper') || s.includes('tts') || s.includes('speech') || s.includes('audio') || s.includes('riva')) {
+      detectedCat = 'audio';
+    } else if (s.includes('r1') || s.includes('o1') || s.includes('o3') || s.includes('reasoning') || s.includes('thinking')) {
+      detectedCat = 'decision';
+    }
+
+    // 2. Detect Context Window
+    if (s.includes('gemini') || s.includes('1m')) {
+      detectedCtx = '1000000';
+      detectedOut = '65536';
+    } else if (s.includes('2m')) {
+      detectedCtx = '2000000';
+      detectedOut = '65536';
+    } else if (s.includes('deepseek') || s.includes('r1') || s.includes('hermes') || s.includes('200k')) {
+      detectedCtx = '200000';
+      detectedOut = '16384';
+    } else if (s.includes('embed') || s.includes('whisper')) {
+      detectedCtx = '8192';
+      detectedOut = '4096';
+    }
+
+    return { detectedCat, detectedCtx, detectedOut };
+  };
+
+  const handleModelIdChange = (val) => {
+    setModelId(val);
+    if (!val.trim()) {
+      setAutoDetected(false);
+      return;
+    }
+    const { detectedCat, detectedCtx, detectedOut } = autoDetectSpecs(val);
+    setCategory(detectedCat);
+    setContextLength(detectedCtx);
+    setOutputTokens(detectedOut);
+    setAutoDetected(true);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -885,7 +1126,7 @@ function AddCustomModelModal({ isOpen, provider, onSave, onClose }) {
             <input
               type="text"
               value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
+              onChange={(e) => handleModelIdChange(e.target.value)}
               placeholder="e.g. meta/llama-3.3-70b-instruct or tts-1-hd"
               className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
               autoFocus
@@ -1718,6 +1959,16 @@ function getProviderDisplayName(prov, overrides = {}) {
 // provider list is never mutated and Reset can always restore the real data.
 const PROVIDER_OVERRIDES_KEY = 'nexus_provider_overrides';
 const CUSTOM_MODELS_KEY = 'nexus_custom_models';
+const MODEL_CONFIGS_KEY = 'nexus_model_configs';
+
+function readModelConfigs() {
+  try {
+    const raw = localStorage.getItem(MODEL_CONFIGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
 function readCustomModels() {
   try {
@@ -1837,6 +2088,39 @@ export default function App() {
   const [customModels, setCustomModels] = useState(readCustomModels);
   const [isFetchModalOpen, setIsFetchModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [modelConfigs, setModelConfigs] = useState(readModelConfigs);
+  const [configuringModel, setConfiguringModel] = useState(null);
+
+  const saveModelConfig = (modelId, patch) => {
+    if (!modelId) return;
+    setModelConfigs((prev) => {
+      const next = { ...prev, [modelId]: { ...(prev[modelId] || {}), ...patch } };
+      try {
+        localStorage.setItem(MODEL_CONFIGS_KEY, JSON.stringify(next));
+      } catch (err) {
+        nexusLog('ERROR', 'Failed to save model config override', { error: String(err) });
+      }
+      return next;
+    });
+    setToast(`Saved custom context specs for ${modelId.split('/').pop()}`);
+    nexusLog('ACTION', `Saved custom context/token limits for "${modelId}"`, patch);
+  };
+
+  const resetModelConfig = (modelId) => {
+    if (!modelId) return;
+    setModelConfigs((prev) => {
+      const next = { ...prev };
+      delete next[modelId];
+      try {
+        localStorage.setItem(MODEL_CONFIGS_KEY, JSON.stringify(next));
+      } catch (err) {
+        nexusLog('ERROR', 'Failed to reset model config', { error: String(err) });
+      }
+      return next;
+    });
+    setToast(`Restored upstream context defaults for ${modelId.split('/').pop()}`);
+    nexusLog('ACTION', `Reset model "${modelId}" to catalog context defaults`);
+  };
 
   const saveCustomModel = (providerId, newModel) => {
     const key = String(providerId || '').toLowerCase();
@@ -2594,8 +2878,22 @@ export default function App() {
     // De-duplicate in case base catalog already has it
     const baseIds = new Set(baseModels.map(m => m.id));
     const uniqueExtras = extraModels.filter(m => !baseIds.has(m.id));
-    return [...uniqueExtras, ...baseModels];
-  }, [currentProvider, customModels]);
+    const merged = [...uniqueExtras, ...baseModels];
+    return merged.map(m => {
+      const override = modelConfigs[m.id];
+      if (!override) return m;
+      return {
+        ...m,
+        customContextActive: true,
+        context: {
+          ...m.context,
+          original: override.context_length ? `${override.context_length} (Custom)` : m.context?.original,
+        },
+        context_length: override.context_length_num || m.context_length,
+        max_output_tokens: override.max_output_tokens,
+      };
+    });
+  }, [currentProvider, customModels, modelConfigs]);
 
   const filteredModels = activeModelsPool.filter((m) => {
     const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
@@ -4449,9 +4747,37 @@ export default function App() {
                               </div>
                             </div>
 
-                            {/* Status badge */}
+                            {/* Model Actions & Status with Apple HIG & SVG Micro-Animations */}
                             <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs">
-                              <span className="text-[var(--md-sys-color-on-surface-variant)] text-[11px]">SLA:</span>
+                              {/* Playground Button (Visual Only + Pulse Animation, No functions) */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  nexusLog('ACTION', `Playground clicked for ${item.id} (interface preview mode)`);
+                                }}
+                                className="group flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all active:scale-95 shadow-xs cursor-pointer"
+                                title="Open Model in Playground (Preview)"
+                              >
+                                <Play size={11} className="svg-anim-play fill-indigo-400/20 text-indigo-400 transition-transform" />
+                                <span>Playground</span>
+                              </button>
+
+                              {/* Custom Context & Token Config Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfiguringModel(item);
+                                }}
+                                className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-amber-400 border border-[var(--md-sys-color-outline-variant)] hover:border-amber-500/40 hover:bg-amber-500/10 transition-all active:scale-95 shadow-xs cursor-pointer"
+                                title="Configure custom context window & token limits"
+                              >
+                                <Sliders size={12} className="svg-anim-config transition-transform" />
+                                <span className="hidden sm:inline">Context</span>
+                              </button>
+
+                              <span className="text-[var(--md-sys-color-on-surface-variant)] text-[11px] hidden sm:inline">SLA:</span>
                               <span className="px-2 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-emerald-400 font-bold">
                                 {item.status ?? '—'}
                               </span>
@@ -4916,6 +5242,17 @@ export default function App() {
       {/* Provider identity editor. Mounted last so it stacks above every
           canvas, and rendered only for a real provider so the modal's state
           always matches the provider being edited. */}
+            {/* Custom Context Window & Output Limit Configurator */}
+      {configuringModel && (
+        <ModelConfigModal
+          model={configuringModel}
+          currentConfig={modelConfigs[configuringModel.id]}
+          onSave={saveModelConfig}
+          onReset={resetModelConfig}
+          onClose={() => setConfiguringModel(null)}
+        />
+      )}
+
       {/* OmniRoute Inspired Add Custom Model Modal */}
       {isAddModalOpen && currentProvider && (
         <AddCustomModelModal
