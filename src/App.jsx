@@ -2605,8 +2605,20 @@ function usdBase(usdAmount) {
  */
 function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
   const [coords, setCoords] = useState(null);
+  // Mount the leader fully retracted, then flip on the next frame so the CSS
+  // transitions actually run instead of rendering straight to their end state.
+  const [drawn, setDrawn] = useState(false);
   const anchorRef = useRef(null);
   const tooltipId = React.useId();
+
+  useEffect(() => {
+    if (!coords) {
+      setDrawn(false);
+      return undefined;
+    }
+    const raf = requestAnimationFrame(() => setDrawn(true));
+    return () => cancelAnimationFrame(raf);
+  }, [coords]);
 
   const showTooltip = () => {
     if (coords || !anchorRef.current) return;
@@ -2618,11 +2630,26 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
       ? Math.min(rect.right + 12, window.innerWidth - panelWidth - 12)
       : Math.max(rect.left - 12 - panelWidth, 12);
     const above = rect.top >= 180;
+    const top = above ? rect.top - 10 : rect.bottom + 10;
+
+    // Badi Dandi geometry: anchor dot on the figure's near edge, one horizontal
+    // run, then a diagonal into the panel corner. Same three-point path the
+    // model-pill leader uses, so the two tooltips draw identically.
+    const dotX = openRight ? rect.right : rect.left;
+    const dotY = rect.top + rect.height / 2;
+    const midX = dotX + (openRight ? 14 : -14);
+    const midY = dotY;
     setCoords({
       left: Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12)),
-      top: above ? rect.top - 10 : rect.bottom + 10,
+      top,
       panelWidth,
       below: !above,
+      dotX,
+      dotY,
+      midX,
+      midY,
+      boxX: openRight ? Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12)) : Math.min(window.innerWidth - 12, Math.max(left, 12) + panelWidth),
+      boxY: above ? top : top,
     });
   };
 
@@ -2655,7 +2682,53 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
         {trigger}
       </span>
       {coords && (
-        <div
+        <>
+          {/* Badi Dandi: signature leader drawn from the figure to the panel.
+              200ms dash draw + 160ms dot scale + 140ms fade, matching the
+              model-pill tooltip exactly. */}
+          <svg
+            aria-hidden="true"
+            className="fixed inset-0 w-full h-full overflow-visible pointer-events-none z-[998]"
+            style={{
+              opacity: drawn ? 1 : 0,
+              transition: 'opacity 140ms ease-out',
+            }}
+          >
+            <path
+              d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
+              fill="none"
+              stroke="var(--md-sys-color-primary)"
+              strokeWidth="1.5"
+              strokeDasharray="90"
+              strokeDashoffset={drawn ? '0' : '90'}
+              style={{
+                transition: drawn ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              }}
+            />
+            <circle
+              cx={coords.dotX}
+              cy={coords.dotY}
+              r="3"
+              fill="var(--md-sys-color-primary)"
+              style={{
+                transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
+                transform: drawn ? 'scale(1)' : 'scale(0)',
+                transition: drawn ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              }}
+            />
+            <circle
+              cx={coords.boxX}
+              cy={coords.boxY}
+              r="2.5"
+              fill="var(--md-sys-color-primary)"
+              style={{
+                transformOrigin: `${coords.boxX}px ${coords.boxY}px`,
+                transform: drawn ? 'scale(1)' : 'scale(0)',
+                transition: drawn ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              }}
+            />
+          </svg>
+          <div
           id={tooltipId}
           role="tooltip"
           className="fixed z-[999] pointer-events-none px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
@@ -2710,6 +2783,7 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
             USD rate converted at the reference rate above.
           </p>
         </div>
+        </>
       )}
     </>
   );
