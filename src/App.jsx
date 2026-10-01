@@ -2590,6 +2590,30 @@ function usdBase(usdAmount) {
 }
 
 /**
+ * Worked example for the tooltip: tokens → USD → active currency.
+ *
+ * Providers price per 1M tokens, so the arithmetic is shown end to end rather
+ * than stating the rate alone — the user sees how many tokens produced how many
+ * dollars, and how those dollars became the figure on the card. Returns null
+ * when the input price is zero, since there is nothing to walk through.
+ */
+function buildCostWalkthrough(usdAmount, currency, tokens = 1_000_000) {
+  const base = usdBase(usdAmount);
+  if (base <= 0) return null;
+  const rate = USD_RATES[currency.id] ?? 1;
+  const perMillion = base / (tokens / 1_000_000);
+  return {
+    tokens,
+    tokensLabel: tokens.toLocaleString('en-US'),
+    perMillion,
+    dollars: base,
+    dollarsLabel: `$${base.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    rate,
+    converted: `${currency.symbol}${(base * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+  };
+}
+
+/**
  * Hover card explaining a cost figure. Every displayed price is converted from
  * the provider's published USD rate — this says so, and shows the base figure
  * next to the converted one so the arithmetic is visible rather than implied.
@@ -2777,6 +2801,35 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
               </div>
             )}
           </div>
+
+          {/* Worked example: show the actual arithmetic instead of only the rate. */}
+          {(() => {
+            const walk = buildCostWalkthrough(baseUsd, currency);
+            if (!walk) return null;
+            return (
+              <div className="mt-2.5 pt-2 border-t border-[var(--md-sys-color-outline-variant)] space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] block">
+                  How this was calculated
+                </span>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+                    {walk.tokensLabel} tokens used
+                  </span>
+                  <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-on-surface)]">
+                    {walk.dollarsLabel}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+                    × {walk.rate} ({currency.id} per $)
+                  </span>
+                  <span className="font-mono text-[10px] font-bold text-[var(--md-sys-color-primary)]">
+                    {walk.converted}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           <p className="mt-2.5 text-[10px] leading-relaxed text-[var(--md-sys-color-on-surface-variant)]">
             Providers publish pricing in US dollars. The figure you see is that
