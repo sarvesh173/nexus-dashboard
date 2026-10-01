@@ -343,6 +343,7 @@ const navMicroAnimationStyles = `
   .nav-overview-icon,
   .nav-model-icon,
   .nav-agent-icon,
+  .nav-playground-icon,
   .nav-cost-icon,
   .nav-settings-icon {
     position: relative;
@@ -406,6 +407,7 @@ const navMicroAnimationStyles = `
   .nav-tab:hover .nav-overview-icon,
   .nav-tab:hover .nav-model-icon,
   .nav-tab:hover .nav-agent-icon,
+  .nav-tab:hover .nav-playground-icon,
   .nav-tab:hover .nav-cost-icon,
   .nav-tab:hover .nav-settings-icon {
     transform: scale(1.15);
@@ -2707,6 +2709,7 @@ export default function App() {
   const isAgentsNavActive = location.pathname === '/agents';
   const isAgentCliActive = location.pathname.startsWith('/agents/');
   const isCostNavActive = location.pathname === '/cost';
+  const isPlaygroundNavActive = location.pathname === '/playground';
   const isSettingsNavActive = location.pathname === '/settings';
 
   // The URL is the source of truth. Local state made /modules/<id> deep-links
@@ -2721,7 +2724,7 @@ export default function App() {
   // a 404. This is what makes a bad deep link obvious in the live terminal.
   const isKnownRoute =
     isOverviewNavActive || isModelsNavActive || isAgentsNavActive
-    || isCostNavActive || isSettingsNavActive;
+    || isPlaygroundNavActive || isCostNavActive || isSettingsNavActive;
   useEffect(() => {
     nexusLog(
       isKnownRoute ? 'NAVIGATION' : 'ERROR',
@@ -2810,6 +2813,7 @@ export default function App() {
       if (e.altKey && e.key === '3') navigate('/agents');
       if (e.altKey && e.key === '4') navigate('/settings');
       if (e.altKey && e.key === '5') navigate('/cost');
+      if (e.altKey && (e.key === '6' || e.key === 'p' || e.key === 'P')) navigate('/playground');
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -3503,6 +3507,23 @@ export default function App() {
               <Bot size={14} className={isAgentsNavActive ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Agents</span>
+          </button>
+
+          {/* Top Navbar Playground Button with Fluid Animation */}
+          <button
+            type="button"
+            onClick={() => navigate('/playground')}
+            aria-current={isPlaygroundNavActive ? 'page' : undefined}
+            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+              isPlaygroundNavActive
+                ? 'nav-playground-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+            }`}
+          >
+            <span className="nav-playground-icon" aria-hidden="true">
+              <Play size={14} className={`svg-anim-play ${isPlaygroundNavActive ? 'fill-current' : 'text-[var(--md-sys-color-primary)]'}`} />
+            </span>
+            <span>Playground</span>
           </button>
 
           <button
@@ -5157,19 +5178,7 @@ export default function App() {
                                 );
                               })()}
 
-                              {/* Playground Button (Visual Only + Pulse Animation, No functions) */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  nexusLog('ACTION', `Playground clicked for ${item.id} (interface preview mode)`);
-                                }}
-                                className="group flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all active:scale-95 shadow-xs cursor-pointer"
-                                title="Open Model in Playground (Preview)"
-                              >
-                                <Play size={11} className="svg-anim-play fill-indigo-400/20 text-indigo-400 transition-transform" />
-                                <span>Playground</span>
-                              </button>
+
 
                               {/* Custom Context & Token Config Button */}
                               <button
@@ -5239,6 +5248,47 @@ export default function App() {
                   </div>
                 )}
 
+        </div>
+
+        {/* VIEW: PLAYGROUND WORKSPACE CANVAS (Apple Fluid Design) */}
+        <div className={`w-full space-y-5 ${isPlaygroundNavActive ? 'block apple-view-pane' : 'hidden'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
+                <Play size={22} className="text-[var(--md-sys-color-primary)] fill-[var(--md-sys-color-primary)]/20" />
+                Model Playground
+              </h1>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                Direct model evaluation and interactive prompt testing environment
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                Live Gateway Ready
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-2xl border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.4)] p-8 text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] flex items-center justify-center mx-auto border border-[var(--md-sys-color-primary)]/25 shadow-sm">
+              <Play size={28} className="fill-[var(--md-sys-color-primary)]/20" />
+            </div>
+            <div className="max-w-md mx-auto space-y-2">
+              <h3 className="text-lg font-bold text-[var(--md-sys-color-on-surface)]">Omni Playground Canvas</h3>
+              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                Seamless multimodal interaction playground connected directly to Hermes OmniRoute inference engine. Select any model from the Models tab to stream live responses.
+              </p>
+            </div>
+            <div className="pt-2 flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/model')}
+                className="px-5 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] hover:opacity-90 transition-all apple-pressable cursor-pointer shadow-md"
+              >
+                Browse Models Catalog
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* VIEW 4: AGENTS DASHBOARD CANVAS */}
