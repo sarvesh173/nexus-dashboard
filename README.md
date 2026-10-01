@@ -1,9 +1,9 @@
 # Nexus Agent Telemetry & Model Engine (Nexus-Dashboard)
 
-> **Status:** Staging / Active Development  
+> **Status:** Staging / Active Development
 > **Target:** High-performance, low-overhead agentic telemetry runtime and multi-provider model routing dashboard.
 
-Nexus Dashboard is an agentic telemetry and observability cockpit engineered to track live inference, multi-provider model catalogs (74+ providers, 700+ live models), cost intelligence, and hardware health metrics in real-time.
+Nexus Dashboard is an agentic telemetry and observability cockpit engineered to track live inference, multi-provider model catalogs (80+ providers, 800+ live models), cost intelligence, and hardware health metrics in real-time.
 
 ---
 
@@ -11,7 +11,8 @@ Nexus Dashboard is an agentic telemetry and observability cockpit engineered to 
 
 - **Dynamic Fluid Model Grid:** Proportional auto-fill grid layout with responsive zero-gap card architecture, native bidirectional resizing, and compact modality tiering.
 - **5-Modality Breakdown Engine:** Instant categorization across `LLM`, `Vision`, `Embedding`, `STT` (Speech-to-Text), and `TTS` (Text-to-Speech) for all connected providers.
-- **Provider & Model Catalog (`/model` & `/model/:providerId`):** Deep inspection interface with model-level hide/restore rails, active modality filters, and capability telemetry.
+- **Provider & Model Catalog (`/model` & `/model/:providerId`):** Deep inspection interface with live upstream catalog fetch, custom model injection, per-model testing with latency reporting, model-level hide/restore rails, active modality filters, and capability telemetry.
+- **Interactive Playground (`/playground`):** Cupertino-style frosted chat canvas for direct model interaction with live latency badges.
 - **Price & Cost Scanner (`/cost`):** Live model cost scanner tracking input/output token pricing across foundational providers.
 - **Hardware & Telemetry Overview (`/`):** Real-time monitoring of CPU, RAM, active agent sessions, and routing latency.
 
@@ -53,7 +54,10 @@ npm run build
 
 - [x] Zero-gap proportional card grid layout with 2-column live model stream.
 - [x] Full-bleed widescreen canvas with dynamic column balancing.
-- [x] Client-side auto-derivation of modalities across 74+ providers.
+- [x] Client-side auto-derivation of modalities across 80+ providers.
+- [x] Per-model test runner with latency reporting and failure auto-hide.
+- [x] Interactive playground with live inference and latency badges.
+- [x] Upstream model catalog fetch and custom model injection.
 - [ ] Real-time WebSocket sync for live inference sessions and token streaming.
 - [ ] Autonomous model health and failover metrics.
 
