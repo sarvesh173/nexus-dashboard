@@ -261,6 +261,52 @@ const navMicroAnimationStyles = `
     }
   }
 
+  @keyframes fetchArrowBounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(2.5px);
+    }
+  }
+
+  @keyframes editPenTilt {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    30% {
+      transform: rotate(-12deg);
+    }
+    70% {
+      transform: rotate(10deg);
+    }
+  }
+
+  @keyframes addPlusRotate {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    50% {
+      transform: rotate(45deg) scale(1.12);
+    }
+    100% {
+      transform: rotate(90deg) scale(1);
+    }
+  }
+
+  .group:hover .svg-anim-fetch {
+    animation: fetchArrowBounce 800ms ease-in-out infinite;
+  }
+
+  .group:hover .svg-anim-edit {
+    animation: editPenTilt 700ms ease-in-out infinite;
+    transform-origin: bottom left;
+  }
+
+  .group:hover .svg-anim-add {
+    animation: addPlusRotate 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .apple-view-pane {
     animation: appleViewEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -2821,20 +2867,21 @@ export default function App() {
                       </h1>
                       {selectedProviderId && !isProviderNotFound && currentProvider && (
                         <div className="flex items-center gap-1.5 ml-1">
+                          {/* Edit Provider Button with subtle pen-tilt SVG animation */}
                           <button
                             type="button"
                             onClick={() => {
                               nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
                               setEditingProvider(currentProvider);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer group"
                             title="Edit provider name and logo"
                           >
-                            <Edit2 size={13} />
+                            <Edit2 size={13} className="svg-anim-edit transition-transform" />
                             <span>Edit Provider</span>
                           </button>
 
-                          {/* Fetch Button (UI ready, awaiting backend connection) */}
+                          {/* Fetch Button with subtle downward-bounce SVG animation */}
                           <button
                             type="button"
                             onClick={() => {
@@ -2844,11 +2891,11 @@ export default function App() {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
                             title="Fetch newly released models for this provider"
                           >
-                            <DownloadCloud size={13} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                            <DownloadCloud size={13} className="text-cyan-400 svg-anim-fetch transition-transform" />
                             <span>Fetch</span>
                           </button>
 
-                          {/* Add Button (UI ready, awaiting backend connection) */}
+                          {/* Add Button with subtle rotation SVG animation */}
                           <button
                             type="button"
                             onClick={() => {
@@ -2858,7 +2905,7 @@ export default function App() {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
                             title="Add model manually by name"
                           >
-                            <Plus size={13} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                            <Plus size={13} className="text-emerald-400 svg-anim-add transition-transform" />
                             <span>Add</span>
                           </button>
                         </div>
