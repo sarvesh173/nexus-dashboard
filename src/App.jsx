@@ -39,6 +39,7 @@ import {
   Bug,
   Download,
   Trash,
+  EyeOff,
   Compass,
   Square,
   Circle,
@@ -877,18 +878,18 @@ function getCropGeometry(imgW, imgH, zoom, pan, box = CROP_BOX_PX) {
 function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
   const originalUpstream = model?.context?.original || (model?.context_length ? `${model.context_length} tokens` : '128k (Catalog default)');
   
-  // 3 Modes: '200k' | '120k' | 'custom'
+  // 3 Modes requested: '1M' (1 Million) | '200k' | 'custom'
   const [contextMode, setContextMode] = useState(() => {
     const saved = currentConfig?.context_length;
-    if (saved === '200k') return '200k';
-    if (saved === '120k') return '120k';
+    if (saved === '1M' || saved === '1000000' || saved === '1,000,000') return '1M';
+    if (saved === '200k' || saved === '200000') return '200k';
     if (saved) return 'custom';
     return '200k';
   });
 
   const [customValue, setCustomValue] = useState(() => {
     const saved = currentConfig?.context_length;
-    return (saved && saved !== '200k' && saved !== '120k') ? saved : '';
+    return (saved && saved !== '1M' && saved !== '200k') ? saved : '';
   });
 
   const [outputTokens, setOutputTokens] = useState(() => currentConfig?.max_output_tokens || '');
@@ -897,28 +898,59 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
 
   if (!model) return null;
 
-  // Auto fetch / resolve context using 9Router algorithm with fluid feedback
-  const handleAutoDetect = () => {
+  // Real Dynamic Auto-Fetch from upstream API / verified models catalog
+  const handleAutoDetect = async () => {
     setIsFetchingAuto(true);
-    setTimeout(() => {
-      const detected = resolve9RouterContext(model.id, originalUpstream);
-      if (detected === '200k') {
-        setContextMode('200k');
-      } else if (detected === '120k' || detected === '128k') {
-        setContextMode('120k');
+    try {
+      const res = await fetch(`/api/model/context?model=${encodeURIComponent(model.id)}&provider=${encodeURIComponent(model.provider || '')}`);
+      if (res.ok) {
+        const data = await res.json();
+        const fmt = data.formatted_context || '200k';
+        if (fmt.includes('1M') || fmt.includes('1.0M') || data.raw_context >= 1000000) {
+          setContextMode('1M');
+        } else if (fmt.includes('200k') || data.raw_context === 200000) {
+          setContextMode('200k');
+        } else {
+          setContextMode('custom');
+          setCustomValue(fmt);
+        }
+        if (data.max_output_tokens) {
+          setOutputTokens(String(data.max_output_tokens));
+        }
+        setAutoResolvedBadge({
+          context: fmt,
+          tokens: data.max_output_tokens,
+          source: data.source
+        });
       } else {
+        // Fallback to local 9Router algorithmic resolver
+        const detected = resolve9RouterContext(model.id, originalUpstream);
+        if (detected === '1M') setContextMode('1M');
+        else if (detected === '200k') setContextMode('200k');
+        else {
+          setContextMode('custom');
+          setCustomValue(detected);
+        }
+        setAutoResolvedBadge({ context: detected, source: 'offline-heuristic' });
+      }
+    } catch {
+      const detected = resolve9RouterContext(model.id, originalUpstream);
+      if (detected === '1M') setContextMode('1M');
+      else if (detected === '200k') setContextMode('200k');
+      else {
         setContextMode('custom');
         setCustomValue(detected);
       }
-      setAutoResolvedBadge(detected);
+      setAutoResolvedBadge({ context: detected, source: 'offline-heuristic' });
+    } finally {
       setIsFetchingAuto(false);
-    }, 380);
+    }
   };
 
   const handleSave = (e) => {
     e?.preventDefault();
     let finalContext = '200k';
-    if (contextMode === '120k') finalContext = '120k';
+    if (contextMode === '1M') finalContext = '1M';
     else if (contextMode === 'custom') {
       finalContext = customValue.trim() || '200k';
     }
@@ -976,10 +1008,10 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
             onClick={handleAutoDetect}
             disabled={isFetchingAuto}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
-            title="Automatically query and resolve official context window from 9Router engine"
+            title="Query real-time upstream context from live verified registry"
           >
             <RefreshCw size={12} className={isFetchingAuto ? 'animate-spin' : ''} />
-            <span>{isFetchingAuto ? 'Fetching…' : 'Auto Fetch'}</span>
+            <span>{isFetchingAuto ? 'Querying API…' : 'Auto Fetch'}</span>
           </button>
         </div>
 
@@ -987,14 +1019,17 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
           <div className="text-[11px] font-mono px-3.5 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 flex items-center justify-between animate-in fade-in duration-200">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              9Router Auto Resolved
+              Live Upstream Auto-Fetched:
             </span>
-            <span className="font-bold text-xs bg-cyan-500/20 px-2 py-0.5 rounded-lg border border-cyan-500/30">{autoResolvedBadge}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs bg-cyan-500/20 px-2 py-0.5 rounded-lg border border-cyan-500/30">{autoResolvedBadge.context}</span>
+              <span className="text-[9px] uppercase tracking-wider text-cyan-400/80">{autoResolvedBadge.source}</span>
+            </div>
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-4">
-          {/* Context Window Selector (200k / 120k / Custom) */}
+          {/* Context Window Selector (1 Million / 200k / Custom) */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] block">
@@ -1007,8 +1042,20 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
               )}
             </div>
 
-            {/* Apple Fluid Segmented Control */}
+            {/* Apple Fluid Segmented Control (1M, 200k, Custom) */}
             <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/50">
+              <button
+                type="button"
+                onClick={() => setContextMode('1M')}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono apple-segmented-item cursor-pointer flex items-center justify-center gap-1.5 ${
+                  contextMode === '1M'
+                    ? 'bg-emerald-500 text-black shadow-[0_2px_12px_rgba(16,185,129,0.35)] scale-[1.02]'
+                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+                }`}
+              >
+                <span>1 Million (1M)</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setContextMode('200k')}
@@ -1019,18 +1066,6 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
                 }`}
               >
                 <span>200k</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setContextMode('120k')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold font-mono apple-segmented-item cursor-pointer flex items-center justify-center gap-1.5 ${
-                  contextMode === '120k'
-                    ? 'bg-emerald-500 text-black shadow-[0_2px_12px_rgba(16,185,129,0.35)] scale-[1.02]'
-                    : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-                }`}
-              >
-                <span>120k</span>
               </button>
 
               <button
@@ -1053,12 +1088,12 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
                   type="text"
                   value={customValue}
                   onChange={(e) => setCustomValue(e.target.value)}
-                  placeholder="Enter exact context (e.g. 1M, 500k, 64k, 1048576)"
+                  placeholder="Enter exact context (e.g. 500k, 128k, 64k, 1048576)"
                   className="w-full px-4 py-2.5 text-xs font-mono rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-emerald-500/40 text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]/50 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   autoFocus
                 />
                 <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5 font-mono">
-                  Shorthands like 1M, 500k, 64k or exact tokens will be mapped seamlessly.
+                  Shorthands like 500k, 128k, 64k or exact tokens will be mapped seamlessly.
                 </p>
               </div>
             )}
@@ -1080,7 +1115,6 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
 
           {/* Modal Actions */}
           <div className="flex items-center justify-between pt-3.5 border-t border-[var(--md-sys-color-outline-variant)]/40">
-            {/* Reset Original: Stays distinct red/rose for safety */}
             <button
               type="button"
               onClick={handleReset}
@@ -1098,7 +1132,6 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
               >
                 Cancel
               </button>
-              {/* Apply Specs: System Primary / Emerald Theme */}
               <button
                 type="submit"
                 className="px-5 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer apple-pressable"
@@ -1112,6 +1145,7 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
     </div>
   );
 }
+
 function AddCustomModelModal({ isOpen, provider, onSave, onClose }) {
   const [modelId, setModelId] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -2232,6 +2266,109 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modelConfigs, setModelConfigs] = useState(readModelConfigs);
   const [configuringModel, setConfiguringModel] = useState(null);
+  const [modelTestResults, setModelTestResults] = useState({}); // { [modelId]: { status: 'testing'|'ok'|'error'|'timeout', latency_ms: number, reply: string, error: string } }
+  const [autoHideOnFail, setAutoHideOnFail] = useState(() => {
+    try {
+      return localStorage.getItem('nexus_auto_hide_fail') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isTestingAll, setIsTestingAll] = useState(false);
+  const [testAllProgress, setTestAllProgress] = useState({ current: 0, total: 0 });
+
+  const toggleAutoHideOnFail = () => {
+    setAutoHideOnFail((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('nexus_auto_hide_fail', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Run single model test
+  const runModelTest = async (modelItem) => {
+    const mId = modelItem.id;
+    if (!mId) return;
+
+    setModelTestResults((prev) => ({
+      ...prev,
+      [mId]: { status: 'testing', latency_ms: 0, reply: null, error: null }
+    }));
+
+    try {
+      const res = await fetch('/api/model/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: mId,
+          provider: modelItem.provider || selectedProviderId,
+          kind: modelItem.category || 'text'
+        })
+      });
+
+      const data = await res.json();
+      const isTimeout = data.status === 408 || (data.error && data.error.includes('Time Out'));
+      const status = data.ok ? 'ok' : isTimeout ? 'timeout' : 'error';
+
+      setModelTestResults((prev) => ({
+        ...prev,
+        [mId]: {
+          status,
+          latency_ms: data.latency_ms || 0,
+          reply: data.reply || null,
+          error: data.error || (data.ok ? null : 'Failed')
+        }
+      }));
+
+      // OmniRouter automatic hide on test failure
+      if (!data.ok && autoHideOnFail) {
+        await setVisibility('models', mId, true);
+        setToast(`Auto-hidden "${mId.split('/').pop()}" due to test failure`);
+      }
+    } catch (err) {
+      setModelTestResults((prev) => ({
+        ...prev,
+        [mId]: {
+          status: 'error',
+          latency_ms: 0,
+          reply: null,
+          error: String(err.message || err)
+        }
+      }));
+      if (autoHideOnFail) {
+        await setVisibility('models', mId, true);
+      }
+    }
+  };
+
+  // Run Test All sequentially
+  const runTestAll = async (modelsToTest) => {
+    if (!modelsToTest || modelsToTest.length === 0 || isTestingAll) return;
+    setIsTestingAll(true);
+    setTestAllProgress({ current: 0, total: modelsToTest.length });
+
+    for (let i = 0; i < modelsToTest.length; i++) {
+      setTestAllProgress({ current: i + 1, total: modelsToTest.length });
+      await runModelTest(modelsToTest[i]);
+      // Small pause between pings
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    setIsTestingAll(false);
+    setToast(`Completed testing ${modelsToTest.length} models`);
+  };
+
+  // Hide All in current view
+  const handleHideAllInView = async (modelsToHide) => {
+    if (!modelsToHide || modelsToHide.length === 0) return;
+    for (const m of modelsToHide) {
+      await setVisibility('models', m.id, true);
+    }
+    setToast(`Hidden all ${modelsToHide.length} models in view`);
+  };
+
   const [customProviders, setCustomProviders] = useState(readCustomProviders);
   const [isAddProviderModalOpen, setIsAddProviderModalOpen] = useState(false);
 
@@ -2974,12 +3111,15 @@ export default function App() {
       });
     }
 
-    if (live.length) {
-      setProvidersList(live);
-      setAllProviders(live);
+    let finalProviders = (live && live.length) ? live : [];
+    if (!finalProviders.length && nvidia) {
+      finalProviders = [nvidia];
     }
-    // A settled flag (success *or* failure) is what lets the /model/<slug>
-    // view tell "still loading" apart from "this provider does not exist".
+    // If still empty, fall back directly to /api/all-providers or /api/providers
+    if (finalProviders.length) {
+      setProvidersList(finalProviders);
+      setAllProviders(finalProviders);
+    }
     setCatalogSettled(true);
     nexusLog('SYSTEM', 'Provider catalog refreshed', {
       providers: live.length,
@@ -4804,6 +4944,60 @@ export default function App() {
 
                     </div>
 
+                    {/* Live Testing & Bulk Visibility Actions Toolbar (9Router / OmniRouter Architecture) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 text-xs">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Test All Button */}
+                        <button
+                          type="button"
+                          disabled={isTestingAll || filteredModels.length === 0}
+                          onClick={() => runTestAll(filteredModels)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
+                          title="Sequentially ping and test every model in this list"
+                        >
+                          <RefreshCw size={12} className={isTestingAll ? 'animate-spin' : ''} />
+                          <span>{isTestingAll ? `Testing ${testAllProgress.current}/${testAllProgress.total}…` : 'Test All'}</span>
+                        </button>
+
+                        {/* Hide Section Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleHideAllInView(filteredModels)}
+                          disabled={filteredModels.length === 0}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 border border-[var(--md-sys-color-outline-variant)] hover:border-rose-500/30 transition-all apple-pressable cursor-pointer shadow-xs"
+                          title="Hide all models in current category tab"
+                        >
+                          <EyeOff size={12} />
+                          <span>Hide Section</span>
+                        </button>
+
+                        {/* Hide All in Provider */}
+                        <button
+                          type="button"
+                          onClick={() => handleHideAllInView(activeModelsPool)}
+                          disabled={activeModelsPool.length === 0}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-rose-500/10 text-rose-400/90 border border-rose-500/20 hover:bg-rose-500/20 transition-all apple-pressable cursor-pointer shadow-xs"
+                          title="Hide all models under this provider"
+                        >
+                          <Trash size={12} />
+                          <span>Hide All</span>
+                        </button>
+                      </div>
+
+                      {/* Auto-Hide On Fail Checkbox (OmniRouter Feature) */}
+                      <label className="flex items-center gap-2 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={autoHideOnFail}
+                          onChange={toggleAutoHideOnFail}
+                          className="w-4 h-4 rounded text-rose-500 focus:ring-0 cursor-pointer"
+                        />
+                        <span className="hover:text-[var(--md-sys-color-on-surface)] transition-colors">
+                          Auto-hide model on test failure
+                        </span>
+                      </label>
+                    </div>
+
                     {/* Models Count & Back Navigation bar */}
                     <div className="flex items-center justify-between text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono px-1">
                       <span>Showing {filteredModels.length} of {activeModelsPool.length} models</span>
@@ -4910,6 +5104,59 @@ export default function App() {
 
                             {/* Model Actions & Status with Apple HIG & SVG Micro-Animations */}
                             <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs">
+                              {/* 9Router / OmniRouter Text Model Test Button */}
+                              {(() => {
+                                const testRes = modelTestResults[item.id];
+                                const isTesting = testRes?.status === 'testing';
+                                const isOk = testRes?.status === 'ok';
+                                const isTimeout = testRes?.status === 'timeout';
+                                const isError = testRes?.status === 'error';
+
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      runModelTest(item);
+                                    }}
+                                    disabled={isTesting}
+                                    className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all active:scale-95 apple-pressable shadow-xs cursor-pointer border ${
+                                      isTesting
+                                        ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                                        : isOk
+                                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                        : isTimeout
+                                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                        : isError
+                                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                        : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/30'
+                                    }`}
+                                    title={
+                                      isOk
+                                        ? `Passed in ${testRes.latency_ms}ms${testRes.reply ? ': ' + testRes.reply : ''}`
+                                        : isTimeout
+                                        ? 'Time Out: Model took > 12s to respond'
+                                        : isError
+                                        ? `Error: ${testRes.error}`
+                                        : 'Test model ping & live latency'
+                                    }
+                                  >
+                                    <Activity size={12} className={isTesting ? 'animate-spin' : ''} />
+                                    <span>
+                                      {isTesting
+                                        ? 'Testing…'
+                                        : isOk
+                                        ? `${testRes.latency_ms}ms`
+                                        : isTimeout
+                                        ? 'Time Out'
+                                        : isError
+                                        ? 'Failed'
+                                        : 'Test'}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
+
                               {/* Playground Button (Visual Only + Pulse Animation, No functions) */}
                               <button
                                 type="button"

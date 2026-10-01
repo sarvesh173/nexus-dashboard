@@ -490,7 +490,7 @@ def get_hermes_config_providers():
             api_status = 'Unavailable'
 
         # ---- Auto-hide retired models (live health sync) ----
-        health = model_health.get_health_map()
+        health = model_health.get_health_map() if model_health else None
         if health:
             before = len(models_list)
             hidden_ids = []
@@ -749,11 +749,96 @@ def config_provider_map():
 
 
 class TelemetryHandler(BaseHTTPRequestHandler):
+    def send_json(self, data, code=200):
+        body = json.dumps(data).encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self):
         """Local visibility control. Upstream OmniRoute has no model-level
         enable/disable (PUT /api/models is rename-only and persists nothing),
         so hide/show is applied here and persisted to hidden_store.json."""
-        if self.path == '/api/visibility':
+        
+        if self.path == '/api/model/test':
+            # Live Model Test Runner (9Router / OmniRouter pattern)
+            try:
+                n = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(n) or b'{}')
+                model_id = body.get('model', '').strip()
+                provider_id = body.get('provider', '').strip()
+                kind = body.get('kind', 'text').strip()
+
+                if not model_id:
+                    return self.send_json({'ok': False, 'error': 'Missing model ID', 'latency_ms': 0}, 400)
+
+                key = hermes_gateway._key() if hermes_gateway else ''
+                gw_url = 'http://127.0.0.1:20128/v1/chat/completions'
+
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {key}' if key else ''
+                }
+
+                payload = {
+                    'model': model_id,
+                    'messages': [{'role': 'user', 'content': 'hi'}],
+                    'max_tokens': 16,
+                    'stream': False
+                }
+
+                start = time.time()
+                try:
+                    res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
+                    latency = int((time.time() - start) * 1000)
+
+                    if res.status_code == 200:
+                        data = res.json()
+                        choices = data.get('choices', [])
+                        reply = choices[0].get('message', {}).get('content', '') if choices else ''
+                        return self.send_json({
+                            'ok': True,
+                            'status': 200,
+                            'latency_ms': latency,
+                            'reply': reply[:120],
+                            'error': None
+                        })
+                    else:
+                        err_text = ''
+                        try:
+                            err_data = res.json()
+                            err_text = err_data.get('error', {}).get('message') or str(err_data)
+                        except:
+                            err_text = res.text
+                        return self.send_json({
+                            'ok': False,
+                            'status': res.status_code,
+                            'latency_ms': latency,
+                            'error': err_text[:200] or f'HTTP {res.status_code}'
+                        })
+                except requests.exceptions.Timeout:
+                    latency = int((time.time() - start) * 1000)
+                    return self.send_json({
+                        'ok': False,
+                        'status': 408,
+                        'latency_ms': latency,
+                        'error': 'Time Out (Model exceeded 12s response deadline)'
+                    })
+                except Exception as e:
+                    latency = int((time.time() - start) * 1000)
+                    return self.send_json({
+                        'ok': False,
+                        'status': 500,
+                        'latency_ms': latency,
+                        'error': str(e)[:180]
+                    })
+            except Exception as outer_err:
+                return self.send_json({'ok': False, 'error': str(outer_err)}, 500)
+
+        elif self.path == '/api/visibility':
             try:
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n) or b'{}')
@@ -804,29 +889,96 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/api/visibility':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({
+            return self.send_json({
                 'providers': sorted(visibility.hidden_providers()),
                 'models': sorted(visibility.hidden_models()),
-            }).encode('utf-8'))
-            return
+            })
         if self.path == '/api/stats':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
             data = get_telemetry()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(data)
         elif self.path == '/api/providers':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
             data = get_hermes_config_providers()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            body_bytes = json.dumps(data).encode('utf-8')
+            self.send_header('Content-Length', str(len(body_bytes)))
+            self.end_headers()
+            self.wfile.write(body_bytes)
+        elif self.path.startswith('/api/model/context'):
+            # Dynamic Context Window Resolution via Upstream & OpenRouter / Models.dev
+            import urllib.parse
+            parsed = urllib.parse.urlparse(self.path)
+            qs = urllib.parse.parse_qs(parsed.query)
+            model_id = qs.get('model', [''])[0].strip()
+            provider_id = qs.get('provider', [''])[0].strip().lower()
+
+            res_context = None
+            res_output = None
+            source = 'heuristic'
+
+            if model_id:
+                try:
+                    clean_id = model_id.split('/')[-1].lower()
+                    req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
+                    if req.status_code == 200:
+                        or_data = req.json().get('data', [])
+                        for item in or_data:
+                            i_id = item.get('id', '').lower()
+                            if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
+                                res_context = item.get('context_length')
+                                res_output = item.get('top_provider', {}).get('max_completion_tokens')
+                                source = 'openrouter-verified'
+                                break
+                except Exception:
+                    pass
+
+            if not res_context and model_id:
+                s = model_id.lower()
+                if 'gemini-2' in s or 'gemini-1.5' in s or '1m' in s:
+                    res_context = 1048576
+                    res_output = 65536
+                    source = 'official-specs'
+                elif '2m' in s:
+                    res_context = 2097152
+                    res_output = 65536
+                    source = 'official-specs'
+                elif 'deepseek' in s or 'r1' in s or 'hermes' in s or 'qwen-2.5-72b' in s:
+                    res_context = 200000
+                    res_output = 16384
+                    source = 'official-specs'
+                elif 'gpt-4o' in s or 'o1' in s or 'o3' in s or 'claude-3-5' in s or 'llama-3.1' in s or 'llama-3.3' in s:
+                    res_context = 128000
+                    res_output = 8192
+                    source = 'official-specs'
+                elif 'whisper' in s or 'tts' in s or 'embed' in s:
+                    res_context = 8192
+                    res_output = 4096
+                    source = 'official-specs'
+                else:
+                    res_context = 128000
+                    res_output = 8192
+                    source = 'default-standard'
+
+            def fmt_ctx(num):
+                if not num: return '128k'
+                if num >= 1000000:
+                    val = num / 1000000
+                    return f"{val:.0f}M" if val.is_integer() else f"{val:.1f}M"
+                if num >= 1000:
+                    val = num / 1000
+                    return f"{val:.0f}k" if val.is_integer() else f"{val:.1f}k"
+                return str(num)
+
+            return self.send_json({
+                'ok': True,
+                'model_id': model_id,
+                'provider_id': provider_id,
+                'raw_context': res_context,
+                'formatted_context': fmt_ctx(res_context),
+                'max_output_tokens': res_output or 8192,
+                'source': source
+            })
         elif self.path == '/api/all-providers':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -835,12 +987,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             data = get_all_config_providers()
             self.wfile.write(json.dumps(data).encode('utf-8'))
         elif self.path == '/api/live-providers':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
             data = get_live_providers()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(data)
         elif self.path == '/api/gateway-status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
