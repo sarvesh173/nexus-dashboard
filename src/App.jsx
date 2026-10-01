@@ -226,7 +226,18 @@ function getModelTelemetry(modelId, modelName = '') {
   }
   
   const consumedDollars = (rawTokens / 1000000) * ratePerMillion;
-  const cost = `$${consumedDollars.toFixed(3)} USD`;
+  // Respect the currency picked in Settings. Reading it here (module scope, so
+  // this fn cannot take a prop) keeps every call site unchanged — the Overview
+  // cards and the Cost view both render through here.
+  const activeCurrency = (() => {
+    try {
+      const code = localStorage.getItem('nexus_currency') || 'USD';
+      return CURRENCY_OPTIONS.find(c => c.id === code) || CURRENCY_OPTIONS[0];
+    } catch {
+      return CURRENCY_OPTIONS[0];
+    }
+  })();
+  const cost = `${activeCurrency.symbol}${consumedDollars.toFixed(3)} ${activeCurrency.id}`;
   const isFreeTier = s.includes('flash') || s.includes('free') || s.includes('nvidia') || s.includes('gemini');
 
   return { contextWindow, tokensUsed, cost, ratePerMillion, isFreeTier };
@@ -4304,12 +4315,16 @@ export default function App() {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
                         <div className="w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] animate-subtle-glow">
-                          <DollarSign size={15} />
+                          {activeCurrency.id === 'USD' ? (
+                            <DollarSign size={15} />
+                          ) : (
+                            <span className="text-[15px] font-bold leading-none select-none tracking-tight">{activeCurrency.symbol}</span>
+                          )}
                         </div>
                       </div>
                       <div className="my-1">
                         <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          ${costOverview.total_accrued}
+                          {activeCurrency.symbol}{costOverview.total_accrued}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs font-mono">
@@ -4473,7 +4488,7 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
                       <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Total Cumulative Spend</span>
-                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">${costOverview.total_accrued}</span>
+                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{activeCurrency.symbol}{costOverview.total_accrued}</span>
                       <span className="text-[10px] text-[var(--md-sys-color-primary)] font-mono">100% Free Tier Covered</span>
                     </div>
 
