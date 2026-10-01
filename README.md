@@ -86,6 +86,36 @@ with a 12s deadline and a latency badge per response.
 
 ---
 
+## Early-access model intelligence
+
+The next milestone. Not news — **actionable model routing**: what just landed,
+what it actually costs, and which provider serves it cheapest.
+
+A first pass has already been validated against live sources. Three signals
+were extracted in a single pass:
+
+| Signal | Status | Where | Notes |
+|---|---|---|---|
+| `fledge alpha` | free / trial | OpenCode | **Undisclosed lab.** 1M ctx, 131k max output, vision + tools + reasoning. US-only. |
+| K2 Horizon | open weights | IFM | 6 models, 0.9B–375B. Training data, recipes and evals also open. |
+| Clef | open weights | Cloudflare | Decision model. |
+
+The `fledge alpha` case is the exact problem this feature exists to solve. It
+appeared on a provider with **no vendor attribution at all**. Its real
+specifications were only recoverable by cross-referencing a community thread
+against the upstream `models.dev` metadata — the provider listing itself was
+incomplete.
+
+So the pipeline is: **fetch → attribute → verify against `models.dev` →
+resolve cheapest provider**. Attribution and cost resolution are the hard parts,
+and neither is optional.
+
+> Note: raw search alone does not produce this. Unscoped queries returned
+> unrelated results at a high rate, so relevance filtering and deduplication are
+> part of the design, not an afterthought.
+
+---
+
 ## Running it
 
 ```bash
