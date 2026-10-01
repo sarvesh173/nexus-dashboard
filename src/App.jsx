@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Search,
   Sparkles,
+  Terminal,
   Filter,
   Trash2,
   RotateCcw,
@@ -794,53 +795,93 @@ const navMicroAnimationStyles = `  .nav-overview-icon,
   }
 
   
-  @keyframes playgroundWandGlow {
-    0%, 100% {
-      transform: scale(1) rotate(0deg);
-      filter: drop-shadow(0 0 0px rgba(99, 102, 241, 0));
-    }
-    30% {
-      transform: scale(1.18) rotate(-14deg);
-      filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.7));
-    }
-    70% {
-      transform: scale(1.1) rotate(8deg);
-      filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
-    }
+  /* Playground console: glass well + light sweep (reuses nav-model-metal-sheen)
+     + tactile press (reuses nav-model-spring) + one new outward ring. */
+  .nav-playground-icon {
+    perspective: 520px;
   }
 
-  @keyframes sparkFloatA {
-    0%, 100% {
-      transform: translate(0, 0) scale(0.8);
-      opacity: 0.2;
-    }
-    50% {
-      transform: translate(2px, -3px) scale(1.3);
-      opacity: 1;
-    }
+  .nav-playground-icon::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 6px;
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent),
+      transparent 62%
+    );
+    opacity: 0;
+    transform: scale(0.72);
+    transition: opacity 260ms ease, transform 380ms cubic-bezier(0.22, 1.4, 0.36, 1);
+    pointer-events: none;
   }
 
-  @keyframes sparkFloatB {
-    0%, 100% {
-      transform: translate(0, 0) scale(1.1);
-      opacity: 0.9;
-    }
-    50% {
-      transform: translate(-2px, 2px) scale(0.6);
-      opacity: 0.3;
-    }
+  .nav-playground-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    top: -3px;
+    left: -7px;
+    width: 3px;
+    height: 21px;
+    border-radius: 2px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.62), transparent);
+    transform: translateX(-10px) rotate(25deg);
   }
 
-  .nav-tab:hover .svg-anim-playground-main {
-    animation: playgroundWandGlow 750ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  /* the extra animation: an outward ring, hover-only so it never burns CPU
+     while the tab sits active (the exact bug 0664c4a fixed) */
+  .nav-playground-ring {
+    position: absolute;
+    inset: -3px;
+    z-index: 0;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 82%, white);
+    border-radius: 7px;
+    opacity: 0;
+    pointer-events: none;
   }
 
-  .nav-playground-button:hover .nav-sparkle-a {
-    animation: sparkFloatA 600ms ease-in-out infinite;
+  .nav-playground-button:hover .nav-playground-icon,
+  .nav-playground-button:focus-visible .nav-playground-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(-14deg) rotateY(16deg)
+      translate3d(0, -1px, 3px) scale(1.1);
   }
 
-  .nav-playground-button:hover .nav-sparkle-b {
-    animation: sparkFloatB 600ms ease-in-out infinite 200ms;
+  .nav-playground-button:hover .nav-playground-icon::before,
+  .nav-playground-button:focus-visible .nav-playground-icon::before {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  .nav-playground-button:hover .nav-playground-icon::after,
+  .nav-playground-button:focus-visible .nav-playground-icon::after {
+    animation: nav-model-metal-sheen 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .nav-playground-button:active .nav-playground-icon,
+  .nav-playground-button.nav-playground-active:active .nav-playground-icon {
+    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  .nav-playground-button:hover .nav-playground-ring,
+  .nav-playground-button:focus-visible .nav-playground-ring {
+    animation: nav-pg-ring 1.5s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+
+  @keyframes nav-pg-ring {
+    0%   { opacity: 0;    transform: scale(0.6); }
+    26%  { opacity: 0.92; }
+    100% { opacity: 0;    transform: scale(1.55); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-playground-icon::before,
+    .nav-playground-icon::after,
+    .nav-playground-ring { animation: none !important; opacity: 0; }
   }
 
   .apple-view-pane {
@@ -4066,19 +4107,17 @@ export default function App() {
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
-            <span className="nav-playground-icon relative inline-flex items-center justify-center w-4 h-4" aria-hidden="true">
-              {/* Primary SVG: Wand / Sparkle */}
-              <Sparkles
-                size={14}
-                className={`svg-anim-playground-main transition-transform ${
+            <span className="nav-playground-icon" aria-hidden="true">
+              <span className="nav-playground-ring" />
+              <Terminal
+                size={13}
+                strokeWidth={2.4}
+                className={`relative z-[2] transition-colors ${
                   isPlaygroundNavActive
-                    ? 'text-[var(--md-sys-color-on-primary)] fill-current'
-                    : 'text-indigo-400 group-hover:text-indigo-300'
+                    ? 'text-[var(--md-sys-color-on-primary)]'
+                    : 'text-[var(--md-sys-color-primary)]'
                 }`}
               />
-              {/* Micro-spark dots */}
-              <span className="nav-sparkle-a absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-cyan-400 opacity-60 pointer-events-none" />
-              <span className="nav-sparkle-b absolute -bottom-0.5 -left-0.5 w-1 h-1 rounded-full bg-indigo-400 opacity-60 pointer-events-none" />
             </span>
             <span>Playground</span>
           </button>
