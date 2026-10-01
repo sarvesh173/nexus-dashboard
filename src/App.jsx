@@ -254,7 +254,462 @@ const MODALITY_ALIASES = {
 
 // Navigation-only motion stays local to App.jsx so the icons can feel tactile
 // without adding a global animation dependency or affecting the rest of the UI.
-const navMicroAnimationStyles = `
+const navMicroAnimationStyles = `  .nav-overview-icon,
+  .nav-model-icon,
+  .nav-agent-icon,
+  .nav-cost-icon,
+  .nav-settings-icon {
+    position: relative;
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 16px;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  /* Every tab shares the same tactile spring and focus treatment. The
+     illustration inside each icon gives the tab its own identity. */
+  .nav-tab {
+    transition: background-color 240ms ease, color 240ms ease,
+      box-shadow 360ms cubic-bezier(0.22, 1.4, 0.36, 1),
+      transform 360ms cubic-bezier(0.22, 1.4, 0.36, 1);
+  }
+
+  .nav-tab:active { transform: scale(0.96); }
+  .nav-tab:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+  }
+
+  .nav-overview-icon,
+  .nav-cost-icon,
+  .nav-settings-icon,
+  .nav-model-icon,
+  .nav-agent-icon {
+    transition: transform 460ms cubic-bezier(0.22, 1.4, 0.36, 1), filter 240ms ease;
+  }
+
+  .nav-model-icon {
+    perspective: 520px;
+  }
+
+  /* Clean 3D rotation without weird background chassis artifacts */
+  .nav-model-icon::before {
+    display: none;
+  }
+
+  /* The moving highlight is deliberately brief: each hover feels like a
+     polished object catching light instead of a constantly flashing icon. */
+  .nav-model-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    top: -3px;
+    left: -7px;
+    width: 4px;
+    height: 22px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.7),
+      transparent
+    );
+    transform: translateX(-10px) rotate(25deg);
+  }
+
+  .nav-overview-icon > svg,
+  .nav-model-icon > svg,
+  .nav-agent-icon > svg,
+  .nav-cost-icon > svg,
+  .nav-settings-icon > svg {
+    position: relative;
+    z-index: 2;
+  }
+
+  .nav-model-button:hover .nav-model-icon,
+  .nav-model-button:focus-visible .nav-model-icon,
+  .nav-model-button.nav-model-active:hover .nav-model-icon,
+  .nav-model-button.nav-model-active:focus-visible .nav-model-icon {
+    filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.28));
+    transform: perspective(520px) rotateX(18deg) rotateY(-22deg)
+      translate3d(0, -1px, 3px) scale(1.12);
+  }
+
+  .nav-model-button:hover .nav-model-icon::before,
+  .nav-model-button:focus-visible .nav-model-icon::before,
+  .nav-model-button.nav-model-active .nav-model-icon::before {
+    box-shadow:
+      inset 1px 1px 0 rgb(255 255 255 / 0.34),
+      inset -2px -2px 0 rgb(0 0 0 / 0.24),
+      3px 4px 0 color-mix(in srgb, var(--md-sys-color-primary) 54%, var(--md-sys-color-surface-container)),
+      4px 7px 9px rgb(0 0 0 / 0.28);
+  }
+
+  .nav-model-button:hover .nav-model-icon::before,
+  .nav-model-button:focus-visible .nav-model-icon::before {
+    transform: translate3d(2px, 2px, -4px) rotateX(58deg) rotateZ(-5deg);
+  }
+
+  .nav-model-button:hover .nav-model-icon::after,
+  .nav-model-button:focus-visible .nav-model-icon::after,
+  .nav-model-button.nav-model-active .nav-model-icon::after {
+    animation: nav-model-metal-sheen 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .nav-model-button.nav-model-active .nav-model-icon {
+    transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+      translate3d(0, -0.5px, 2px) scale(1.06);
+  }
+
+  .nav-model-button:active .nav-model-icon,
+  .nav-model-button.nav-model-active:active .nav-model-icon {
+    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  @keyframes nav-model-metal-sheen {
+    0% { opacity: 0; transform: translateX(-10px) rotate(25deg); }
+    18% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateX(30px) rotate(25deg); }
+  }
+
+  @keyframes nav-model-spring {
+    0% {
+      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+        translate3d(0, -0.5px, 2px) scale(1.06);
+    }
+    22% {
+      transform: perspective(520px) rotateX(-18deg) rotateY(24deg)
+        translate3d(0, 2px, -3px) scale(0.86, 0.88);
+    }
+    52% {
+      transform: perspective(520px) rotateX(22deg) rotateY(-27deg)
+        translate3d(0, -2px, 5px) scale(1.16);
+    }
+    76% {
+      transform: perspective(520px) rotateX(8deg) rotateY(-10deg)
+        translate3d(0, 0.5px, 1px) scale(1.02);
+    }
+    100% {
+      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+        translate3d(0, -0.5px, 2px) scale(1.06);
+    }
+  }
+
+  .nav-agent-icon {
+    --nav-agent-glow: var(--md-sys-color-primary);
+  }
+
+  /* Layered rings make the Bot feel like it is receiving a small neural
+     signal, while the soft aura keeps the effect harmonious with M3 color. */
+  .nav-agent-icon::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 85%, white);
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.52);
+    pointer-events: none;
+  }
+
+  .nav-agent-icon::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--nav-agent-glow) 58%, transparent),
+      transparent 70%
+    );
+    opacity: 0;
+    filter: blur(3px);
+    pointer-events: none;
+  }
+
+  .nav-agent-pulse {
+    position: absolute;
+    inset: 1px;
+    z-index: 1;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 88%, white);
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.68);
+    pointer-events: none;
+  }
+
+  .nav-agent-spark {
+    position: absolute;
+    z-index: 4;
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--nav-agent-glow) 82%, white);
+    box-shadow: 0 0 5px 1px var(--nav-agent-glow);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav-agent-spark::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 78%, white);
+    transform: rotate(45deg);
+  }
+
+  .nav-agent-spark-a { top: -1px; right: 0; }
+  .nav-agent-spark-b { bottom: 0; left: -1px; }
+
+  .nav-agent-button:hover .nav-agent-icon,
+  .nav-agent-button:focus-visible .nav-agent-icon,
+  .nav-agent-button.nav-agent-active .nav-agent-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 64%, transparent));
+    transform: translateY(-0.5px) scale(1.08);
+  }
+
+  .nav-agent-button:hover .nav-agent-icon::before,
+  .nav-agent-button:focus-visible .nav-agent-icon::before,
+  .nav-agent-button:hover .nav-agent-pulse,
+  .nav-agent-button:focus-visible .nav-agent-pulse {
+    animation: nav-agent-neural-pulse 1.65s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-icon::after,
+  .nav-agent-button:focus-visible .nav-agent-icon::after {
+    animation: nav-agent-aura 1.65s ease-in-out infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-spark-a,
+  .nav-agent-button:focus-visible .nav-agent-spark-a {
+    animation: nav-agent-spark-a 1.45s 120ms ease-in-out infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-spark-b,
+  .nav-agent-button:focus-visible .nav-agent-spark-b {
+    animation: nav-agent-spark-b 1.45s 480ms ease-in-out infinite;
+  }
+
+  .nav-agent-button:active .nav-agent-icon,
+  .nav-agent-button.nav-agent-active:active .nav-agent-icon {
+    transform: scale(0.91) rotate(5deg);
+  }
+
+  @keyframes nav-agent-neural-pulse {
+    0% { opacity: 0; transform: scale(0.52); box-shadow: 0 0 0 0 transparent; }
+    28% { opacity: 0.95; }
+    72% { opacity: 0.45; }
+    100% { opacity: 0; transform: scale(1.62); box-shadow: 0 0 0 3px transparent; }
+  }
+
+  @keyframes nav-agent-aura {
+    0%, 100% { opacity: 0.18; transform: scale(0.82); }
+    50% { opacity: 0.72; transform: scale(1.12); }
+  }
+
+  @keyframes nav-agent-spark-a {
+    0%, 100% { opacity: 0; transform: translate(-2px, 2px) scale(0.35) rotate(0deg); }
+    35% { opacity: 1; transform: translate(0, 0) scale(1) rotate(45deg); }
+    70% { opacity: 0.15; transform: translate(2px, -2px) scale(0.6) rotate(90deg); }
+  }
+
+  @keyframes nav-agent-spark-b {
+    0%, 100% { opacity: 0; transform: translate(2px, -1px) scale(0.35) rotate(0deg); }
+    35% { opacity: 0.18; transform: translate(0, 0) scale(0.6) rotate(45deg); }
+    70% { opacity: 1; transform: translate(-2px, 1px) scale(1) rotate(90deg); }
+  }
+
+  /* Dashboard tiles shift cleanly on hover without showing visual clutter at rest */
+  .nav-overview-cell {
+    position: absolute;
+    z-index: 1;
+    width: 4px;
+    height: 4px;
+    border: 1px solid currentColor;
+    border-radius: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  .nav-overview-cell:nth-child(1) { top: 2px; left: 2px; }
+  .nav-overview-cell:nth-child(2) { top: 2px; right: 2px; }
+  .nav-overview-cell:nth-child(3) { bottom: 2px; left: 2px; }
+  .nav-overview-cell:nth-child(4) { bottom: 2px; right: 2px; }
+  .nav-overview-button.nav-overview-active .nav-overview-icon {
+    transform: translateY(-0.5px) scale(1.05);
+  }
+  .nav-overview-button:hover .nav-overview-icon,
+  .nav-overview-button:focus-visible .nav-overview-icon,
+  .nav-overview-button.nav-overview-active:hover .nav-overview-icon,
+  .nav-overview-button.nav-overview-active:focus-visible .nav-overview-icon {
+    transform: translateY(-1px) scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-overview-button:hover .nav-overview-cell,
+  .nav-overview-button:focus-visible .nav-overview-cell {
+    animation: nav-overview-grid-pulse 820ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
+  }
+  .nav-overview-cell:nth-child(2) { animation-delay: 70ms !important; }
+  .nav-overview-cell:nth-child(3) { animation-delay: 140ms !important; }
+  .nav-overview-cell:nth-child(4) { animation-delay: 210ms !important; }
+  @keyframes nav-overview-grid-pulse {
+    0% { opacity: 0.3; transform: translate(0, 0) scale(0.7); }
+    45% { opacity: 0.95; transform: translate(1px, -1px) scale(1.35); }
+    100% { opacity: 0.55; transform: translate(0, 0) scale(1); }
+  }
+
+  /* Cost combines a coin rim with the same spring-loaded tactile response as
+     the 3D Models icon, while keeping the dollar mark readable. */
+  .nav-cost-button.nav-cost-active .nav-cost-icon {
+    transform: rotate(8deg) scale(1.05);
+  }
+  .nav-cost-button:hover .nav-cost-icon,
+  .nav-cost-button:focus-visible .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:hover .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:focus-visible .nav-cost-icon {
+    transform: translateY(-1px) rotate(-16deg) scale(1.13);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-cost-button:active .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:active .nav-cost-icon {
+    animation: nav-cost-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+  @keyframes nav-cost-spring {
+    0% { transform: rotate(8deg) scale(1.05); }
+    22% { transform: translateY(2px) rotate(22deg) scale(0.86, 0.9); }
+    52% { transform: translateY(-2px) rotate(-24deg) scale(1.16); }
+    76% { transform: translateY(0.5px) rotate(-4deg) scale(1.02); }
+    100% { transform: rotate(8deg) scale(1.05); }
+  }
+
+  /* Orbital dynamic spinning loop with balanced luminous ring that keeps the currency symbol 100% visible */
+  .nav-cost-icon::before {
+    content: '';
+    position: absolute;
+    inset: -3.5px;
+    border: 1.5px dashed var(--md-sys-color-primary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transform: rotate(0deg) scale(0.8);
+    transition: opacity 240ms ease, transform 300ms ease;
+  }
+  .nav-cost-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    inset: -1px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent) 0%,
+      transparent 70%
+    );
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms ease;
+  }
+  .nav-cost-button:hover .nav-cost-icon::before,
+  .nav-cost-button:focus-visible .nav-cost-icon::before {
+    opacity: 0.95;
+    border-style: solid;
+    border-top-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, white);
+    border-right-color: var(--md-sys-color-primary);
+    border-bottom-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
+    border-left-color: transparent;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
+    animation: nav-cost-spin-orbit 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .nav-cost-button:hover .nav-cost-icon::after,
+  .nav-cost-button:focus-visible .nav-cost-icon::after {
+    opacity: 0.85;
+  }
+  .nav-cost-button:active .nav-cost-icon::before {
+    animation-duration: 0.5s;
+    box-shadow: 0 0 12px var(--md-sys-color-primary);
+  }
+  @keyframes nav-cost-spin-orbit {
+    0% { transform: rotate(0deg) scale(1.1); }
+    50% { transform: rotate(180deg) scale(1.18); }
+    100% { transform: rotate(360deg) scale(1.1); }
+  }
+
+  .nav-settings-button.nav-settings-active .nav-settings-icon {
+    transform: rotate(45deg) scale(1.05);
+  }
+  .nav-settings-button:hover .nav-settings-icon,
+  .nav-settings-button:focus-visible .nav-settings-icon {
+    transform: rotate(90deg) scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-settings-button.nav-settings-active:hover .nav-settings-icon,
+  .nav-settings-button.nav-settings-active:focus-visible .nav-settings-icon {
+    transform: rotate(135deg) scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  .nav-overview-button:active .nav-overview-icon,
+  .nav-overview-button.nav-overview-active:active .nav-overview-icon,
+  .nav-cost-button:active .nav-cost-icon,
+  .nav-cost-button.nav-cost-active:active .nav-cost-icon {
+    transform: translateY(1px) scale(0.92);
+  }
+  .nav-settings-button:active .nav-settings-icon,
+  .nav-settings-button.nav-settings-active:active .nav-settings-icon {
+    transform: rotate(180deg) scale(0.92);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-tab,
+    .nav-overview-icon,
+    .nav-overview-cell,
+    .nav-model-icon,
+    .nav-model-icon::before,
+    .nav-agent-icon,
+    .nav-cost-icon,
+    .nav-cost-icon::before,
+    .nav-settings-icon {
+      transition: none !important;
+      animation: none !important;
+    }
+    .nav-tab:active { transform: none; }
+
+    .nav-overview-button:hover .nav-overview-icon,
+    .nav-overview-button:focus-visible .nav-overview-icon,
+    .nav-overview-button.nav-overview-active .nav-overview-icon,
+    .nav-cost-button:hover .nav-cost-icon,
+    .nav-cost-button:focus-visible .nav-cost-icon,
+    .nav-cost-button.nav-cost-active .nav-cost-icon,
+    .nav-settings-button:hover .nav-settings-icon,
+    .nav-settings-button:focus-visible .nav-settings-icon,
+    .nav-settings-button.nav-settings-active .nav-settings-icon,
+    .nav-model-button:hover .nav-model-icon,
+    .nav-model-button:focus-visible .nav-model-icon,
+    .nav-model-button.nav-model-active .nav-model-icon,
+    .nav-agent-button:hover .nav-agent-icon,
+    .nav-agent-button:focus-visible .nav-agent-icon,
+    .nav-agent-button.nav-agent-active .nav-agent-icon {
+      transform: none;
+      filter: none;
+    }
+
+    .nav-model-icon::after,
+    .nav-cost-icon::after,
+    .nav-agent-icon::before,
+    .nav-agent-icon::after,
+    .nav-agent-pulse,
+    .nav-agent-spark {
+      animation: none !important;
+      opacity: 0;
+    }
+  }
+
+
   @keyframes appleViewEnter {
     0% {
       opacity: 0;
@@ -456,14 +911,7 @@ const navMicroAnimationStyles = `
     animation: applePillGlow 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
   }
 
-  .nav-tab:hover .nav-overview-icon,
-  .nav-tab:hover .nav-model-icon,
-  .nav-tab:hover .nav-agent-icon,
-  .nav-tab:hover .nav-playground-icon,
-  .nav-tab:hover .nav-cost-icon,
-  .nav-tab:hover .nav-settings-icon {
-    transform: scale(1.15);
-  }
+
 `;
 
 function getProviderModalityStats(provider) {
