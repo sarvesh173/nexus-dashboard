@@ -30,7 +30,7 @@ async def check():
         page = await browser.new_page(viewport={"width": 1440, "height": 900})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        await page.goto("http://localhost:5173/overview", wait_until="load", timeout=15000)
+        await page.goto("http://localhost:5173/", wait_until="load", timeout=15000)
         await page.wait_for_timeout(1200)
         if errors:
             fails.append(f"page errors: {errors}")
