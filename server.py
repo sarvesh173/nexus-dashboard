@@ -463,6 +463,8 @@ def get_hermes_config_providers():
                         }
                     }
                 ]
+                # Collect existing model IDs to prevent duplicate entries when appending visual GenAI models
+                existing_ids = {m['id'] for m in models_list}
                 for vm in visual_genai_models:
                     if vm['id'] not in existing_ids:
                         models_list.append(vm)
