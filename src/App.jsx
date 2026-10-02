@@ -181,6 +181,18 @@ const CostMetricIcon = ({ symbol }) => (
       style={{ '--overview-icon-dash': 76 }}
     />
     <circle
+      className="overview-icon-sweep"
+      cx="16"
+      cy="16"
+      r="9.25"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeDasharray="7 52"
+      opacity="0.72"
+    />
+    <circle
       className="overview-icon-depth"
       cx="16"
       cy="16"
@@ -214,58 +226,59 @@ const CostMetricIcon = ({ symbol }) => (
     </text>
   </IconFrame>
 );
-const CpuMetricIcon = () => (
-  <IconFrame active>
-    <circle
-      className="overview-icon-draw overview-icon-depth"
-      cx="16"
-      cy="16"
-      r="12"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.25"
-      opacity="0.36"
-      style={{ '--overview-icon-dash': 76 }}
-    />
-    <path
-      className="overview-icon-draw"
-      d="M10 11.5h12v9H10z"
-      fill="var(--md-sys-color-primary)"
-      fillOpacity="0.12"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.45"
-      strokeLinejoin="round"
-      style={{ '--overview-icon-dash': 42 }}
-    />
-    <path
-      d="M13 14.3h6.1v3.4H13z"
-      fill="var(--md-sys-color-primary)"
-      opacity="0.8"
-    />
-    <path
-      className="overview-icon-draw"
-      d="M13 8.2v3.3M19 8.2v3.3M13 20.5v3.3M19 20.5v3.3M8.2 13h1.8M8.2 19h1.8M22 13h1.8M22 19h1.8"
-      fill="none"
-      stroke="var(--md-sys-color-on-surface)"
-      strokeWidth="1.35"
-      strokeLinecap="round"
-      style={{ '--overview-icon-dash': 34 }}
-    />
-    <path
-      className="overview-icon-depth"
-      d="M10.2 24.2c1.65-1.04 3.57-1.56 5.8-1.56s4.15.52 5.8 1.56"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1"
-      strokeLinecap="round"
-      opacity="0.55"
-    />
-  </IconFrame>
-);
+const CpuMetricIcon = ({ load = 0 }) => {
+  // Live-data driven. The outer arc spins faster the busier the CPU really is,
+  // clamped so an idle machine still breathes and a saturated one does not
+  // strobe. M3 guidance for live telemetry is a bounded visual rate, never one
+  // animation per sample.
+  const pct = Math.max(0, Math.min(100, Number(load) || 0));
+  const spin = 3.2 - (pct / 100) * 2.1; // 3.2s idle -> 1.1s saturated
+  return (
+    <IconFrame active>
+      <circle
+        className="overview-icon-draw overview-icon-depth"
+        cx="16" cy="16" r="12" fill="none"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.25" opacity="0.36"
+        style={{ '--overview-icon-dash': 76 }}
+      />
+      <circle
+        className="overview-icon-orbit"
+        cx="16" cy="16" r="12" fill="none"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.75"
+        strokeLinecap="round" strokeDasharray="13 62" opacity="0.9"
+        style={{ animationDuration: `${spin}s` }}
+      />
+      <rect
+        className="overview-icon-draw"
+        x="11.4" y="11.4" width="9.2" height="9.2" rx="2" fill="none"
+        stroke="var(--md-sys-color-on-surface)" strokeWidth="1.35"
+        style={{ '--overview-icon-dash': 38 }}
+      />
+      <path
+        className="overview-icon-draw"
+        d="M11.4 14.2h9.2M14.2 11.4v9.2M17.8 11.4v9.2"
+        fill="none" stroke="var(--md-sys-color-on-surface)" strokeWidth="0.9"
+        opacity="0.62" style={{ '--overview-icon-dash': 30 }}
+      />
+      <rect
+        className="overview-icon-load"
+        x="12.1" y="12.1" width="7.8" height="7.8" rx="1.5"
+        fill="var(--md-sys-color-primary)"
+        style={{ '--overview-load': pct / 100 }}
+      />
+      <path
+        className="overview-icon-draw"
+        d="M8 8.8h2.2M8 8.8v2.2M24 8.8h-2.2M24 8.8v2.2M8 23.2h2.2M8 23.2v-2.2M24 23.2h-2.2M24 23.2v-2.2"
+        fill="none" stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+        strokeLinecap="round" opacity="0.7" style={{ '--overview-icon-dash': 24 }}
+      />
+    </IconFrame>
+  );
+};
 const ModelsMetricIcon = () => (
   <IconFrame>
     <path
-      className="overview-icon-draw overview-icon-depth"
+      className="overview-icon-layer overview-icon-draw overview-icon-depth"
       d="m16 5 10 5.5-10 5.5L6 10.5 16 5Z"
       fill="var(--md-sys-color-primary)"
       fillOpacity="0.18"
@@ -275,7 +288,7 @@ const ModelsMetricIcon = () => (
       style={{ '--overview-icon-dash': 48 }}
     />
     <path
-      className="overview-icon-draw"
+      className="overview-icon-layer overview-icon-draw"
       d="m6 15.4 10 5.5 10-5.5M6 20.8l10 5.5 10-5.5"
       fill="none"
       stroke="var(--md-sys-color-on-surface)"
@@ -296,43 +309,54 @@ const ModelsMetricIcon = () => (
   </IconFrame>
 );
 
-const MemoryMetricIcon = () => (
-  <IconFrame>
-    <path
-      className="overview-icon-draw overview-icon-depth"
-      d="M8 11.3h16v9.4H8z"
-      fill="var(--md-sys-color-primary)"
-      fillOpacity="0.1"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.35"
-      strokeLinejoin="round"
-      style={{ '--overview-icon-dash': 52 }}
-    />
-    <path
-      className="overview-icon-draw"
-      d="M11 8.1v3.2M16 8.1v3.2M21 8.1v3.2M11 20.7v3.2M16 20.7v3.2M21 20.7v3.2"
-      fill="none"
-      stroke="var(--md-sys-color-on-surface)"
-      strokeWidth="1.35"
-      strokeLinecap="round"
-      style={{ '--overview-icon-dash': 26 }}
-    />
-    <path
-      d="M11.2 14.3h2.2v2.4h-2.2zM14.9 14.3h2.2v2.4h-2.2zM18.6 14.3h2.2v2.4h-2.2z"
-      fill="var(--md-sys-color-primary)"
-      opacity="0.82"
-    />
-    <path
-      className="overview-icon-depth"
-      d="M7 24.8c2.55-1.4 5.55-2.1 9-2.1s6.45.7 9 2.1"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1"
-      strokeLinecap="round"
-      opacity="0.55"
-    />
-  </IconFrame>
-);
+const MemoryMetricIcon = ({ load = 0 }) => {
+  const pct = Math.max(0, Math.min(100, Number(load) || 0));
+  // The module's fill height is the actual RAM percentage, so the icon carries
+  // real information instead of being decoration next to the figure it labels.
+  const h = 7.4 * (pct / 100);
+  return (
+    <IconFrame>
+      <path
+        className="overview-icon-draw overview-icon-depth"
+        d="M8 11.3h16v9.4H8z"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity="0.1"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+        style={{ '--overview-icon-dash': 52 }}
+      />
+      <rect
+        className="overview-icon-load"
+        x="8.9"
+        y={20.7 - h}
+        width="14.2"
+        height={h}
+        rx="0.8"
+        fill="var(--md-sys-color-primary)"
+        style={{ '--overview-load': pct / 100 }}
+      />
+      <path
+        className="overview-icon-draw"
+        d="M11 8.1v3.2M16 8.1v3.2M21 8.1v3.2M11 20.7v3.2M16 20.7v3.2M21 20.7v3.2"
+        fill="none"
+        stroke="var(--md-sys-color-on-surface)"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        style={{ '--overview-icon-dash': 26 }}
+      />
+      <path
+        className="overview-icon-depth"
+        d="M7 24.8c2.55-1.4 5.55-2.1 9-2.1s6.45.7 9 2.1"
+        fill="none"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1"
+        strokeLinecap="round"
+        opacity="0.55"
+      />
+    </IconFrame>
+  );
+};
 
 // Custom smooth number tween hook with M3 standard 1.2s deceleration
 function useSmoothCounter(targetValue, duration = 1200) {
@@ -5008,7 +5032,7 @@ export default function App() {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
                         <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
-                          <CpuMetricIcon />
+                          <CpuMetricIcon load={smoothCpu} />
                         </div>
                       </div>
                       
@@ -5052,7 +5076,7 @@ export default function App() {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
                         <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
-                          <MemoryMetricIcon />
+                          <MemoryMetricIcon load={telemetry?.ram_percent ?? 0} />
                         </div>
                       </div>
 

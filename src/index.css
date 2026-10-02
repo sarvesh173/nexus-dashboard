@@ -306,7 +306,9 @@ body {
   position: relative;
   isolation: isolate;
   z-index: 0;
-  overflow: hidden;
+  /* No overflow:hidden here. The cost tooltip is a DOM descendant of a trigger
+     inside this card, so clipping the card also clips the tooltip and traps it
+     inside the box. The state layer below gets the card's radius instead. */
   transition:
     transform var(--ov-dur-medium) var(--ov-ease-emphasized),
     box-shadow var(--ov-dur-medium) var(--ov-ease-standard),
@@ -330,6 +332,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   z-index: -1;
   pointer-events: none;
   background: currentColor;
@@ -423,4 +426,89 @@ body {
     filter: none;
   }
   .overview-icon-draw { stroke-dashoffset: 0; }
+}
+
+/* =====================================================================
+   Inside-the-icon motion.
+
+   The card icons used to animate only once on mount (a stroke draw that is
+   already over by the time you look at the page) plus a 0.65px hover shift,
+   which reads as nothing happening. These give each icon something that is
+   actually alive:
+
+     CPU     an arc orbits at a speed set by the real CPU percentage
+     Memory  the module fills to the real RAM percentage
+     Cost    light sweeps once around the coin rim
+     Models  each layer lifts in a staggered wave
+
+   Motion routing follows M3: the orbit and sweep are spatial so they ride
+   the emphasized curve; opacity on the load fills is an effect and uses the
+   decelerate curve, so nothing overshoots.
+   ===================================================================== */
+
+.overview-icon-orbit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: overview-icon-orbit 3.2s linear infinite;
+}
+@keyframes overview-icon-orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.overview-icon-sweep {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: overview-icon-sweep 4.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes overview-icon-sweep {
+  0%   { transform: rotate(0deg);   opacity: 0; }
+  12%  { opacity: 0.72; }
+  50%  { transform: rotate(190deg); opacity: 0.5; }
+  88%  { opacity: 0.72; }
+  100% { transform: rotate(360deg); opacity: 0; }
+}
+
+/* Load fills. Opacity is an effect: decelerate, no overshoot. The value is the
+   real percentage, so a busy machine visibly reads as busier. */
+.overview-icon-load {
+  opacity: calc(0.16 + var(--overview-load, 0) * 0.62);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity var(--ov-dur-long) var(--ov-ease-decelerate);
+}
+
+/* Staggered layer wave on the models icon. */
+.overview-icon-layer {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: overview-icon-layer 2.8s var(--ov-ease-emphasized) infinite;
+}
+.overview-icon-layer:nth-of-type(1) { animation-delay: 0ms; }
+.overview-icon-layer:nth-of-type(2) { animation-delay: 220ms; }
+.overview-icon-layer:nth-of-type(3) { animation-delay: 440ms; }
+.overview-icon-layer:nth-of-type(4) { animation-delay: 660ms; }
+@keyframes overview-icon-layer {
+  0%, 62%, 100% { transform: translateY(0); }
+  24%           { transform: translateY(-1.1px); }
+}
+
+/* A hover depth shift of 0.65px was invisible; 2px reads as a lift. Spatial
+   property, so it rides the emphasized curve at medium2. */
+.overview-card:hover .overview-icon-depth {
+  transform: translate(1.4px, 1.4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-icon-orbit,
+  .overview-icon-sweep,
+  .overview-icon-layer {
+    animation: none !important;
+  }
+  .overview-icon-load {
+    transition: none !important;
+  }
+  .overview-card:hover .overview-icon-depth {
+    transform: none;
+  }
 }
