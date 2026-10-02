@@ -150,6 +150,190 @@ function AgentSessionView({ navigate }) {
   );
 }
 
+/* =====================================================================
+   Animated Overview card icons.
+   Purpose-built SVGs instead of generic Lucide glyphs: each card gets a
+   coin ring, a processor die, and a memory module. Strokes draw themselves
+   on mount and gain depth on hover, so the icons read as part of
+   the card rather than a label stuck in the corner.
+   ===================================================================== */
+const IconFrame = ({ children, active = false }) => (
+  <svg
+    viewBox="0 0 32 32"
+    aria-hidden="true"
+    focusable="false"
+    className={`overview-card-icon ${active ? 'overview-card-icon-active' : ''}`}
+  >
+    {children}
+  </svg>
+);
+const CostMetricIcon = ({ symbol }) => (
+  <IconFrame>
+    <circle
+      className="overview-icon-draw overview-icon-depth"
+      cx="16"
+      cy="16"
+      r="12"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.25"
+      opacity="0.42"
+      style={{ '--overview-icon-dash': 76 }}
+    />
+    <circle
+      className="overview-icon-depth"
+      cx="16"
+      cy="16"
+      r="9.25"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1"
+      strokeDasharray="1.5 3"
+      opacity="0.6"
+    />
+    <path
+      className="overview-icon-draw"
+      d="M16 7.1v17.8M19.75 10.3c-.78-.78-1.98-1.2-3.64-1.2-2.07 0-3.63 1.03-3.63 2.6 0 1.58 1.34 2.18 3.63 2.52 2.31.35 3.63 1.02 3.63 2.61 0 1.6-1.57 2.66-3.66 2.66-1.75 0-3.15-.48-4.04-1.42"
+      fill="none"
+      stroke="var(--md-sys-color-on-surface)"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ '--overview-icon-dash': 94 }}
+    />
+    <text
+      x="16"
+      y="28.2"
+      textAnchor="middle"
+      fontSize="4.2"
+      fontWeight="700"
+      fill="var(--md-sys-color-primary)"
+      opacity="0.9"
+    >
+      {symbol}
+    </text>
+  </IconFrame>
+);
+const CpuMetricIcon = () => (
+  <IconFrame active>
+    <circle
+      className="overview-icon-draw overview-icon-depth"
+      cx="16"
+      cy="16"
+      r="12"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.25"
+      opacity="0.36"
+      style={{ '--overview-icon-dash': 76 }}
+    />
+    <path
+      className="overview-icon-draw"
+      d="M10 11.5h12v9H10z"
+      fill="var(--md-sys-color-primary)"
+      fillOpacity="0.12"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.45"
+      strokeLinejoin="round"
+      style={{ '--overview-icon-dash': 42 }}
+    />
+    <path
+      d="M13 14.3h6.1v3.4H13z"
+      fill="var(--md-sys-color-primary)"
+      opacity="0.8"
+    />
+    <path
+      className="overview-icon-draw"
+      d="M13 8.2v3.3M19 8.2v3.3M13 20.5v3.3M19 20.5v3.3M8.2 13h1.8M8.2 19h1.8M22 13h1.8M22 19h1.8"
+      fill="none"
+      stroke="var(--md-sys-color-on-surface)"
+      strokeWidth="1.35"
+      strokeLinecap="round"
+      style={{ '--overview-icon-dash': 34 }}
+    />
+    <path
+      className="overview-icon-depth"
+      d="M10.2 24.2c1.65-1.04 3.57-1.56 5.8-1.56s4.15.52 5.8 1.56"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1"
+      strokeLinecap="round"
+      opacity="0.55"
+    />
+  </IconFrame>
+);
+const ModelsMetricIcon = () => (
+  <IconFrame>
+    <path
+      className="overview-icon-draw overview-icon-depth"
+      d="m16 5 10 5.5-10 5.5L6 10.5 16 5Z"
+      fill="var(--md-sys-color-primary)"
+      fillOpacity="0.18"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.25"
+      strokeLinejoin="round"
+      style={{ '--overview-icon-dash': 48 }}
+    />
+    <path
+      className="overview-icon-draw"
+      d="m6 15.4 10 5.5 10-5.5M6 20.8l10 5.5 10-5.5"
+      fill="none"
+      stroke="var(--md-sys-color-on-surface)"
+      strokeWidth="1.35"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ '--overview-icon-dash': 46 }}
+    />
+    <circle cx="16" cy="10.5" r="1.7" fill="var(--md-sys-color-on-surface)" />
+    <path
+      className="overview-icon-depth"
+      d="m9.5 12.45 6.5 3.55 6.5-3.55"
+      fill="none"
+      stroke="var(--md-sys-color-on-surface)"
+      strokeWidth="0.8"
+      opacity="0.5"
+    />
+  </IconFrame>
+);
+
+const MemoryMetricIcon = () => (
+  <IconFrame>
+    <path
+      className="overview-icon-draw overview-icon-depth"
+      d="M8 11.3h16v9.4H8z"
+      fill="var(--md-sys-color-primary)"
+      fillOpacity="0.1"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.35"
+      strokeLinejoin="round"
+      style={{ '--overview-icon-dash': 52 }}
+    />
+    <path
+      className="overview-icon-draw"
+      d="M11 8.1v3.2M16 8.1v3.2M21 8.1v3.2M11 20.7v3.2M16 20.7v3.2M21 20.7v3.2"
+      fill="none"
+      stroke="var(--md-sys-color-on-surface)"
+      strokeWidth="1.35"
+      strokeLinecap="round"
+      style={{ '--overview-icon-dash': 26 }}
+    />
+    <path
+      d="M11.2 14.3h2.2v2.4h-2.2zM14.9 14.3h2.2v2.4h-2.2zM18.6 14.3h2.2v2.4h-2.2z"
+      fill="var(--md-sys-color-primary)"
+      opacity="0.82"
+    />
+    <path
+      className="overview-icon-depth"
+      d="M7 24.8c2.55-1.4 5.55-2.1 9-2.1s6.45.7 9 2.1"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1"
+      strokeLinecap="round"
+      opacity="0.55"
+    />
+  </IconFrame>
+);
+
 // Custom smooth number tween hook with M3 standard 1.2s deceleration
 function useSmoothCounter(targetValue, duration = 1200) {
   const [displayValue, setDisplayValue] = useState(targetValue);
@@ -3741,6 +3925,9 @@ export default function App() {
 
   const [costOverview, setCostOverview] = useState(cost);
   const [costLoadState, setCostLoadState] = useState('loading'); // loading | ready | error
+  // The backend distinguishes "zero spend so far" from "no usage recorded yet".
+  // Only render a currency figure when the former is actually true.
+  const [costHasUsage, setCostHasUsage] = useState(false);
 
   // Industry Standard Model Catalog Structure
   const [modelCatalog, setModelCatalog] = useState([
@@ -3939,11 +4126,11 @@ export default function App() {
     }
   ]);
 
-  // Smooth but fast. The previous 2800ms made live figures feel broken: the
-  // data was already in memory, only the tween was lagging. 420ms keeps the
-  // motion (cubic ease-out, same curve) while landing well inside the 2.5ms
-  // backend latency the user actually perceives.
-  const TELEMETRY_RAMP_MS = 420;
+  // The numbers are meant to be watched, not snapped at. 420ms read as a
+  // jump-cut; the original 2800ms was watchable but felt like a stall because
+  // it outlasted the eye's patience. 1500ms keeps the cubic ease-out glide
+  // legible on both the headline figure and the small sub-cells.
+  const TELEMETRY_RAMP_MS = 1500;
   const smoothCpu        = useSmoothCounter(telemetry?.cpu_percent ?? 0, TELEMETRY_RAMP_MS);
   const smoothCore0      = useSmoothCounter(telemetry?.cpu_cores?.[0] ?? 0, TELEMETRY_RAMP_MS);
   const smoothCore1      = useSmoothCounter(telemetry?.cpu_cores?.[1] ?? 0, TELEMETRY_RAMP_MS);
@@ -3973,6 +4160,7 @@ export default function App() {
       const res = await fetch('/api/cost-overview');
       if (!res.ok) throw new Error(`cost-overview ${res.status}`);
       const data = await res.json();
+      setCostHasUsage(Boolean(data.has_usage));
       setCostOverview({
         total_accrued: data.total_accrued ?? cost.total_accrued,
         scan_cadence: data.request_count
@@ -4641,15 +4829,15 @@ export default function App() {
                   
                   {/* CARD 1: Total Cost */}
                   <div
-                    className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer"
+                    className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer"
                     onClick={() => navigate('/cost')}
                   >
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
-                        <div className="w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] animate-subtle-glow">
+                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] animate-subtle-glow">
                           {activeCurrency.id === 'USD' ? (
-                            <DollarSign size={15} />
+                            <CostMetricIcon symbol={activeCurrency.symbol} />
                           ) : (
                             <span className="text-[15px] font-bold leading-none select-none tracking-tight">{activeCurrency.symbol}</span>
                           )}
@@ -4666,7 +4854,9 @@ export default function App() {
                           ]}
                           trigger={
                             <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)] inline-block">
-                              {convertFromUsd(costOverview.total_accrued, activeCurrency)}
+                              {costHasUsage
+                                ? convertFromUsd(costOverview.total_accrued, activeCurrency)
+                                : <span className="overview-pending" title="No gateway usage recorded yet">—</span>}
                             </span>
                           }
                         />
@@ -4716,12 +4906,12 @@ export default function App() {
                   </div>
 
                   {/* CARD 2: CPU Load */}
-                  <div className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
+                  <div className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
-                        <div className="w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
-                          <Cpu size={15} />
+                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
+                          <CpuMetricIcon />
                         </div>
                       </div>
                       
@@ -4760,12 +4950,12 @@ export default function App() {
                   </div>
 
                   {/* CARD 3: Memory (RAM & Swap) */}
-                  <div className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
+                  <div className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
-                        <div className="w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
-                          <Activity size={15} />
+                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
+                          <MemoryMetricIcon />
                         </div>
                       </div>
 
@@ -4800,12 +4990,12 @@ export default function App() {
                   </div>
 
                   {/* CARD 4: Models & Providers */}
-                  <div className="p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer" onClick={() => navigate('/model')}>
+                  <div className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer" onClick={() => navigate('/model')}>
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
-                        <div className="w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
-                          <Layers size={15} />
+                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
+                          <ModelsMetricIcon />
                         </div>
                       </div>
 
@@ -4861,8 +5051,8 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
                       <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Total Cumulative Spend</span>
-                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{convertFromUsd(costOverview.total_accrued, activeCurrency)}</span>
-                      <span className="text-[10px] text-[var(--md-sys-color-primary)] font-mono">{costLoadState === 'error' ? 'Backend unreachable' : 'From gateway usage ledger'}</span>
+                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{costHasUsage ? convertFromUsd(costOverview.total_accrued, activeCurrency) : <span className="overview-pending" title="No gateway usage recorded yet">—</span>}</span>
+                      <span className="text-[10px] text-[var(--md-sys-color-primary)] font-mono">{costLoadState === 'error' ? 'Backend unreachable' : costHasUsage ? 'From gateway usage ledger' : 'No gateway usage recorded yet'}</span>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">

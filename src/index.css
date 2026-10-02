@@ -236,9 +236,12 @@ body {
    broken. The em-dash is rendered at the same font-size as a real figure
    (so layout never jumps), but at a fraction of the visual weight.
    --------------------------------------------------------------------- */
+/* Tuned after looking at it: 0.38 made a pending card read as a card that
+   had shrunk. 0.62 keeps the same visual mass as a live figure while still
+   reading unmistakably as "not a measurement yet". */
 .overview-pending {
   color: var(--md-sys-color-on-surface-variant);
-  opacity: 0.38;
+  opacity: 0.62;
   font-weight: 400;
 }
 
@@ -263,4 +266,161 @@ body {
   .m3-linear-indicator {
     transition: none;
   }
+}
+
+/* =====================================================================
+   Animated Overview card icons + card hover.
+
+   Every duration and curve below is a verified Material 3 Web token
+   (material-web tokens/versions/v0_192/_md-sys-motion.scss and
+   _md-sys-state.scss, as of 2026-10-01 UTC). The previous values
+   (240ms / cubic-bezier(0.16, 1, 0.3, 1)) were not M3 tokens at all.
+
+     duration  short3 150ms · medium2 300ms · long2 500ms
+     easing    standard  cubic-bezier(0.2, 0, 0, 1)
+               standard-decelerate     cubic-bezier(0, 0, 0, 1)
+               emphasized-decelerate  cubic-bezier(0.05, 0.7, 0.1, 1)
+     state     hover 8% · focus 10% · pressed 10% · dragged 16%
+
+   Property routing follows M3's rule: translation/scale are spatial and
+   ride the emphasized-decelerate curve; opacity and colour are effects and
+   ride standard-decelerate. Nothing overshoots.
+   ===================================================================== */
+
+:root {
+  --ov-dur-short: 150ms;
+  --ov-dur-medium: 300ms;
+  --ov-dur-long: 500ms;
+  --ov-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ov-ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ov-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ov-state-hover: 8%;
+  --ov-state-focus: 10%;
+  --ov-state-pressed: 10%;
+}
+
+.overview-card {
+  /* Without its own stacking context a hovered card lifts on transform but
+     is painted UNDER later siblings, so the CPU card would slide out of
+     sight behind the next one. Own the layer, and raise it on hover. */
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+  overflow: hidden;
+  transition:
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized),
+    box-shadow var(--ov-dur-medium) var(--ov-ease-standard),
+    border-color var(--ov-dur-short) var(--ov-ease-standard);
+}
+
+.overview-card:hover,
+.overview-card:focus-within {
+  z-index: 2;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.16);
+}
+
+.overview-card:active {
+  transform: translateY(-1px) scale(0.997);
+}
+
+/* M3 state layer: one content-coloured wash between container and content.
+   It sits under the content via isolation + negative z, never over the text. */
+.overview-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--ov-dur-short) var(--ov-ease-standard);
+}
+.overview-card:hover::after   { opacity: 0.08; }
+.overview-card:focus-visible::after { opacity: 0.10; }
+.overview-card:active::after  { opacity: 0.10; }
+
+.overview-card-icon-shell {
+  position: relative;
+  z-index: 1;
+  transition:
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized),
+    background-color var(--ov-dur-short) var(--ov-ease-standard);
+}
+.overview-card:hover .overview-card-icon-shell {
+  transform: translateY(-1px) scale(1.04);
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.overview-card-icon {
+  position: relative;
+  z-index: 1;
+  width: 21px;
+  height: 21px;
+  overflow: visible;
+  transition:
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized),
+    filter var(--ov-dur-short) var(--ov-ease-standard);
+}
+.overview-card:hover .overview-card-icon {
+  transform: translateY(-0.5px) scale(1.04);
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.2));
+}
+
+/* Stroke draw-on: a spatial reveal, so it rides the emphasized curve at
+   medium2 rather than the previous unverified 240ms. */
+.overview-icon-draw {
+  stroke-dasharray: var(--overview-icon-dash);
+  stroke-dashoffset: var(--overview-icon-dash);
+  animation: overview-icon-draw-on var(--ov-dur-medium) var(--ov-ease-emphasized) both;
+}
+
+.overview-icon-depth {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform var(--ov-dur-medium) var(--ov-ease-emphasized);
+}
+.overview-card:hover .overview-icon-depth {
+  transform: translate(0.65px, 0.65px);
+}
+
+.overview-card-icon-active .overview-icon-active,
+.overview-card-icon-active {
+  animation: overview-icon-breathe var(--ov-dur-long) var(--ov-ease-emphasized) both;
+}
+
+@keyframes overview-icon-draw-on {
+  from { stroke-dashoffset: var(--overview-icon-dash); }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes overview-icon-breathe {
+  0%   { transform: scale(1); }
+  58%  { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-card,
+  .overview-card-icon-shell,
+  .overview-card-icon,
+  .overview-icon-draw,
+  .overview-icon-depth {
+    transition: none !important;
+    animation: none !important;
+  }
+  .overview-card:hover,
+  .overview-card:active,
+  .overview-card:focus-within {
+    transform: none;
+    box-shadow: none;
+  }
+  .overview-card::after { transition-duration: 1ms; }
+  .overview-card:hover .overview-card-icon-shell,
+  .overview-card:hover .overview-card-icon,
+  .overview-card:hover .overview-icon-depth {
+    transform: none;
+    filter: none;
+  }
+  .overview-icon-draw { stroke-dashoffset: 0; }
 }
