@@ -535,3 +535,77 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .output-rate-fill { transition: none !important; }
 }
+
+
+/* =====================================================================
+   Shared icon motion.
+
+   Every icon in this app is Lucide: viewBox "0 0 24 24", stroke-based, on
+   .lucide with path/circle/rect/line children. Rather than hand-animating
+   ~101 of them one by one, one layer covers the whole set.
+
+   Restrained on purpose: a 55-icon draw-in storm on page load reads as noise,
+   so motion is split into a single quick settle on entry and a self-tracing
+   stroke only on hover, when exactly one icon is under the cursor. Durations
+   and easings are the verified M3 tokens, not invented values.
+   ===================================================================== */
+
+.lucide {
+  transform-origin: center;
+  overflow: visible;
+  animation: lucide-settle var(--ov-dur-long) var(--ov-ease-emphasized) backwards;
+}
+
+.lucide path,
+.lucide circle,
+.lucide rect,
+.lucide line,
+.lucide polyline,
+.lucide polygon,
+.lucide ellipse {
+  transition: stroke-dashoffset var(--ov-dur-long) var(--ov-ease-standard);
+}
+
+/* Hover: the icon redraws its own outline. */
+.lucide:hover path,
+.lucide:hover circle,
+.lucide:hover rect,
+.lucide:hover line,
+.lucide:hover polyline,
+.lucide:hover polygon,
+.lucide:hover ellipse,
+a:hover > .lucide path,
+a:hover > .lucide circle,
+a:hover > .lucide rect,
+a:hover > .lucide line,
+button:hover > .lucide path,
+button:hover > .lucide circle,
+button:hover > .lucide rect,
+button:hover > .lucide line {
+  animation: lucide-trace 620ms var(--ov-ease-standard) forwards;
+}
+
+@keyframes lucide-settle {
+  from { opacity: 0; transform: translateY(3px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes lucide-trace {
+  from { stroke-dasharray: 48; stroke-dashoffset: 48; }
+  to   { stroke-dasharray: 48; stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lucide { animation: none; }
+  .lucide path,
+  .lucide circle,
+  .lucide rect,
+  .lucide line,
+  .lucide polyline,
+  .lucide polygon,
+  .lucide ellipse { transition: none; animation: none !important; }
+  .lucide:hover path,
+  .lucide:hover circle,
+  .lucide:hover rect,
+  .lucide:hover line { animation: none !important; }
+}
