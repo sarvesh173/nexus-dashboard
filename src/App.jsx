@@ -4382,6 +4382,14 @@ export default function App() {
     };
   }, []);
 
+  // Publish the ramp as a CSS custom property so the stylesheet's bar transition
+  // cannot drift away from the counter it is tracking. These two were
+  // independently 1500ms and 1200ms, which made the bar and the figure visibly
+  // disagree - the bar finished long before the number it was labelling.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ov-ramp', `${TELEMETRY_RAMP_MS}ms`);
+  }, [TELEMETRY_RAMP_MS]);
+
   const palettes = [
     { id: 'indigo-violet', name: 'Celestial Violet', color: '#d0bcff' },
     { id: 'obsidian-emerald', name: 'Obsidian Emerald', color: '#6dd5ad' },
@@ -5059,7 +5067,11 @@ export default function App() {
                         <div className="m3-linear-track">
                           <div
                             className="m3-linear-indicator"
-                            style={{ width: hasRealTelemetry ? `${Math.min(smoothCpu, 100)}%` : '0%' }}
+                            style={{
+                              '--ov-progress': hasRealTelemetry
+                                ? Math.min(smoothCpu, 100) / 100
+                                : 0,
+                            }}
                           />
                         </div>
                         <div className="m3-linear-stop" />
@@ -5102,7 +5114,11 @@ export default function App() {
                         <div className="m3-linear-track">
                           <div
                             className="m3-linear-indicator"
-                            style={{ width: hasRealTelemetry ? `${Math.min(smoothRamPercent, 100)}%` : '0%' }}
+                            style={{
+                              '--ov-progress': hasRealTelemetry
+                                ? Math.min(smoothRamPercent, 100) / 100
+                                : 0,
+                            }}
                           />
                         </div>
                         <div className="m3-linear-stop" />

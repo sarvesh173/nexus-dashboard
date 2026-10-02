@@ -154,31 +154,39 @@ body {
 .m3-linear-progress {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
-  height: 4px;
+  /* 4px was a sliver on a ~310px card and could not be seen. */
+  height: 8px;
 }
 
 .m3-linear-track {
   position: relative;
   flex: 1;
-  height: 4px;
-  background-color: var(--md-sys-color-outline-variant);
+  height: 8px;
+  background-color: color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
   border-radius: var(--md-sys-shape-corner-full);
   overflow: hidden;
 }
 
 .m3-linear-indicator {
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  /* scaleX, never width: animating width forces a layout pass every frame,
+     which M3's motion guidance lists as layout thrash. */
+  transform: scaleX(var(--ov-progress, 0));
   background-color: var(--md-sys-color-primary);
   border-radius: var(--md-sys-shape-corner-full);
-  transition: width 1.2s cubic-bezier(0.2, 0, 0, 1);
-  will-change: width;
+  /* var(--ov-ramp) is published from TELEMETRY_RAMP_MS in App.jsx, so the bar
+     and the number it labels always finish together. */
+  transition: transform var(--ov-ramp) var(--ov-ease-standard);
+  will-change: transform;
 }
 
 .m3-linear-stop {
-  width: 4px;
-  height: 4px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--md-sys-shape-corner-full);
   background-color: var(--md-sys-color-primary);
   flex-shrink: 0;
@@ -288,6 +296,9 @@ body {
    ===================================================================== */
 
 :root {
+  /* Fallback for first paint; src/App.jsx overwrites this with the real
+     TELEMETRY_RAMP_MS on mount so the two can never disagree. */
+  --ov-ramp: 1500ms;
   --ov-dur-short: 150ms;
   --ov-dur-medium: 300ms;
   --ov-dur-long: 500ms;
