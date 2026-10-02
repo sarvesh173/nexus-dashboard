@@ -232,7 +232,7 @@ const CpuMetricIcon = ({ load = 0 }) => {
   // strobe. M3 guidance for live telemetry is a bounded visual rate, never one
   // animation per sample.
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
-  const spin = 3.2 - (pct / 100) * 2.1; // 3.2s idle -> 1.1s saturated
+  const spin = 4.0 - (pct / 100) * 2.8; // 4.0s idle -> 1.2s saturated
   return (
     <IconFrame active>
       <circle
@@ -244,8 +244,8 @@ const CpuMetricIcon = ({ load = 0 }) => {
       <circle
         className="overview-icon-orbit"
         cx="16" cy="16" r="12" fill="none"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.75"
-        strokeLinecap="round" strokeDasharray="13 62" opacity="0.9"
+        stroke="var(--md-sys-color-primary)" strokeWidth="2.9"
+        strokeLinecap="round" strokeDasharray="26 49" opacity="0.95"
         style={{ animationDuration: `${spin}s` }}
       />
       <rect
