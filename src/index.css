@@ -457,10 +457,18 @@ body {
    decelerate curve, so nothing overshoots.
    ===================================================================== */
 
-.overview-icon-orbit {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: overview-icon-orbit 3.2s linear infinite;
+/* Resting state: animations disabled when idle to avoid processor spikes */
+.overview-icon-orbit,
+.overview-cpu-core,
+.overview-memory-bus,
+.overview-coin-sheen {
+  animation: none;
+}
+
+/* While hovered OR during the 5-second grace period: loop actively */
+.overview-card:hover .overview-icon-orbit,
+.overview-card.is-animating .overview-icon-orbit {
+  animation: overview-icon-orbit 1.8s linear infinite;
 }
 @keyframes overview-icon-orbit {
   from { transform: rotate(0deg); }
@@ -470,7 +478,10 @@ body {
 .overview-icon-sweep {
   transform-box: fill-box;
   transform-origin: center;
-  animation: overview-icon-sweep 4.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.overview-card:hover .overview-icon-sweep,
+.overview-card.is-animating .overview-icon-sweep {
+  animation: overview-icon-sweep 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 @keyframes overview-icon-sweep {
   0%   { transform: rotate(0deg);   opacity: 0; }
@@ -489,18 +500,22 @@ body {
   transition: opacity var(--ov-dur-long) var(--ov-ease-decelerate);
 }
 
-/* Dual CPU Core Die Pulse */
+/* Dual CPU Core Die Pulse - active on hover + 5s cooldown */
 .overview-cpu-core {
   transform-box: fill-box;
   transform-origin: center;
-  animation: overview-core-pulse 2.2s ease-in-out infinite;
+  opacity: calc(0.5 + var(--overview-load, 0) * 0.4);
+}
+.overview-card:hover .overview-cpu-core,
+.overview-card.is-animating .overview-cpu-core {
+  animation: overview-core-pulse 1.8s ease-in-out infinite;
 }
 @keyframes overview-core-pulse {
   0%, 100% { opacity: calc(0.45 + var(--overview-load, 0) * 0.45); transform: scale(1); }
   50%      { opacity: calc(0.75 + var(--overview-load, 0) * 0.25); transform: scale(1.05); }
 }
 
-/* Staggered Neural Layer Floating Wave */
+/* Staggered Neural Layer Floating Wave (Preserved for Model Provider) */
 .overview-neural-layer {
   transform-box: fill-box;
   transform-origin: center;
@@ -514,9 +529,13 @@ body {
   50%      { transform: translateY(-3.2px); }
 }
 
-/* Currency Coin Sheen & Glow */
+/* Currency Coin Sheen & Glow - active on hover + 5s cooldown */
 .overview-coin-sheen {
-  animation: overview-sheen-pulse 3.2s ease-in-out infinite;
+  opacity: 0.75;
+}
+.overview-card:hover .overview-coin-sheen,
+.overview-card.is-animating .overview-coin-sheen {
+  animation: overview-sheen-pulse 2s ease-in-out infinite;
 }
 @keyframes overview-sheen-pulse {
   0%, 100% { opacity: 0.65; }
@@ -526,10 +545,13 @@ body {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
-/* Active memory bus flow & chip states */
+/* Active memory bus flow - active on hover + 5s cooldown */
 .overview-memory-bus {
   stroke-dasharray: 4 6;
-  animation: overview-bus-flow 1.8s linear infinite;
+}
+.overview-card:hover .overview-memory-bus,
+.overview-card.is-animating .overview-memory-bus {
+  animation: overview-bus-flow 1.6s linear infinite;
 }
 @keyframes overview-bus-flow {
   from { stroke-dashoffset: 20; }

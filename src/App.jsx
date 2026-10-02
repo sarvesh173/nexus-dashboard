@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -167,7 +167,7 @@ const IconFrame = ({ children, active = false }) => (
     {children}
   </svg>
 );
-const CostMetricIcon = ({ symbol }) => (
+const CostMetricIcon = ({ symbol = '$' }) => (
   <IconFrame>
     {/* Outer currency coin boundary with ambient sheen */}
     <circle
@@ -183,24 +183,24 @@ const CostMetricIcon = ({ symbol }) => (
       strokeDasharray="3 2"
       opacity="0.6"
     />
-    {/* Prominent currency symbol */}
+    {/* Prominent currency symbol supporting ₹, $, €, ¥, £ */}
     <text
-      x="16" y="20.5"
+      x="16" y={symbol === '₹' ? "20" : "20.5"}
       textAnchor="middle"
-      fontSize="13"
+      fontSize={symbol && symbol.length > 2 ? "10" : (symbol === '₹' ? "13" : "13.5")}
       fontWeight="800"
-      fontFamily="monospace"
+      fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
       fill="var(--md-sys-color-primary)"
       className="overview-coin-glow"
     >
-      {symbol || '$'}
+      {symbol}
     </text>
   </IconFrame>
 );
 
 const CpuMetricIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
-  const spin = 4.0 - (pct / 100) * 2.8; // 4.0s idle -> 1.2s saturated
+  const spin = 3.6 - (pct / 100) * 2.2;
   return (
     <IconFrame active>
       {/* Outer Telemetry Arc Ring (fulfils overview-icon-orbit stroke >= 2.4 requirement) */}
@@ -220,17 +220,19 @@ const CpuMetricIcon = ({ load = 0 }) => {
       {/* Dual Cores Semiconductor Die */}
       <rect
         className="overview-cpu-core"
-        x="10.5" y="10.5" width="5" height="11" rx="1.2"
+        x="10.8" y="10.8" width="4.5" height="10.4" rx="1.2"
         fill="var(--md-sys-color-primary)"
         style={{ '--overview-load': pct / 100 }}
       />
       <rect
         className="overview-cpu-core"
-        x="16.5" y="10.5" width="5" height="11" rx="1.2"
+        x="16.7" y="10.8" width="4.5" height="10.4" rx="1.2"
         fill="var(--md-sys-color-primary)"
-        style={{ '--overview-load': pct / 100, animationDelay: '0.4s' }}
+        style={{ '--overview-load': pct / 100, animationDelay: '0.35s' }}
       />
-      {/* Micro-circuit pin leads */}
+      {/* Pin 1 Index Indicator */}
+      <circle cx="9.8" cy="9.8" r="0.8" fill="var(--md-sys-color-primary)" opacity="0.9" />
+      {/* Micro-circuit pin leads in 4 directions */}
       <path
         d="M8.5 12H5.5 M8.5 16H5.5 M8.5 20H5.5 M23.5 12H26.5 M23.5 16H26.5 M23.5 20H26.5 M12 8.5V5.5 M16 8.5V5.5 M20 8.5V5.5 M12 23.5V26.5 M16 23.5V26.5 M20 23.5V26.5"
         fill="none"
@@ -298,57 +300,90 @@ const MemoryMetricIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
   return (
     <IconFrame>
-      {/* PCB Substrate with center notch */}
+      {/* DDR DIMM Module Substrate */}
       <rect
-        x="4.5" y="8.5" width="23" height="13.5" rx="2"
+        x="4.5" y="8.8" width="23" height="13.2" rx="1.8"
         fill="var(--md-sys-color-surface-container-highest)"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.25"
       />
-      {/* 4 Discrete Memory IC Packages */}
+      {/* 4 BGA Memory IC Packages */}
       <rect
         className="overview-memory-chip"
-        x="6.2" y="10.5" width="3.6" height="6.5" rx="0.7"
+        x="6.2" y="10.4" width="3.6" height="6.2" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 15 ? 0.9 : 0.2}
-      />
-      <rect
-        className="overview-memory-chip"
-        x="11.2" y="10.5" width="3.6" height="6.5" rx="0.7"
-        fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 40 ? 0.9 : 0.2}
+        fillOpacity={pct >= 15 ? 0.95 : 0.25}
       />
       <rect
         className="overview-memory-chip"
-        x="16.2" y="10.5" width="3.6" height="6.5" rx="0.7"
+        x="11.2" y="10.4" width="3.6" height="6.2" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 65 ? 0.9 : 0.2}
+        fillOpacity={pct >= 40 ? 0.95 : 0.25}
       />
       <rect
         className="overview-memory-chip"
-        x="21.2" y="10.5" width="3.6" height="6.5" rx="0.7"
+        x="16.2" y="10.4" width="3.6" height="6.2" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 85 ? 0.9 : 0.2}
+        fillOpacity={pct >= 65 ? 0.95 : 0.25}
+      />
+      <rect
+        className="overview-memory-chip"
+        x="21.2" y="10.4" width="3.6" height="6.2" rx="0.7"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity={pct >= 85 ? 0.95 : 0.25}
       />
       {/* Dynamic Data Bus Flow Trace */}
       <path
         className="overview-memory-bus"
-        d="M6 18.5 H26"
+        d="M6 18 H26"
         fill="none"
         stroke="var(--md-sys-color-primary)"
         strokeWidth="1"
       />
       {/* Gold Edge Connector Pins */}
       <path
-        d="M6 22 V24 M8.5 22 V24 M11 22 V24 M13.5 22 V24 M17.5 22 V24 M20 22 V24 M22.5 22 V24 M25 22 V24"
+        d="M6.5 22 V23.8 M9 22 V23.8 M11.5 22 V23.8 M13.5 22 V23.8 M17.5 22 V23.8 M19.5 22 V23.8 M22 22 V23.8 M24.5 22 V23.8"
         fill="none"
         stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.1"
+        strokeWidth="1.15"
         strokeLinecap="round"
         opacity="0.9"
       />
+      {/* Alignment Key Notch at Bottom */}
+      <rect x="14.8" y="21.2" width="2.4" height="1.4" rx="0.4" fill="var(--md-sys-color-surface-container-high)" />
     </IconFrame>
   );
 };
+
+// Active while hovered, plus 5-second graceful cooldown after unhovering.
+// Prevents continuous animation loops and CPU spikes on idle.
+function useHoverGraceTimer(cooldownMs = 5000) {
+  const [isActive, setIsActive] = useState(false);
+  const timerRef = useRef(null);
+
+  const onMouseEnter = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsActive(true);
+  }, []);
+
+  const onMouseLeave = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setIsActive(false);
+      timerRef.current = null;
+    }, cooldownMs);
+  }, [cooldownMs]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return { isActive, onMouseEnter, onMouseLeave };
+}
 
 // Custom smooth number tween hook with M3 standard 1.2s deceleration
 function useSmoothCounter(targetValue, duration = 1200) {
@@ -2767,7 +2802,7 @@ const CURRENCY_OPTIONS = [
 const PANEL_HALF_H = 110;
 
 const USD_RATES = {
-  USD: 1, CNY: 7.24, EUR: 0.92, JPY: 149.5, INR: 83.4, GBP: 0.79,
+  USD: 1, CNY: 7.24, EUR: 0.92, JPY: 149.5, INR: 86.8, GBP: 0.79,
   CAD: 1.36, BRL: 5.42, RUB: 92.5, KRW: 1338, AUD: 1.51, CHF: 0.88,
   AED: 3.6725, SGD: 1.35,
 };
@@ -4270,6 +4305,11 @@ export default function App() {
   const smoothRamUsed    = useSmoothCounter(telemetry?.ram_used_mb ?? 0, TELEMETRY_RAMP_MS);
   const smoothSwapPercent = useSmoothCounter(telemetry?.swap_percent ?? 0, TELEMETRY_RAMP_MS);
 
+  // 5-second graceful hover cooldown timers for Overview card animations
+  const costHover = useHoverGraceTimer(5000);
+  const cpuHover = useHoverGraceTimer(5000);
+  const memoryHover = useHoverGraceTimer(5000);
+
   const fetchStats = async () => {
     setIsRefreshing(true);
     try {
@@ -4958,6 +4998,20 @@ export default function App() {
                       Dual-Core CPU & Physical Swap
                     </span>
                     <button
+                      onClick={() => {
+                        const list = ['INR', 'USD', 'EUR', 'GBP', 'JPY'];
+                        const idx = list.indexOf(currencyCode);
+                        const next = list[(idx + 1) % list.length];
+                        localStorage.setItem('nexus_currency', next);
+                        setCurrencyCode(next);
+                      }}
+                      className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] active:scale-95 transition-all flex items-center gap-1.5 text-xs font-bold font-mono shadow-2xs cursor-pointer"
+                      title={`Global Currency: ${activeCurrency.name} (${activeCurrency.symbol}) — Click to switch INR/USD/EUR/GBP/JPY`}
+                    >
+                      <span>{activeCurrency.flag}</span>
+                      <span>{activeCurrency.symbol} {activeCurrency.id}</span>
+                    </button>
+                    <button
                       onClick={fetchStats}
                       disabled={isRefreshing}
                       className="p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] active:scale-95 transition-all"
@@ -4972,18 +5026,16 @@ export default function App() {
                   
                   {/* CARD 1: Total Cost */}
                   <div
-                    className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer"
+                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer ${costHover.isActive ? 'is-animating' : ''}`}
                     onClick={() => navigate('/cost')}
+                    onMouseEnter={costHover.onMouseEnter}
+                    onMouseLeave={costHover.onMouseLeave}
                   >
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
                         <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] animate-subtle-glow shadow-xs">
-                          {activeCurrency.id === 'USD' ? (
-                            <CostMetricIcon symbol={activeCurrency.symbol} />
-                          ) : (
-                            <span className="text-[15px] font-bold leading-none select-none tracking-tight">{activeCurrency.symbol}</span>
-                          )}
+                          <CostMetricIcon symbol={activeCurrency.symbol} />
                         </div>
                       </div>
                       <div className="my-1">
@@ -5057,7 +5109,11 @@ export default function App() {
                   </div>
 
                   {/* CARD 2: CPU Load */}
-                  <div className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
+                  <div
+                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] ${cpuHover.isActive ? 'is-animating' : ''}`}
+                    onMouseEnter={cpuHover.onMouseEnter}
+                    onMouseLeave={cpuHover.onMouseLeave}
+                  >
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
@@ -5105,7 +5161,11 @@ export default function App() {
                   </div>
 
                   {/* CARD 3: Memory (RAM & Swap) */}
-                  <div className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)]">
+                  <div
+                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] ${memoryHover.isActive ? 'is-animating' : ''}`}
+                    onMouseEnter={memoryHover.onMouseEnter}
+                    onMouseLeave={memoryHover.onMouseLeave}
+                  >
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
