@@ -14,7 +14,8 @@ CHECKS = [
     "cpu_indicator_uses_transform",
     "cpu_transition_matches_ramp",
     "icon_orbit_stroke",
-    "output_cell_distinct",
+    "output_cell_no_highlight",
+    "output_cell_unpositioned",
     "output_ratio_rendered",
     "output_ratio_no_fake_usage",
     "reduced_motion_kills_it",
@@ -46,6 +47,7 @@ async def collect(page):
         inBg: inputCell  ? getComputedStyle(inputCell).backgroundColor  : null,
         outBg: outputCell ? getComputedStyle(outputCell).backgroundColor : null,
         outBorder: outputCell ? getComputedStyle(outputCell).borderTopColor : null,
+        outPos: outputCell ? getComputedStyle(outputCell).position : null,
         inBorder: inputCell ? getComputedStyle(inputCell).borderTopColor : null,
         ratioText: document.querySelector('.output-rate-ratio')?.textContent?.trim() || null,
         ratioWidth: (() => {
@@ -68,8 +70,17 @@ def evaluate(d):
         out.append(f"cpu_transition_matches_ramp: --ov-ramp={d['rampVar']!r}")
     if d["orbitStroke"] < 2.4:
         out.append(f"icon_orbit_stroke: {d['orbitStroke']}px, want >= 2.4px")
-    if d["inBg"] == d["outBg"] and d["inBorder"] == d["outBorder"]:
-        out.append("output_cell_distinct: output cell is pixel-identical to input cell")
+    # The Output Token cell was originally given its own surface so it would
+    # stand out. That highlight was explicitly unwanted, and the `position:
+    # relative` it required also painted the cell over the tooltip's leader line,
+    # hiding the dandi. The two cells must therefore match, and the cell must
+    # stay unpositioned so it can never occlude the leader again.
+    if d["inBg"] != d["outBg"] or d["inBorder"] != d["outBorder"]:
+        out.append("output_cell_no_highlight: output cell is styled differently "
+                   f"from the input cell (in={d['inBg']} out={d['outBg']})")
+    if d["outPos"] not in ("static", None):
+        out.append(f"output_cell_unpositioned: cell is {d['outPos']}, which creates a "
+                   "stacking context that can occlude the leader line")
     if not d["ratioText"]:
         out.append("output_rate_ratio: no .output-rate-ratio element rendered")
     body = (d["caption"] or "").lower()
