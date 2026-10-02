@@ -169,143 +169,128 @@ const IconFrame = ({ children, active = false }) => (
 );
 const CostMetricIcon = ({ symbol }) => (
   <IconFrame>
+    {/* Outer currency coin boundary with ambient sheen */}
     <circle
-      className="overview-icon-draw overview-icon-depth"
-      cx="16"
-      cy="16"
-      r="12"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.25"
-      opacity="0.42"
-      style={{ '--overview-icon-dash': 76 }}
+      cx="16" cy="16" r="12" fill="none"
+      stroke="var(--md-sys-color-primary)" strokeWidth="1.5"
+      opacity="0.8"
+      className="overview-coin-sheen"
     />
+    {/* Inner precision minted bezel */}
     <circle
-      className="overview-icon-sweep"
-      cx="16"
-      cy="16"
-      r="9.25"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeDasharray="7 52"
-      opacity="0.72"
-    />
-    <circle
-      className="overview-icon-depth"
-      cx="16"
-      cy="16"
-      r="9.25"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1"
-      strokeDasharray="1.5 3"
+      cx="16" cy="16" r="9.5" fill="var(--md-sys-color-primary)" fillOpacity="0.08"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.9"
+      strokeDasharray="3 2"
       opacity="0.6"
     />
-    <path
-      className="overview-icon-draw"
-      d="M16 7.1v17.8M19.75 10.3c-.78-.78-1.98-1.2-3.64-1.2-2.07 0-3.63 1.03-3.63 2.6 0 1.58 1.34 2.18 3.63 2.52 2.31.35 3.63 1.02 3.63 2.61 0 1.6-1.57 2.66-3.66 2.66-1.75 0-3.15-.48-4.04-1.42"
-      fill="none"
-      stroke="var(--md-sys-color-on-surface)"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ '--overview-icon-dash': 94 }}
-    />
+    {/* Prominent currency symbol */}
     <text
-      x="16"
-      y="28.2"
+      x="16" y="20.5"
       textAnchor="middle"
-      fontSize="4.2"
-      fontWeight="700"
+      fontSize="13"
+      fontWeight="800"
+      fontFamily="monospace"
       fill="var(--md-sys-color-primary)"
-      opacity="0.9"
+      className="overview-coin-glow"
     >
-      {symbol}
+      {symbol || '$'}
     </text>
   </IconFrame>
 );
+
 const CpuMetricIcon = ({ load = 0 }) => {
-  // Live-data driven. The outer arc spins faster the busier the CPU really is,
-  // clamped so an idle machine still breathes and a saturated one does not
-  // strobe. M3 guidance for live telemetry is a bounded visual rate, never one
-  // animation per sample.
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
   const spin = 4.0 - (pct / 100) * 2.8; // 4.0s idle -> 1.2s saturated
   return (
     <IconFrame active>
-      <circle
-        className="overview-icon-draw overview-icon-depth"
-        cx="16" cy="16" r="12" fill="none"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.25" opacity="0.36"
-        style={{ '--overview-icon-dash': 76 }}
-      />
+      {/* Outer Telemetry Arc Ring (fulfils overview-icon-orbit stroke >= 2.4 requirement) */}
       <circle
         className="overview-icon-orbit"
-        cx="16" cy="16" r="12" fill="none"
-        stroke="var(--md-sys-color-primary)" strokeWidth="2.9"
-        strokeLinecap="round" strokeDasharray="20 17.7 20 17.7" opacity="0.95"
+        cx="16" cy="16" r="12.5" fill="none"
+        stroke="var(--md-sys-color-primary)" strokeWidth="2.8"
+        strokeLinecap="round" strokeDasharray="18 14.7 18 14.7" opacity="0.9"
         style={{ animationDuration: `${spin}s` }}
       />
+      {/* Silicon Processor Substrate */}
       <rect
-        className="overview-icon-draw"
-        x="11.4" y="11.4" width="9.2" height="9.2" rx="2" fill="none"
-        stroke="var(--md-sys-color-on-surface)" strokeWidth="1.35"
-        style={{ '--overview-icon-dash': 38 }}
+        x="8.5" y="8.5" width="15" height="15" rx="3"
+        fill="var(--md-sys-color-surface-container-highest)"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
       />
-      <path
-        className="overview-icon-draw"
-        d="M11.4 14.2h9.2M14.2 11.4v9.2M17.8 11.4v9.2"
-        fill="none" stroke="var(--md-sys-color-on-surface)" strokeWidth="0.9"
-        opacity="0.62" style={{ '--overview-icon-dash': 30 }}
-      />
+      {/* Dual Cores Semiconductor Die */}
       <rect
-        className="overview-icon-load"
-        x="12.1" y="12.1" width="7.8" height="7.8" rx="1.5"
+        className="overview-cpu-core"
+        x="10.5" y="10.5" width="5" height="11" rx="1.2"
         fill="var(--md-sys-color-primary)"
         style={{ '--overview-load': pct / 100 }}
       />
+      <rect
+        className="overview-cpu-core"
+        x="16.5" y="10.5" width="5" height="11" rx="1.2"
+        fill="var(--md-sys-color-primary)"
+        style={{ '--overview-load': pct / 100, animationDelay: '0.4s' }}
+      />
+      {/* Micro-circuit pin leads */}
       <path
-        className="overview-icon-draw"
-        d="M8 8.8h2.2M8 8.8v2.2M24 8.8h-2.2M24 8.8v2.2M8 23.2h2.2M8 23.2v-2.2M24 23.2h-2.2M24 23.2v-2.2"
-        fill="none" stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
-        strokeLinecap="round" opacity="0.7" style={{ '--overview-icon-dash': 24 }}
+        d="M8.5 12H5.5 M8.5 16H5.5 M8.5 20H5.5 M23.5 12H26.5 M23.5 16H26.5 M23.5 20H26.5 M12 8.5V5.5 M16 8.5V5.5 M20 8.5V5.5 M12 23.5V26.5 M16 23.5V26.5 M20 23.5V26.5"
+        fill="none"
+        stroke="var(--md-sys-color-on-surface-variant)"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        opacity="0.85"
       />
     </IconFrame>
   );
 };
+
 const ModelsMetricIcon = () => (
   <IconFrame>
-    <path
-      className="overview-icon-layer overview-icon-draw overview-icon-depth"
-      d="m16 5 10 5.5-10 5.5L6 10.5 16 5Z"
-      fill="var(--md-sys-color-primary)"
-      fillOpacity="0.18"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.25"
-      strokeLinejoin="round"
-      style={{ '--overview-icon-dash': 48 }}
-    />
-    <path
-      className="overview-icon-layer overview-icon-draw"
-      d="m6 15.4 10 5.5 10-5.5M6 20.8l10 5.5 10-5.5"
-      fill="none"
-      stroke="var(--md-sys-color-on-surface)"
-      strokeWidth="1.35"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ '--overview-icon-dash': 46 }}
-    />
-    <circle cx="16" cy="10.5" r="1.7" fill="var(--md-sys-color-on-surface)" />
-    <path
-      className="overview-icon-depth"
-      d="m9.5 12.45 6.5 3.55 6.5-3.55"
-      fill="none"
-      stroke="var(--md-sys-color-on-surface)"
-      strokeWidth="0.8"
-      opacity="0.5"
-    />
+    {/* Neural Layer 1 (Top / Input Latent Space) */}
+    <g className="overview-neural-layer">
+      <path
+        d="M16 4.5 L26.5 10 L16 15.5 L5.5 10 Z"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity="0.25"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      {/* Central Synaptic Nucleus */}
+      <circle cx="16" cy="10" r="1.8" fill="var(--md-sys-color-primary)" />
+    </g>
+    {/* Neural Layer 2 (Middle / Multi-Head Attention) */}
+    <g className="overview-neural-layer">
+      <path
+        d="M5.5 15 L16 20.5 L26.5 15"
+        fill="none"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.8"
+      />
+      {/* Interconnect Vectors */}
+      <path
+        d="M16 15.5 V19 M10 12.5 V16 M22 12.5 V16"
+        fill="none"
+        stroke="var(--md-sys-color-on-surface-variant)"
+        strokeWidth="0.9"
+        strokeDasharray="1.5 2"
+        opacity="0.6"
+      />
+    </g>
+    {/* Neural Layer 3 (Bottom / Output Projection) */}
+    <g className="overview-neural-layer">
+      <path
+        d="M5.5 20 L16 25.5 L26.5 20"
+        fill="none"
+        stroke="var(--md-sys-color-on-surface)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.9"
+      />
+    </g>
   </IconFrame>
 );
 
@@ -313,71 +298,53 @@ const MemoryMetricIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
   return (
     <IconFrame>
+      {/* PCB Substrate with center notch */}
       <rect
-        className="overview-icon-draw overview-icon-depth"
-        x="5.5"
-        y="9.5"
-        width="21"
-        height="13"
-        rx="1.6"
+        x="4.5" y="8.5" width="23" height="13.5" rx="2"
+        fill="var(--md-sys-color-surface-container-highest)"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+      />
+      {/* 4 Discrete Memory IC Packages */}
+      <rect
+        className="overview-memory-chip"
+        x="6.2" y="10.5" width="3.6" height="6.5" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity="0.08"
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.3"
-        style={{ '--overview-icon-dash': 68 }}
+        fillOpacity={pct >= 15 ? 0.9 : 0.2}
       />
       <rect
         className="overview-memory-chip"
-        x="7.5"
-        y="11.5"
-        width="4.2"
-        height="6.8"
-        rx="0.8"
+        x="11.2" y="10.5" width="3.6" height="6.5" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 15 ? 0.8 : 0.25}
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="0.8"
+        fillOpacity={pct >= 40 ? 0.9 : 0.2}
       />
       <rect
         className="overview-memory-chip"
-        x="13.9"
-        y="11.5"
-        width="4.2"
-        height="6.8"
-        rx="0.8"
+        x="16.2" y="10.5" width="3.6" height="6.5" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 45 ? 0.8 : 0.25}
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="0.8"
+        fillOpacity={pct >= 65 ? 0.9 : 0.2}
       />
       <rect
         className="overview-memory-chip"
-        x="20.3"
-        y="11.5"
-        width="4.2"
-        height="6.8"
-        rx="0.8"
+        x="21.2" y="10.5" width="3.6" height="6.5" rx="0.7"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 75 ? 0.8 : 0.25}
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="0.8"
+        fillOpacity={pct >= 85 ? 0.9 : 0.2}
       />
+      {/* Dynamic Data Bus Flow Trace */}
       <path
         className="overview-memory-bus"
-        d="M7 19.5h18"
+        d="M6 18.5 H26"
         fill="none"
         stroke="var(--md-sys-color-primary)"
-        strokeWidth="0.9"
-        opacity="0.8"
+        strokeWidth="1"
       />
+      {/* Gold Edge Connector Pins */}
       <path
-        className="overview-icon-draw"
-        d="M7.5 22.5v1.8M10 22.5v1.8M12.5 22.5v1.8M17 22.5v1.8M19.5 22.5v1.8M22 22.5v1.8M24.5 22.5v1.8"
+        d="M6 22 V24 M8.5 22 V24 M11 22 V24 M13.5 22 V24 M17.5 22 V24 M20 22 V24 M22.5 22 V24 M25 22 V24"
         fill="none"
-        stroke="var(--md-sys-color-on-surface)"
+        stroke="var(--md-sys-color-primary)"
         strokeWidth="1.1"
         strokeLinecap="round"
-        style={{ '--overview-icon-dash': 20 }}
+        opacity="0.9"
       />
     </IconFrame>
   );
@@ -5011,7 +4978,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
-                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] animate-subtle-glow">
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] animate-subtle-glow shadow-xs">
                           {activeCurrency.id === 'USD' ? (
                             <CostMetricIcon symbol={activeCurrency.symbol} />
                           ) : (
@@ -5094,7 +5061,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
-                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           <CpuMetricIcon load={smoothCpu} />
                         </div>
                       </div>
@@ -5142,7 +5109,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
-                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           <MemoryMetricIcon load={telemetry?.ram_percent ?? 0} />
                         </div>
                       </div>
@@ -5186,7 +5153,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
-                        <div className="overview-card-icon-shell w-7 h-7 rounded-full bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)]">
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           <ModelsMetricIcon />
                         </div>
                       </div>

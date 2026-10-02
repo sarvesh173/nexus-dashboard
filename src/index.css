@@ -369,8 +369,8 @@ body {
 .overview-card-icon {
   position: relative;
   z-index: 1;
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   overflow: visible;
   transition:
     transform var(--ov-dur-medium) var(--ov-ease-emphasized),
@@ -489,28 +489,50 @@ body {
   transition: opacity var(--ov-dur-long) var(--ov-ease-decelerate);
 }
 
-/* Staggered layer wave on the models icon. */
-.overview-icon-layer {
+/* Dual CPU Core Die Pulse */
+.overview-cpu-core {
   transform-box: fill-box;
   transform-origin: center;
-  animation: overview-icon-layer 2.4s var(--ov-ease-emphasized) infinite;
+  animation: overview-core-pulse 2.2s ease-in-out infinite;
 }
-.overview-icon-layer:nth-of-type(1) { animation-delay: 0ms; }
-.overview-icon-layer:nth-of-type(2) { animation-delay: 240ms; }
-.overview-icon-layer:nth-of-type(3) { animation-delay: 480ms; }
-.overview-icon-layer:nth-of-type(4) { animation-delay: 720ms; }
-@keyframes overview-icon-layer {
+@keyframes overview-core-pulse {
+  0%, 100% { opacity: calc(0.45 + var(--overview-load, 0) * 0.45); transform: scale(1); }
+  50%      { opacity: calc(0.75 + var(--overview-load, 0) * 0.25); transform: scale(1.05); }
+}
+
+/* Staggered Neural Layer Floating Wave */
+.overview-neural-layer {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: overview-neural-float 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.overview-neural-layer:nth-of-type(1) { animation-delay: 0ms; }
+.overview-neural-layer:nth-of-type(2) { animation-delay: 260ms; }
+.overview-neural-layer:nth-of-type(3) { animation-delay: 520ms; }
+@keyframes overview-neural-float {
   0%, 100% { transform: translateY(0); }
-  45%      { transform: translateY(-2.8px); }
+  50%      { transform: translateY(-3.2px); }
+}
+
+/* Currency Coin Sheen & Glow */
+.overview-coin-sheen {
+  animation: overview-sheen-pulse 3.2s ease-in-out infinite;
+}
+@keyframes overview-sheen-pulse {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; filter: drop-shadow(0 0 2px var(--md-sys-color-primary)); }
+}
+.overview-coin-glow {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
 /* Active memory bus flow & chip states */
 .overview-memory-bus {
-  stroke-dasharray: 5 6;
-  animation: overview-bus-flow 2s linear infinite;
+  stroke-dasharray: 4 6;
+  animation: overview-bus-flow 1.8s linear infinite;
 }
 @keyframes overview-bus-flow {
-  from { stroke-dashoffset: 22; }
+  from { stroke-dashoffset: 20; }
   to   { stroke-dashoffset: 0; }
 }
 
@@ -528,10 +550,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .overview-icon-orbit,
   .overview-icon-sweep,
-  .overview-icon-layer {
+  .overview-icon-layer,
+  .overview-cpu-core,
+  .overview-neural-layer,
+  .overview-coin-sheen,
+  .overview-memory-bus {
     animation: none !important;
   }
-  .overview-icon-load {
+  .overview-icon-load,
+  .overview-memory-chip {
     transition: none !important;
   }
   .overview-card:hover .overview-icon-depth {
