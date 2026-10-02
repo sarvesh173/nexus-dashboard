@@ -2791,6 +2791,9 @@ function buildCostWalkthrough(usdAmount, currency, tokens = 1_000_000) {
   const perMillion = base / (tokens / 1_000_000);
   return {
     tokens,
+    // Deliberately NOT "tokens used". No token count is known here - this is
+    // the 1M-token basis the published rate is quoted against, so saying
+    // "used" would assert usage that has not happened.
     tokensLabel: tokens.toLocaleString('en-US'),
     perMillion,
     dollars: base,
@@ -2835,23 +2838,44 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
     if (coords || !anchorRef.current) return;
     const rect = anchorRef.current.getBoundingClientRect();
     const panelWidth = Math.min(260, window.innerWidth - 24);
+    // The panel has to clear the whole CARD, not just this trigger span: the
+    // span is a narrow inline element, so clearing only it still left the panel
+    // sitting on top of the card's own figures.
+    const cardEl = anchorRef.current.closest('.overview-card');
+    const cardRect = cardEl ? cardEl.getBoundingClientRect() : rect;
+    const clearRight = Math.max(rect.right, cardRect.right);
+    const clearLeft = Math.min(rect.left, cardRect.left);
+    const clearBottom = Math.max(rect.bottom, cardRect.bottom);
+    const clearTopOf = Math.min(rect.top, cardRect.top);
+
 
     // Same three-point path as the model-pill leader: dot on the figure's edge,
     // horizontal run, diagonal into the panel. The panel itself is positioned
     // from boxX/boxY with translate(-50%) so its edge sits exactly where the
     // diagonal lands - keeping both in one coordinate system is what stops the
     // leader from detaching from the box.
-    const goRight = window.innerWidth - rect.right >= panelWidth + 48;
+    // Placement priority: the Overview cards sit in a tight row with no free
+    // horizontal gutter, so placing the panel beside one card just covers its
+    // neighbour. The row has open space underneath, so prefer vertical
+    // placement and only fall back to a side when there is no vertical room.
+    const V_GAP = 18;
+    const need = PANEL_HALF_H + V_GAP + 12;
+    let mode;
+    if (window.innerHeight - clearBottom > need) mode = 'below';
+    else if (clearTopOf > need) mode = 'above';
+    else if (window.innerWidth - clearRight > panelWidth + 64) mode = 'right';
+    else mode = 'left';
+    const goRight = mode === 'right';
 
     // The overlay is absolutely positioned inside the anchor, so every point is
     // expressed relative to the anchor's own box. Working in the same
     // coordinate space as the panel is what keeps the leader attached to it.
     const ox = rect.left;
     const oy = rect.top;
-    const dotX = goRight ? rect.width : 0;
-    const dotY = rect.height / 2;
-    const midX = dotX + (goRight ? 28 : -28);
-    const midY = dotY;
+    let dotX = goRight ? rect.width : 0;
+    let dotY = rect.height / 2;
+    let midX = dotX + (goRight ? 28 : -28);
+    let midY = dotY;
     let boxX = midX + (goRight ? 24 : -24);
     let boxY = midY - 26;
 
@@ -2871,7 +2895,80 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
     boxX = clampedViewportX - ox;
     boxY = clampedViewportY - oy;
 
-    setCoords({ dotX, dotY, midX, midY, boxX, boxY, panelWidth, isRightAligned: goRight });
+    // The viewport clamp can shove the panel back across its own trigger, which
+    // reads as the tooltip covering the figure. Force it fully clear: on the
+    // right of the anchor box, or entirely to the left of it, never overlapping.
+    const GAP = 24;
+
+    let isBelow = false;
+    let isAbove = false;
+    const clearRightLocal = clearRight - ox;
+    const clearLeftLocal = clearLeft - ox;
+
+    if (mode === 'below' || mode === 'above') {
+      isBelow = mode === 'below';
+      isAbove = mode === 'above';
+      // Align to the CARD's left edge, not the viewport centre. Centring on the
+      // viewport put the panel far from a left-aligned trigger, so the leader
+      // had to run 600px sideways straight across the neighbouring cards. Only
+      // when the card itself would overflow do we slide in to stay on screen.
+      const margin = 8;
+      const preferredLeft = cardRect ? cardRect.left : rect.left;
+      const panelLeftViewport = Math.max(
+        margin,
+        Math.min(preferredLeft, window.innerWidth - panelWidth - margin)
+      );
+      boxX = panelLeftViewport - ox;
+      const anchorY = isAbove ? clearTopOf - V_GAP : clearBottom + V_GAP;
+      boxY = Math.max(PANEL_HALF_H + 12, anchorY) - oy;
+      // Leader leaves from the card edge nearest the panel and runs to it.
+      dotX = isAbove ? rect.width / 2 : rect.width / 2;
+      dotY = isAbove ? 0 : rect.height;
+      midX = boxX + panelWidth / 2;
+      midY = dotY + (isAbove ? -14 : 14);
+    } else if (goRight && ox + boxX < clearRight + 8) {
+      boxX = clearRightLocal + GAP;
+    } else if (!goRight && ox + boxX > clearLeft - 8) {
+      // isRightAligned=false renders the panel with translate(-100%), so boxX
+      // is the panel's RIGHT edge.
+      boxX = clearLeftLocal - GAP;
+    }
+
+    // Last resort: a side panel that a narrow viewport would clip.
+    const panelViewportLeft = ox + boxX;
+    const panelViewportRight = panelViewportLeft + (goRight || isBelow || isAbove ? panelWidth : 0);
+    if (!isBelow && !isAbove &&
+        (panelViewportLeft < 8 || panelViewportRight > window.innerWidth - 8)) {
+      isBelow = true;
+      const margin = 8;
+      const preferredLeft = cardRect ? cardRect.left : rect.left;
+      const panelLeftViewport = Math.max(
+        margin,
+        Math.min(preferredLeft, window.innerWidth - panelWidth - margin)
+      );
+      boxX = panelLeftViewport - ox;
+      boxY = Math.min(clearBottom + V_GAP, window.innerHeight - PANEL_HALF_H - 12) - oy;
+      dotX = rect.width / 2;
+      dotY = rect.height;
+      midX = boxX + panelWidth / 2;
+      midY = rect.height + 14;
+    }
+
+    // Where the line should actually arrive. For a vertical placement the panel
+    // is top-left anchored, so the path has to end at its top edge centre, not
+    // at its corner.
+    const landingX = isBelow || isAbove ? boxX + panelWidth / 2 : boxX;
+    const landingY = isBelow || isAbove ? boxY : boxY;
+    setCoords({
+      dotX: dotX,
+      dotY,
+      midX,
+      midY,
+      boxX, boxY, panelWidth,
+      landingX, landingY,
+      isRightAligned: isBelow || isAbove ? false : goRight,
+      isBelow: isBelow || isAbove,
+    });
   };
 
   const hideTooltip = (event) => {
@@ -2915,7 +3012,7 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
             }}
           >
             <path
-              d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.boxX} ${coords.boxY}`}
+              d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.landingX} ${coords.landingY}`}
               fill="none"
               stroke="var(--md-sys-color-primary)"
               strokeWidth="1.5"
@@ -2951,12 +3048,12 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
           <div
           id={tooltipId}
           role="tooltip"
-          className="absolute z-[999] pointer-events-none px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
+          className="absolute z-[999] px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
           style={{
             left: coords.boxX,
             top: coords.boxY,
             width: coords.panelWidth,
-            transform: `${coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} scale(${drawn ? 1 : 0.92})`,
+            transform: `${coords.isBelow ? 'translate(0, 0)' : coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} scale(${drawn ? 1 : 0.92})`,
             opacity: drawn ? 1 : 0,
             transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
@@ -3011,7 +3108,7 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
                 </span>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
-                    {walk.tokensLabel} tokens used
+                    {walk.tokensLabel} tokens (rate basis)
                   </span>
                   <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-on-surface)]">
                     {walk.dollarsLabel}
