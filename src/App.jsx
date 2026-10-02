@@ -4387,7 +4387,10 @@ export default function App() {
     fetchStats();
     fetchProviders();
     fetchCostOverview();
-    const interval = setInterval(fetchStats, 30000);
+    // 30s left the CPU card frozen for 29 of every 30 seconds, which is why the motion
+    // was never perceived: the 1500ms tween finished long before the next sample.
+    // /api/stats is local and non-blocking (psutil interval=None), answering in 1-50ms.
+    const interval = setInterval(fetchStats, 2000);
     const provInterval = setInterval(fetchProviders, 90000);
     const costInterval = setInterval(fetchCostOverview, 30000);
     return () => {
