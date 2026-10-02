@@ -245,7 +245,7 @@ const CpuMetricIcon = ({ load = 0 }) => {
         className="overview-icon-orbit"
         cx="16" cy="16" r="12" fill="none"
         stroke="var(--md-sys-color-primary)" strokeWidth="2.9"
-        strokeLinecap="round" strokeDasharray="26 49" opacity="0.95"
+        strokeLinecap="round" strokeDasharray="20 17.7 20 17.7" opacity="0.95"
         style={{ animationDuration: `${spin}s` }}
       />
       <rect
@@ -311,48 +311,73 @@ const ModelsMetricIcon = () => (
 
 const MemoryMetricIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
-  // The module's fill height is the actual RAM percentage, so the icon carries
-  // real information instead of being decoration next to the figure it labels.
-  const h = 7.4 * (pct / 100);
   return (
     <IconFrame>
-      <path
+      <rect
         className="overview-icon-draw overview-icon-depth"
-        d="M8 11.3h16v9.4H8z"
+        x="5.5"
+        y="9.5"
+        width="21"
+        height="13"
+        rx="1.6"
         fill="var(--md-sys-color-primary)"
-        fillOpacity="0.1"
+        fillOpacity="0.08"
         stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.35"
-        strokeLinejoin="round"
-        style={{ '--overview-icon-dash': 52 }}
+        strokeWidth="1.3"
+        style={{ '--overview-icon-dash': 68 }}
       />
       <rect
-        className="overview-icon-load"
-        x="8.9"
-        y={20.7 - h}
-        width="14.2"
-        height={h}
+        className="overview-memory-chip"
+        x="7.5"
+        y="11.5"
+        width="4.2"
+        height="6.8"
         rx="0.8"
         fill="var(--md-sys-color-primary)"
-        style={{ '--overview-load': pct / 100 }}
+        fillOpacity={pct >= 15 ? 0.8 : 0.25}
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="0.8"
+      />
+      <rect
+        className="overview-memory-chip"
+        x="13.9"
+        y="11.5"
+        width="4.2"
+        height="6.8"
+        rx="0.8"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity={pct >= 45 ? 0.8 : 0.25}
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="0.8"
+      />
+      <rect
+        className="overview-memory-chip"
+        x="20.3"
+        y="11.5"
+        width="4.2"
+        height="6.8"
+        rx="0.8"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity={pct >= 75 ? 0.8 : 0.25}
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="0.8"
+      />
+      <path
+        className="overview-memory-bus"
+        d="M7 19.5h18"
+        fill="none"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="0.9"
+        opacity="0.8"
       />
       <path
         className="overview-icon-draw"
-        d="M11 8.1v3.2M16 8.1v3.2M21 8.1v3.2M11 20.7v3.2M16 20.7v3.2M21 20.7v3.2"
+        d="M7.5 22.5v1.8M10 22.5v1.8M12.5 22.5v1.8M17 22.5v1.8M19.5 22.5v1.8M22 22.5v1.8M24.5 22.5v1.8"
         fill="none"
         stroke="var(--md-sys-color-on-surface)"
-        strokeWidth="1.35"
+        strokeWidth="1.1"
         strokeLinecap="round"
-        style={{ '--overview-icon-dash': 26 }}
-      />
-      <path
-        className="overview-icon-depth"
-        d="M7 24.8c2.55-1.4 5.55-2.1 9-2.1s6.45.7 9 2.1"
-        fill="none"
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="1"
-        strokeLinecap="round"
-        opacity="0.55"
+        style={{ '--overview-icon-dash': 20 }}
       />
     </IconFrame>
   );

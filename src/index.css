@@ -493,15 +493,30 @@ body {
 .overview-icon-layer {
   transform-box: fill-box;
   transform-origin: center;
-  animation: overview-icon-layer 2.8s var(--ov-ease-emphasized) infinite;
+  animation: overview-icon-layer 2.4s var(--ov-ease-emphasized) infinite;
 }
 .overview-icon-layer:nth-of-type(1) { animation-delay: 0ms; }
-.overview-icon-layer:nth-of-type(2) { animation-delay: 220ms; }
-.overview-icon-layer:nth-of-type(3) { animation-delay: 440ms; }
-.overview-icon-layer:nth-of-type(4) { animation-delay: 660ms; }
+.overview-icon-layer:nth-of-type(2) { animation-delay: 240ms; }
+.overview-icon-layer:nth-of-type(3) { animation-delay: 480ms; }
+.overview-icon-layer:nth-of-type(4) { animation-delay: 720ms; }
 @keyframes overview-icon-layer {
-  0%, 62%, 100% { transform: translateY(0); }
-  24%           { transform: translateY(-1.1px); }
+  0%, 100% { transform: translateY(0); }
+  45%      { transform: translateY(-2.8px); }
+}
+
+/* Active memory bus flow & chip states */
+.overview-memory-bus {
+  stroke-dasharray: 5 6;
+  animation: overview-bus-flow 2s linear infinite;
+}
+@keyframes overview-bus-flow {
+  from { stroke-dashoffset: 22; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.overview-memory-chip {
+  transition: opacity var(--ov-dur-medium) var(--ov-ease-standard),
+              fill var(--ov-dur-medium) var(--ov-ease-standard);
 }
 
 /* A hover depth shift of 0.65px was invisible; 2px reads as a lift. Spatial
