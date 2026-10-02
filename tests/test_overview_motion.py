@@ -88,7 +88,10 @@ async def check():
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.goto("http://localhost:5173/", wait_until="load", timeout=20000)
-        await page.wait_for_timeout(2500)
+        # Telemetry now polls every 2s with a 1500ms tween, so the page is in
+        # near-continuous motion. Settle past one full poll+tween cycle before
+        # measuring, otherwise a re-render can land mid-read and flake.
+        await page.wait_for_timeout(4200)
         if errors:
             fails.append(f"page errors: {errors}")
         fails.extend(evaluate(await collect(page)))
