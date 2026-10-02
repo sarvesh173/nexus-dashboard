@@ -524,22 +524,14 @@ body {
   }
 }
 
-/* The output-token cell carries more weight than the input cell on every
-   published rate card, so it gets its own surface instead of matching it.
-   --md-sys-color-tertiary-container is not defined in any of this app's five
-   hand-written themes, so this deliberately uses primary-container, which is. */
-.output-rate-cell {
-  position: relative;
-  transition:
-    background-color var(--ov-dur-short) var(--ov-ease-standard),
-    border-color var(--ov-dur-short) var(--ov-ease-standard),
-    transform var(--ov-dur-medium) var(--ov-ease-emphasized);
-}
-.output-rate-cell:hover {
-  transform: translateY(-1px);
+/* The output-token cell deliberately keeps NO position, z-index or transform.
+   It previously carried `position: relative` for a hover lift, which promoted
+   it into a positioned box that painted over the tooltip's leader line - the
+   dandi then vanished behind the Input/Output boxes. A static element with no
+   transform cannot occlude the leader. */
+.output-rate-fill {
+  transition: width var(--ov-dur-long) var(--ov-ease-emphasized);
 }
 @media (prefers-reduced-motion: reduce) {
-  .output-rate-cell { transition: none !important; }
-  .output-rate-cell:hover { transform: none; }
   .output-rate-fill { transition: none !important; }
 }

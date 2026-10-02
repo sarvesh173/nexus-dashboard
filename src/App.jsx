@@ -3058,12 +3058,12 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
               }}
             />
             <circle
-              cx={coords.boxX}
-              cy={coords.boxY}
+              cx={coords.landingX}
+              cy={coords.landingY}
               r="2.5"
               fill="var(--md-sys-color-primary)"
               style={{
-                transformOrigin: `${coords.boxX}px ${coords.boxY}px`,
+                transformOrigin: `${coords.landingX}px ${coords.landingY}px`,
                 transform: drawn ? 'scale(1)' : 'scale(0)',
                 transition: drawn ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
               }}
@@ -5030,7 +5030,7 @@ export default function App() {
                               }
                             />
                           </div>
-                          <div className="output-rate-cell bg-[var(--md-sys-color-primary-container)] p-2 rounded-xl border border-[var(--md-sys-color-primary)]/45">
+                          <div className="output-rate-cell bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <CostBreakdownTooltip
                               baseUsd={costOverview.output_token_price}
                               currency={activeCurrency}
@@ -5052,7 +5052,7 @@ export default function App() {
                                       className="block mt-1.5"
                                       title="Published rate comparison, not token usage"
                                     >
-                                      <span className="flex items-baseline justify-between text-[9px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                                      <span className="flex items-baseline justify-between gap-1 whitespace-nowrap text-[8.5px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
                                         <span className="output-rate-ratio">
                                           {outputRateRatio.multiple.toFixed(1)}× input rate
                                         </span>
