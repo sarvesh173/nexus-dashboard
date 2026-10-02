@@ -1,1 +1,25 @@
 /* App layout custom rules */
+
+.nav-overview-button:hover .overview-icon {
+  transform: translateY(-2px) scale(1.1);
+}
+
+.nav-model-button:hover .model-icon {
+  transform: scale(1.15) rotate(6deg);
+}
+
+.nav-agent-button:hover .agent-icon {
+  transform: scale(1.2) translateY(-1px);
+}
+
+.nav-playground-button:hover .playground-icon {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+.nav-cost-button:hover .cost-icon {
+  transform: scale(1.25);
+}
+
+.nav-settings-button:hover .settings-icon {
+  transform: rotate(45deg) scale(1.1);
+}

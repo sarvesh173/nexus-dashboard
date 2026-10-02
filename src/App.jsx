@@ -1,3 +1,4 @@
+import './App.css';
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -1191,64 +1192,76 @@ export default function App() {
           
           <button
             onClick={() => navigate('/')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+            className={`nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
               location.pathname === '/'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <LayoutDashboard size={14} />
+            <LayoutDashboard size={14} className="overview-icon transition-transform duration-200" />
             <span>Overview</span>
           </button>
 
           <button
             onClick={() => navigate('/model')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+            className={`nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
               location.pathname.startsWith('/model') || location.pathname.startsWith('/models') || location.pathname.startsWith('/modules')
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <Boxes size={14} />
+            <Boxes size={14} className="model-icon transition-transform duration-200" />
             <span>Models</span>
           </button>
 
           <button
             onClick={() => navigate('/agents')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+            className={`nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
               location.pathname === '/agents'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <Bot size={14} />
+            <Bot size={14} className="agent-icon transition-transform duration-200" />
             <span>Agents</span>
           </button>
 
           <button
+            onClick={() => navigate('/playground')}
+            className={`nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 ${
+              location.pathname === '/playground'
+                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
+            }`}
+          >
+            <MessageSquare size={14} className="playground-icon transition-transform duration-200" />
+            <span>Playground</span>
+          </button>
+
+          <button
             onClick={() => navigate('/cost')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            className={`nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
               location.pathname === '/cost'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
             <span className="inline-flex animate-subtle-glow">
-              <DollarSign size={14} className="text-[var(--md-sys-color-primary)] group-hover:scale-110 transition-transform" />
+              <DollarSign size={14} className="cost-icon text-[var(--md-sys-color-primary)] transition-transform duration-200" />
             </span>
             <span>Cost</span>
           </button>
 
           <button
             onClick={() => navigate('/settings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
+            className={`nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 shrink-0 active:scale-95 group ${
               location.pathname === '/settings'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <span className="inline-flex group-hover:rotate-45 transition-transform duration-300">
-              <Settings size={14} className="text-[var(--md-sys-color-primary)]" />
+            <span className="inline-flex">
+              <Settings size={14} className="settings-icon text-[var(--md-sys-color-primary)] transition-transform duration-200" />
             </span>
             <span>Settings</span>
           </button>
