@@ -88,10 +88,18 @@ async def check():
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.goto("http://localhost:5173/", wait_until="load", timeout=20000)
-        # Telemetry now polls every 2s with a 1500ms tween, so the page is in
-        # near-continuous motion. Settle past one full poll+tween cycle before
-        # measuring, otherwise a re-render can land mid-read and flake.
-        await page.wait_for_timeout(4200)
+        # The rate bar cannot render until /api/cost-overview resolves - the
+        # initial state carries '—' for both prices, so there is deliberately
+        # nothing to show before then. Wait for the element rather than a fixed
+        # delay, otherwise the test races the fetch and flakes right after a
+        # server restart.
+        try:
+            await page.wait_for_selector(".output-rate-ratio", timeout=15000)
+        except Exception:
+            fails.append("output_rate_ratio: never appeared after 15s")
+        # Telemetry polls every 2s with a 1500ms tween, so the page is in
+        # near-continuous motion. Settle past a full cycle before measuring.
+        await page.wait_for_timeout(1200)
         if errors:
             fails.append(f"page errors: {errors}")
         fails.extend(evaluate(await collect(page)))

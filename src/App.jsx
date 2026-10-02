@@ -5021,7 +5021,11 @@ export default function App() {
                               trigger={
                                 <span>
                                   <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Input Token</span>
-                                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.input_token_price, activeCurrency)}</span>
+                                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
+                                    {costLoadState === 'ready'
+                                      ? convertFromUsd(costOverview.input_token_price, activeCurrency)
+                                      : <span className="overview-pending">—</span>}
+                                  </span>
                                 </span>
                               }
                             />
@@ -5038,7 +5042,11 @@ export default function App() {
                               trigger={
                                 <span>
                                   <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Output Token</span>
-                                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">{convertFromUsd(costOverview.output_token_price, activeCurrency)}</span>
+                                  <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
+                                    {costLoadState === 'ready'
+                                      ? convertFromUsd(costOverview.output_token_price, activeCurrency)
+                                      : <span className="overview-pending">—</span>}
+                                  </span>
                                   {outputRateRatio && (
                                     <span
                                       className="block mt-1.5"
