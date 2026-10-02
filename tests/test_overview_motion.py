@@ -16,8 +16,6 @@ CHECKS = [
     "icon_orbit_stroke",
     "output_cell_no_highlight",
     "output_cell_unpositioned",
-    "output_ratio_rendered",
-    "output_ratio_no_fake_usage",
     "reduced_motion_kills_it",
 ]
 
@@ -55,6 +53,7 @@ async def collect(page):
           return b ? Math.round(b.getBoundingClientRect().width) : null;
         })(),
         caption: document.querySelector('.output-rate-caption')?.textContent?.trim() || null,
+        nativeTitle: document.querySelector('.output-rate-cell [title]')?.getAttribute('title') || null,
       };
     }"""
     )
@@ -81,13 +80,13 @@ def evaluate(d):
     if d["outPos"] not in ("static", None):
         out.append(f"output_cell_unpositioned: cell is {d['outPos']}, which creates a "
                    "stacking context that can occlude the leader line")
-    if not d["ratioText"]:
-        out.append("output_rate_ratio: no .output-rate-ratio element rendered")
-    body = (d["caption"] or "").lower()
-    if d["caption"] and ("usage" in body and "not usage" not in body and "rate" not in body):
-        out.append("output_rate_no_fake_usage: caption implies a usage figure")
-    if not d["ratioWidth"]:
-        out.append("output_rate_ratio: fill has zero width")
+    # The rate bar and the browser-native title tooltip were both removed: the
+    # bar overflowed its cell and wrapped to four cramped lines, and the title
+    # duplicated the hover tooltip that already explains the calculation.
+    if d["ratioText"]:
+        out.append("output_rate_bar_removed: .output-rate-ratio still renders")
+    if d["nativeTitle"]:
+        out.append(f"output_native_title_removed: title={d['nativeTitle']!r} still present")
     return out
 
 
@@ -99,15 +98,15 @@ async def check():
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.goto("http://localhost:5173/", wait_until="load", timeout=20000)
-        # The rate bar cannot render until /api/cost-overview resolves - the
-        # initial state carries '—' for both prices, so there is deliberately
-        # nothing to show before then. Wait for the element rather than a fixed
-        # delay, otherwise the test races the fetch and flakes right after a
-        # server restart.
+        # Wait for the rates themselves, not for a removed element: the cells
+        # render a pending dash until /api/cost-overview resolves.
         try:
-            await page.wait_for_selector(".output-rate-ratio", timeout=15000)
+            await page.wait_for_function(
+                "() => {const c=document.querySelector('.output-rate-cell');"
+                "return c && !c.innerText.includes('\u2014');}",
+                timeout=15000)
         except Exception:
-            fails.append("output_rate_ratio: never appeared after 15s")
+            fails.append("rates: never resolved after 15s")
         # Telemetry polls every 2s with a 1500ms tween, so the page is in
         # near-continuous motion. Settle past a full cycle before measuring.
         await page.wait_for_timeout(1200)

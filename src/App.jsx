@@ -4050,21 +4050,6 @@ export default function App() {
   // Only render a currency figure when the former is actually true.
   const [costHasUsage, setCostHasUsage] = useState(false);
 
-  // Output-vs-input RATE ratio. This is published-rate data already returned by
-  // /api/cost-overview - it is NOT token usage. `has_usage` is false and both
-  // token counters are 0, so showing a consumed-token figure here would be
-  // inventing a measurement the backend has never taken.
-  const outputRateRatio = (() => {
-    const head = (v) => {
-      const n = parseFloat(String(v ?? '').split('/')[0]);
-      return Number.isFinite(n) && n > 0 ? n : null;
-    };
-    const inp = head(costOverview.input_token_price);
-    const out = head(costOverview.output_token_price);
-    if (!inp || !out) return null;
-    return { multiple: out / inp, share: out / Math.max(inp, out) };
-  })();
-
   // Industry Standard Model Catalog Structure
   const [modelCatalog, setModelCatalog] = useState([
     // Text Models
@@ -5020,7 +5005,7 @@ export default function App() {
                               ]}
                               trigger={
                                 <span>
-                                  <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Input Token</span>
+                                  <span className="text-[var(--md-sys-color-on-surface-variant)] block whitespace-nowrap text-[10px]">Input Token</span>
                                   <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
                                     {costLoadState === 'ready'
                                       ? convertFromUsd(costOverview.input_token_price, activeCurrency)
@@ -5041,34 +5026,12 @@ export default function App() {
                               ]}
                               trigger={
                                 <span>
-                                  <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Output Token</span>
+                                  <span className="text-[var(--md-sys-color-on-surface-variant)] block whitespace-nowrap text-[10px]">Output Token</span>
                                   <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
                                     {costLoadState === 'ready'
                                       ? convertFromUsd(costOverview.output_token_price, activeCurrency)
                                       : <span className="overview-pending">—</span>}
                                   </span>
-                                  {outputRateRatio && (
-                                    <span
-                                      className="block mt-1.5"
-                                      title="Published rate comparison, not token usage"
-                                    >
-                                      <span className="flex items-baseline justify-between gap-1 whitespace-nowrap text-[8.5px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                                        <span className="output-rate-ratio">
-                                          {outputRateRatio.multiple.toFixed(1)}× input rate
-                                        </span>
-                                        <span className="output-rate-caption">rate, not usage</span>
-                                      </span>
-                                      <span className="block mt-1 h-1 w-full rounded-full bg-[var(--md-sys-color-outline-variant)] overflow-hidden">
-                                        <span
-                                          className="output-rate-fill block h-full rounded-full bg-[var(--md-sys-color-primary)]"
-                                          style={{
-                                            width: `${(outputRateRatio.share * 100).toFixed(1)}%`,
-                                            transition: 'width var(--ov-dur-long) var(--ov-ease-emphasized)',
-                                          }}
-                                        />
-                                      </span>
-                                    </span>
-                                  )}
                                 </span>
                               }
                             />

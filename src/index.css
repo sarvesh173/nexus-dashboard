@@ -529,12 +529,7 @@ body {
    it into a positioned box that painted over the tooltip's leader line - the
    dandi then vanished behind the Input/Output boxes. A static element with no
    transform cannot occlude the leader. */
-.output-rate-fill {
-  transition: width var(--ov-dur-long) var(--ov-ease-emphasized);
-}
-@media (prefers-reduced-motion: reduce) {
-  .output-rate-fill { transition: none !important; }
-}
+
 
 
 /* =====================================================================
