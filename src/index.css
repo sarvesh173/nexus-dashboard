@@ -6,6 +6,10 @@
 */
 
 :root, [data-theme="indigo-violet"] {
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #93000a;
   --md-sys-color-background: #0f101d;
   --md-sys-color-surface: #141624;
   --md-sys-color-surface-container: #1a1d30;
@@ -23,6 +27,10 @@
 }
 
 [data-theme="obsidian-emerald"] {
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #93000a;
   --md-sys-color-background: #0b1210;
   --md-sys-color-surface: #0f1a16;
   --md-sys-color-surface-container: #14241e;
@@ -40,6 +48,10 @@
 }
 
 [data-theme="cyberpunk-neon"] {
+  --md-sys-color-error: #ff8a80;
+  --md-sys-color-on-error: #4a0006;
+  --md-sys-color-error-container: #7f0000;
+  --md-sys-color-on-error-container: #7f0000;
   --md-sys-color-background: #140d18;
   --md-sys-color-surface: #1b1220;
   --md-sys-color-surface-container: #24182b;
@@ -57,6 +69,10 @@
 }
 
 [data-theme="industrial-amber"] {
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #93000a;
   --md-sys-color-background: #15130d;
   --md-sys-color-surface: #1c1912;
   --md-sys-color-surface-container: #262219;
@@ -74,6 +90,10 @@
 }
 
 [data-theme="paper-light"] {
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
   --md-sys-color-background: #fbf8fd;
   --md-sys-color-surface: #f5f2f7;
   --md-sys-color-surface-container: #eeeaf0;
@@ -209,4 +229,38 @@ body {
 .nav-scroll-fade::-webkit-scrollbar-thumb {
   background: var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-full);
+}
+/* ---------------------------------------------------------------------
+   Overview pending state
+   A card with no live reading yet should look deliberately pending, not
+   broken. The em-dash is rendered at the same font-size as a real figure
+   (so layout never jumps), but at a fraction of the visual weight.
+   --------------------------------------------------------------------- */
+.overview-pending {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.38;
+  font-weight: 400;
+}
+
+.overview-pending-caption {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.5;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* A frozen 0%-width track reads as a broken bar. Dim it and stop the stop
+   dot from implying a completed indicator while data is still pending. */
+.m3-linear-progress[aria-hidden='true'] .m3-linear-track {
+  opacity: 0.35;
+}
+
+.m3-linear-progress[aria-hidden='true'] .m3-linear-stop {
+  opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-linear-indicator {
+    transition: none;
+  }
 }

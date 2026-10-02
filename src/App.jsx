@@ -3714,29 +3714,33 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [location.pathname, navigate]);
 
-  // Target values polled from backend
-  const [telemetry, setTelemetry] = useState({
-    ram_total_mb: 3725,
-    ram_used_mb: 2048,
-    ram_free_mb: 1677,
-    ram_percent: 55.0,
-    swap_total_mb: 12091,
-    swap_used_mb: 4409,
-    swap_free_mb: 7682,
-    swap_percent: 36.5,
-    cpu_percent: 25.0,
-    cpu_cores: [24.0, 26.0],
-    disk_percent: 95.0,
-    nexus_mem_mb: 16.0,
-  });
+  // Target values polled from backend.
+  // Starts null on purpose: until the first successful /api/stats response we
+  // have NO real numbers, and showing plausible-looking seeds would be a lie.
+  const [telemetry, setTelemetry] = useState(null);
 
-  const [costOverview, setCostOverview] = useState({
-    total_accrued: '0.00',
-    scan_cadence: '1h - 24h background sync',
-    last_synced: 'Just now',
-    input_token_price: '0.00 / 0.00',
-    output_token_price: '0.00 / 0.00',
-  });
+  // A telemetry payload is only "real" when every field we display is a finite
+  // number. Anything else must render as pending, not as a fabricated figure.
+  const hasRealTelemetry = (() => {
+    if (!telemetry || typeof telemetry !== 'object') return false;
+    const required = [
+      'ram_total_mb', 'ram_used_mb', 'ram_percent',
+      'swap_used_mb', 'swap_percent', 'cpu_percent',
+    ];
+    if (!required.every((k) => Number.isFinite(telemetry[k]))) return false;
+    return Array.isArray(telemetry.cpu_cores) && telemetry.cpu_cores.length >= 1;
+  })();
+
+  const cost = {
+    total_accrued: '—',
+    scan_cadence: 'Awaiting backend',
+    last_synced: 'Never',
+    input_token_price: '—',
+    output_token_price: '—',
+  };
+
+  const [costOverview, setCostOverview] = useState(cost);
+  const [costLoadState, setCostLoadState] = useState('loading'); // loading | ready | error
 
   // Industry Standard Model Catalog Structure
   const [modelCatalog, setModelCatalog] = useState([
@@ -3935,12 +3939,17 @@ export default function App() {
     }
   ]);
 
-  const smoothCpu = useSmoothCounter(telemetry.cpu_percent, 2800);
-  const smoothCore0 = useSmoothCounter(telemetry.cpu_cores[0] || 0, 2800);
-  const smoothCore1 = useSmoothCounter(telemetry.cpu_cores[1] || 0, 2800);
-  const smoothRamPercent = useSmoothCounter(telemetry.ram_percent, 2800);
-  const smoothRamUsed = useSmoothCounter(telemetry.ram_used_mb, 2800);
-  const smoothSwapPercent = useSmoothCounter(telemetry.swap_percent, 2800);
+  // Smooth but fast. The previous 2800ms made live figures feel broken: the
+  // data was already in memory, only the tween was lagging. 420ms keeps the
+  // motion (cubic ease-out, same curve) while landing well inside the 2.5ms
+  // backend latency the user actually perceives.
+  const TELEMETRY_RAMP_MS = 420;
+  const smoothCpu        = useSmoothCounter(telemetry?.cpu_percent ?? 0, TELEMETRY_RAMP_MS);
+  const smoothCore0      = useSmoothCounter(telemetry?.cpu_cores?.[0] ?? 0, TELEMETRY_RAMP_MS);
+  const smoothCore1      = useSmoothCounter(telemetry?.cpu_cores?.[1] ?? 0, TELEMETRY_RAMP_MS);
+  const smoothRamPercent = useSmoothCounter(telemetry?.ram_percent ?? 0, TELEMETRY_RAMP_MS);
+  const smoothRamUsed    = useSmoothCounter(telemetry?.ram_used_mb ?? 0, TELEMETRY_RAMP_MS);
+  const smoothSwapPercent = useSmoothCounter(telemetry?.swap_percent ?? 0, TELEMETRY_RAMP_MS);
 
   const fetchStats = async () => {
     setIsRefreshing(true);
@@ -3951,9 +3960,33 @@ export default function App() {
         setTelemetry(data);
       }
     } catch {
-      // Fallback
+      // Keep the last good sample rather than blanking the Overview.
     } finally {
-      setTimeout(() => setIsRefreshing(false), 3500);
+      // Release the spinner as soon as the request settles. The previous fixed
+      // 3500ms kept it spinning for seconds AFTER real numbers were on screen.
+      setIsRefreshing(false);
+    }
+  };
+
+  const fetchCostOverview = async () => {
+    try {
+      const res = await fetch('/api/cost-overview');
+      if (!res.ok) throw new Error(`cost-overview ${res.status}`);
+      const data = await res.json();
+      setCostOverview({
+        total_accrued: data.total_accrued ?? cost.total_accrued,
+        scan_cadence: data.request_count
+          ? `${data.request_count} request${data.request_count === 1 ? '' : 's'} recorded`
+          : 'No gateway usage recorded yet',
+        last_synced: data.last_synced ? new Date(data.last_synced).toLocaleString() : 'Never',
+        input_token_price: data.input_token_price ?? cost.input_token_price,
+        output_token_price: data.output_token_price ?? cost.output_token_price,
+      });
+      setCostLoadState('ready');
+    } catch {
+      // Leave the previous values in place; surface the error state without
+      // pretending the figures are real.
+      setCostLoadState((prev) => (prev === 'loading' ? 'error' : prev));
     }
   };
 
@@ -4029,11 +4062,14 @@ export default function App() {
   useEffect(() => {
     fetchStats();
     fetchProviders();
+    fetchCostOverview();
     const interval = setInterval(fetchStats, 30000);
     const provInterval = setInterval(fetchProviders, 90000);
+    const costInterval = setInterval(fetchCostOverview, 30000);
     return () => {
       clearInterval(interval);
       clearInterval(provInterval);
+      clearInterval(costInterval);
     };
   }, []);
 
@@ -4691,32 +4727,35 @@ export default function App() {
                       
                       <div className="my-1">
                         <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {smoothCpu}%
+                          {hasRealTelemetry ? <>{smoothCpu}%</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs font-mono">
+                        <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs ">
                           <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 1</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{smoothCore0}%</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}%</> : <span className="overview-pending">—</span>}</span>
                           </div>
                           <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 2</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{smoothCore1}%</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}%</> : <span className="overview-pending">—</span>}</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-3 pt-2">
-                      <div className="m3-linear-progress">
+                      <div className="m3-linear-progress" aria-hidden={!hasRealTelemetry}>
                         <div className="m3-linear-track">
                           <div
                             className="m3-linear-indicator"
-                            style={{ width: `${Math.min(smoothCpu, 100)}%` }}
+                            style={{ width: hasRealTelemetry ? `${Math.min(smoothCpu, 100)}%` : '0%' }}
                           />
                         </div>
                         <div className="m3-linear-stop" />
                       </div>
+                      {!hasRealTelemetry && (
+                        <span className="overview-pending-caption">waiting for live reading…</span>
+                      )}
                     </div>
                   </div>
 
@@ -4732,27 +4771,27 @@ export default function App() {
 
                       <div className="my-1">
                         <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {smoothRamPercent}%
+                          {hasRealTelemetry ? <>{smoothRamPercent}%</> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
                         </div>
                         <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
-                          {smoothRamUsed}M / {telemetry.ram_total_mb}M physical
+                          {hasRealTelemetry ? <>{smoothRamUsed}M / {telemetry.ram_total_mb}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}
                         </div>
 
-                        <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-xs font-mono bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                        <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between">
                           <span className="text-[var(--md-sys-color-on-surface-variant)] text-[10px]">Swap/Spoke:</span>
                           <span className="text-[var(--md-sys-color-primary)] font-bold">
-                            {smoothSwapPercent}% ({telemetry.swap_used_mb}M)
+                            {hasRealTelemetry ? <>{smoothSwapPercent}% ({telemetry.swap_used_mb}M)</> : <span className="overview-pending">—</span>}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-3 pt-2">
-                      <div className="m3-linear-progress">
+                      <div className="m3-linear-progress" aria-hidden={!hasRealTelemetry}>
                         <div className="m3-linear-track">
                           <div
                             className="m3-linear-indicator"
-                            style={{ width: `${Math.min(smoothRamPercent, 100)}%` }}
+                            style={{ width: hasRealTelemetry ? `${Math.min(smoothRamPercent, 100)}%` : '0%' }}
                           />
                         </div>
                         <div className="m3-linear-stop" />
@@ -4773,7 +4812,7 @@ export default function App() {
                       <div className="my-2 flex items-baseline gap-6">
                         <div>
                           <div className="text-3xl sm:text-4xl font-bold font-mono text-[var(--md-sys-color-on-surface)]">
-                            {providersList.length > 0 ? providersList.reduce((acc, p) => acc + p.total_models, 0) : 81}
+                            {providersList.length > 0 ? providersList.reduce((acc, p) => acc + p.total_models, 0) : <span className="overview-pending">—</span>}
                           </div>
                           <div className="text-[11px] text-[var(--md-sys-color-primary)] font-semibold uppercase tracking-wider mt-1">
                             Live Models
@@ -4782,7 +4821,7 @@ export default function App() {
                         <div className="h-8 w-[1px] bg-[var(--md-sys-color-outline-variant)]" />
                         <div>
                           <div className="text-3xl sm:text-4xl font-bold font-mono text-[var(--md-sys-color-on-surface)]">
-                            {providersList.length > 0 ? providersList.length : 1}
+                            {providersList.length > 0 ? providersList.length : <span className="overview-pending">—</span>}
                           </div>
                           <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-semibold uppercase tracking-wider mt-1">
                             Providers
@@ -4822,20 +4861,20 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
                       <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Total Cumulative Spend</span>
-                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{activeCurrency.symbol}{costOverview.total_accrued}</span>
-                      <span className="text-[10px] text-[var(--md-sys-color-primary)] font-mono">100% Free Tier Covered</span>
+                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{convertFromUsd(costOverview.total_accrued, activeCurrency)}</span>
+                      <span className="text-[10px] text-[var(--md-sys-color-primary)] font-mono">{costLoadState === 'error' ? 'Backend unreachable' : 'From gateway usage ledger'}</span>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
-                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Input Token Price</span>
+                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Input Token Rate</span>
                       <span className="text-xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{costOverview.input_token_price}</span>
-                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-mono">Real-time live rate</span>
+                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-mono">Published USD, per 1M</span>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
-                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Output Token Price</span>
+                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Output Token Rate</span>
                       <span className="text-xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{costOverview.output_token_price}</span>
-                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-mono">Real-time live rate</span>
+                      <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-mono">Published USD, per 1M</span>
                     </div>
                   </div>
                 </div>

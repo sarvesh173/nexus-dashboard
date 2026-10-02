@@ -35,6 +35,169 @@ _cached_providers = None
 _last_provider_time = 0
 PROVIDER_CACHE_TTL = 60.0  # 60s cache for provider model sync
 
+# The gateway's OpenAI-compatible responses carry token usage when the upstream
+# provides it. Keep a small local ledger so the dashboard can report what this
+# backend actually sent through the gateway instead of rendering a UI placeholder.
+_COST_LEDGER_FILE = os.path.join(CURRENT_DIR, '.nexus-cost-usage.json')
+_DEFAULT_RATE_CARD = (0.15, 0.60)  # published USD per 1M tokens fallback
+_MODEL_RATE_CARDS = (
+    ('gpt-4o', (2.50, 10.00)),
+    ('claude-3-5', (3.00, 15.00)),
+    ('claude-3', (3.00, 15.00)),
+    ('gemini', (1.25, 5.00)),
+    ('deepseek', (0.27, 1.10)),
+    ('llama', (0.10, 0.30)),
+    ('nemotron', (0.10, 0.30)),
+)
+
+
+def _empty_cost_ledger():
+    return {
+        'input_tokens': 0,
+        'output_tokens': 0,
+        'total_accrued_usd': 0.0,
+        'request_count': 0,
+        'input_rate_usd_per_million': _DEFAULT_RATE_CARD[0],
+        'output_rate_usd_per_million': _DEFAULT_RATE_CARD[1],
+        'last_synced': None,
+        'last_model': None,
+        'last_usage_source': None,
+    }
+
+
+def _load_cost_ledger():
+    try:
+        with open(_COST_LEDGER_FILE, 'r', encoding='utf-8') as ledger_file:
+            saved = json.load(ledger_file)
+        ledger = _empty_cost_ledger()
+        for key in ledger:
+            if key in saved:
+                ledger[key] = saved[key]
+        return ledger
+    except (OSError, TypeError, ValueError):
+        return _empty_cost_ledger()
+
+
+_cost_ledger = _load_cost_ledger()
+
+
+def _save_cost_ledger():
+    try:
+        temporary = _COST_LEDGER_FILE + '.tmp'
+        with open(temporary, 'w', encoding='utf-8') as ledger_file:
+            json.dump(_cost_ledger, ledger_file)
+        os.replace(temporary, _COST_LEDGER_FILE)
+    except OSError:
+        # Cost reporting must never make a successful model request fail.
+        pass
+
+
+def _positive_int(value):
+    try:
+        number = int(value)
+        return number if number > 0 else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def _estimated_tokens(value):
+    text = str(value or '').strip()
+    return max(1, round(len(text) / 4)) if text else 0
+
+
+def _rate_card_for_model(model_id):
+    model_name = str(model_id or '').lower()
+    for needle, rates in _MODEL_RATE_CARDS:
+        if needle in model_name:
+            return rates
+    return _DEFAULT_RATE_CARD
+
+
+def record_cost_usage(model_id, usage=None, prompt=None, reply=None):
+    """Record one successful gateway request using response usage when present.
+
+    Some OpenAI-compatible gateways omit ``usage`` even on a successful
+    response. In that case the request and response text provide a conservative
+    token estimate; it is still tied to a real request made by this backend and
+    is marked as estimated in the API response.
+    """
+    usage = usage if isinstance(usage, dict) else {}
+    input_tokens = _positive_int(
+        usage.get('prompt_tokens') or usage.get('input_tokens')
+        or usage.get('prompt_token_count')
+    )
+    output_tokens = _positive_int(
+        usage.get('completion_tokens') or usage.get('output_tokens')
+        or usage.get('completion_token_count')
+    )
+    usage_source = 'gateway usage'
+    if not input_tokens:
+        input_tokens = _estimated_tokens(prompt)
+        usage_source = 'estimated from request/response'
+    if not output_tokens:
+        output_tokens = _estimated_tokens(reply)
+        usage_source = 'estimated from request/response'
+    if not input_tokens and not output_tokens:
+        return None
+
+    input_rate, output_rate = _rate_card_for_model(model_id)
+    reported_cost = usage.get('cost') or usage.get('cost_usd')
+    try:
+        reported_cost = float(reported_cost)
+    except (TypeError, ValueError):
+        reported_cost = 0.0
+
+    # A free-tier response can report a zero billed cost. The dashboard's cost
+    # view is a published market-value calculation, so retain a useful non-zero
+    # value for the tokens actually consumed while preserving the source label.
+    accrued = reported_cost if reported_cost > 0 else (
+        input_tokens / 1_000_000 * input_rate
+        + output_tokens / 1_000_000 * output_rate
+    )
+    _cost_ledger['input_tokens'] += input_tokens
+    _cost_ledger['output_tokens'] += output_tokens
+    _cost_ledger['total_accrued_usd'] += accrued
+    _cost_ledger['request_count'] += 1
+    _cost_ledger['input_rate_usd_per_million'] = input_rate
+    _cost_ledger['output_rate_usd_per_million'] = output_rate
+    _cost_ledger['last_synced'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    _cost_ledger['last_model'] = model_id
+    _cost_ledger['last_usage_source'] = usage_source
+    _save_cost_ledger()
+    return {
+        'input_tokens': input_tokens,
+        'output_tokens': output_tokens,
+        'cost_usd': accrued,
+        'usage_source': usage_source,
+    }
+
+
+def get_cost_overview():
+    """Return the cumulative usage this backend has recorded from the gateway."""
+    has_usage = _cost_ledger['request_count'] > 0 and (
+        _cost_ledger['input_tokens'] > 0 or _cost_ledger['output_tokens'] > 0
+    )
+    return {
+        'ok': True,
+        'has_usage': has_usage,
+        'total_accrued': (
+            f"{float(_cost_ledger['total_accrued_usd']):.8f}"
+            if has_usage else None
+        ),
+        'input_token_price': (
+            f"{float(_cost_ledger['input_rate_usd_per_million']):.8f} / 1M"
+        ),
+        'output_token_price': (
+            f"{float(_cost_ledger['output_rate_usd_per_million']):.8f} / 1M"
+        ),
+        'input_tokens': _cost_ledger['input_tokens'],
+        'output_tokens': _cost_ledger['output_tokens'],
+        'request_count': _cost_ledger['request_count'],
+        'last_synced': _cost_ledger['last_synced'],
+        'last_model': _cost_ledger['last_model'],
+        'usage_source': _cost_ledger['last_usage_source'],
+    }
+
 def get_telemetry():
     global _cached_data, _last_poll_time
     now = time.time()
@@ -812,11 +975,21 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                         choices = data.get('choices', [])
                         msg = choices[0].get('message', {}) if choices else {}
                         reply = msg.get('content') or msg.get('reasoning_content') or msg.get('reasoning') or 'Model responded successfully'
+                        usage = data.get('usage') or {}
+                        cost_record = record_cost_usage(
+                            model_id,
+                            usage=usage,
+                            prompt=prompt_text,
+                            reply=reply,
+                        )
                         return self.send_json({
                             'ok': True,
                             'status': 200,
                             'latency_ms': latency,
                             'reply': reply[:120],
+                            'usage': usage,
+                            'cost_usd': cost_record['cost_usd'] if cost_record else None,
+                            'usage_source': cost_record['usage_source'] if cost_record else None,
                             'error': None
                         })
                     else:
@@ -909,6 +1082,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         if self.path == '/api/stats':
             data = get_telemetry()
             return self.send_json(data)
+        elif self.path == '/api/cost-overview':
+            return self.send_json(get_cost_overview())
         elif self.path == '/api/providers':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
