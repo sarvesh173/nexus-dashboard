@@ -2861,6 +2861,18 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
   const showTooltip = () => {
     if (coords || !anchorRef.current) return;
     const rect = anchorRef.current.getBoundingClientRect();
+    // The trigger span sits inside a padded cell, so the span's own bottom edge
+    // is ~10px ABOVE the cell's. A leader leaving from the span therefore ran
+    // its horizontal segment through the cell's opaque background and vanished
+    // behind the Input/Output boxes. Measure the parent cell and exit from its
+    // bottom instead.
+    const anchorCellEl = anchorRef.current.parentElement;
+    const anchorCellRect = anchorCellEl
+      ? anchorCellEl.getBoundingClientRect()
+      : rect;
+    // trigger-local Y of the cell's bottom edge
+    const cellBottomLocal = anchorCellRect.bottom - rect.top;
+    const cellTopLocal = anchorCellRect.top - rect.top;
     const panelWidth = Math.min(260, window.innerWidth - 24);
     // The panel has to clear the whole CARD, not just this trigger span: the
     // span is a narrow inline element, so clearing only it still left the panel
@@ -2932,12 +2944,17 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
     if (mode === 'below' || mode === 'above') {
       isBelow = mode === 'below';
       isAbove = mode === 'above';
-      // Align to the CARD's left edge, not the viewport centre. Centring on the
-      // viewport put the panel far from a left-aligned trigger, so the leader
-      // had to run 600px sideways straight across the neighbouring cards. Only
-      // when the card itself would overflow do we slide in to stay on screen.
+      // Centre the panel on THIS trigger. Giving every cell the card's left edge
+      // put the Input and Output panels on top of each other, so the two
+      // leaders read as one coming from the wrong box. The panel sits below the
+      // whole card row, where the strip is empty, so it is free to run past the
+      // card's right edge toward the CPU card without ever covering it.
       const margin = 8;
-      const preferredLeft = cardRect ? cardRect.left : rect.left;
+      const cardLeft = cardRect ? cardRect.left : rect.left;
+      const centredOnTrigger = rect.left + rect.width / 2 - panelWidth / 2;
+      // Only guard the LEFT side. Hanging off the left looked broken; running
+      // right into the empty strip below the row is the whole point.
+      const preferredLeft = Math.max(cardLeft, centredOnTrigger);
       const panelLeftViewport = Math.max(
         margin,
         Math.min(preferredLeft, window.innerWidth - panelWidth - margin)
@@ -2946,10 +2963,12 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
       const anchorY = isAbove ? clearTopOf - V_GAP : clearBottom + V_GAP;
       boxY = Math.max(PANEL_HALF_H + 12, anchorY) - oy;
       // Leader leaves from the card edge nearest the panel and runs to it.
-      dotX = isAbove ? rect.width / 2 : rect.width / 2;
-      dotY = isAbove ? 0 : rect.height;
+      dotX = rect.width / 2;
+      dotY = isAbove ? cellTopLocal : cellBottomLocal;
       midX = boxX + panelWidth / 2;
-      midY = dotY + (isAbove ? -14 : 14);
+      // Drop a further 18px before turning, so the horizontal run is entirely
+      // in clear space below the cell rather than across its background.
+      midY = dotY + (isAbove ? -18 : 18);
     } else if (goRight && ox + boxX < clearRight + 8) {
       boxX = clearRightLocal + GAP;
     } else if (!goRight && ox + boxX > clearLeft - 8) {
@@ -2973,9 +2992,9 @@ function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
       boxX = panelLeftViewport - ox;
       boxY = Math.min(clearBottom + V_GAP, window.innerHeight - PANEL_HALF_H - 12) - oy;
       dotX = rect.width / 2;
-      dotY = rect.height;
+      dotY = cellBottomLocal;
       midX = boxX + panelWidth / 2;
-      midY = rect.height + 14;
+      midY = cellBottomLocal + 18;
     }
 
     // Where the line should actually arrive. For a vertical placement the panel
