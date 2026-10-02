@@ -523,3 +523,23 @@ body {
     transform: none;
   }
 }
+
+/* The output-token cell carries more weight than the input cell on every
+   published rate card, so it gets its own surface instead of matching it.
+   --md-sys-color-tertiary-container is not defined in any of this app's five
+   hand-written themes, so this deliberately uses primary-container, which is. */
+.output-rate-cell {
+  position: relative;
+  transition:
+    background-color var(--ov-dur-short) var(--ov-ease-standard),
+    border-color var(--ov-dur-short) var(--ov-ease-standard),
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized);
+}
+.output-rate-cell:hover {
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .output-rate-cell { transition: none !important; }
+  .output-rate-cell:hover { transform: none; }
+  .output-rate-fill { transition: none !important; }
+}

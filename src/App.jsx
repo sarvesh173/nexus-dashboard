@@ -5008,7 +5008,7 @@ export default function App() {
                               }
                             />
                           </div>
-                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                          <div className="output-rate-cell bg-[var(--md-sys-color-primary-container)] p-2 rounded-xl border border-[var(--md-sys-color-primary)]/45">
                             <CostBreakdownTooltip
                               baseUsd={costOverview.output_token_price}
                               currency={activeCurrency}
