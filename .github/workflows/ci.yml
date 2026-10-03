@@ -44,3 +44,6 @@ jobs:
 
       - name: Nav animation tests
         run: python3 tests/test_nav_animations.py
+
+      - name: Overview motion tests
+        run: python3 tests/test_overview_motion.py

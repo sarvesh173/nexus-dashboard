@@ -5,7 +5,7 @@ export const AGENTS_DATA = [
     engine: 'Nous Hermes Suite',
     status: 'Active',
     execution_mode: 'CLI Tool',
-    logo: '/agent-logos/hermes.png',
+    logo: '/agent-logos/hermes.svg',
     cli_signature: 'localhost:5173 / Hermes Agent'
   },
   {

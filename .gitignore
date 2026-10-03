@@ -4,9 +4,14 @@ dist
 .env.local
 .DS_Store
 *.log
+.nexus-cost-usage.json
+
+# runtime artefacts — never commit these
 __pycache__/
 *.pyc
+__agent__/
+artifacts/
+.hermes/
 hidden_store.json
 model_health.json
-.vscode/
-.idea/
+.nexus-cost-usage.json

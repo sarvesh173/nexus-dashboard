@@ -6,6 +6,10 @@
 */
 
 :root, [data-theme="indigo-violet"] {
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #93000a;
   --md-sys-color-background: #0f101d;
   --md-sys-color-surface: #141624;
   --md-sys-color-surface-container: #1a1d30;
@@ -23,6 +27,10 @@
 }
 
 [data-theme="obsidian-emerald"] {
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #93000a;
   --md-sys-color-background: #0b1210;
   --md-sys-color-surface: #0f1a16;
   --md-sys-color-surface-container: #14241e;
@@ -40,6 +48,10 @@
 }
 
 [data-theme="cyberpunk-neon"] {
+  --md-sys-color-error: #ff8a80;
+  --md-sys-color-on-error: #4a0006;
+  --md-sys-color-error-container: #7f0000;
+  --md-sys-color-on-error-container: #7f0000;
   --md-sys-color-background: #140d18;
   --md-sys-color-surface: #1b1220;
   --md-sys-color-surface-container: #24182b;
@@ -57,6 +69,10 @@
 }
 
 [data-theme="industrial-amber"] {
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #93000a;
   --md-sys-color-background: #15130d;
   --md-sys-color-surface: #1c1912;
   --md-sys-color-surface-container: #262219;
@@ -74,6 +90,10 @@
 }
 
 [data-theme="paper-light"] {
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
   --md-sys-color-background: #fbf8fd;
   --md-sys-color-surface: #f5f2f7;
   --md-sys-color-surface-container: #eeeaf0;
@@ -134,31 +154,39 @@ body {
 .m3-linear-progress {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
-  height: 4px;
+  /* 4px was a sliver on a ~310px card and could not be seen. */
+  height: 8px;
 }
 
 .m3-linear-track {
   position: relative;
   flex: 1;
-  height: 4px;
-  background-color: var(--md-sys-color-outline-variant);
+  height: 8px;
+  background-color: color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
   border-radius: var(--md-sys-shape-corner-full);
   overflow: hidden;
 }
 
 .m3-linear-indicator {
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  /* scaleX, never width: animating width forces a layout pass every frame,
+     which M3's motion guidance lists as layout thrash. */
+  transform: scaleX(var(--ov-progress, 0));
   background-color: var(--md-sys-color-primary);
   border-radius: var(--md-sys-shape-corner-full);
-  transition: width 1.2s cubic-bezier(0.2, 0, 0, 1);
-  will-change: width;
+  /* var(--ov-ramp) is published from TELEMETRY_RAMP_MS in App.jsx, so the bar
+     and the number it labels always finish together. */
+  transition: transform var(--ov-ramp) var(--ov-ease-standard);
+  will-change: transform;
 }
 
 .m3-linear-stop {
-  width: 4px;
-  height: 4px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--md-sys-shape-corner-full);
   background-color: var(--md-sys-color-primary);
   flex-shrink: 0;
@@ -209,4 +237,434 @@ body {
 .nav-scroll-fade::-webkit-scrollbar-thumb {
   background: var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-full);
+}
+/* ---------------------------------------------------------------------
+   Overview pending state
+   A card with no live reading yet should look deliberately pending, not
+   broken. The em-dash is rendered at the same font-size as a real figure
+   (so layout never jumps), but at a fraction of the visual weight.
+   --------------------------------------------------------------------- */
+/* Tuned after looking at it: 0.38 made a pending card read as a card that
+   had shrunk. 0.62 keeps the same visual mass as a live figure while still
+   reading unmistakably as "not a measurement yet". */
+.overview-pending {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.62;
+  font-weight: 400;
+}
+
+.overview-pending-caption {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.5;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* A frozen 0%-width track reads as a broken bar. Dim it and stop the stop
+   dot from implying a completed indicator while data is still pending. */
+.m3-linear-progress[aria-hidden='true'] .m3-linear-track {
+  opacity: 0.35;
+}
+
+.m3-linear-progress[aria-hidden='true'] .m3-linear-stop {
+  opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-linear-indicator {
+    transition: none;
+  }
+}
+
+/* =====================================================================
+   Animated Overview card icons + card hover.
+
+   Every duration and curve below is a verified Material 3 Web token
+   (material-web tokens/versions/v0_192/_md-sys-motion.scss and
+   _md-sys-state.scss, as of 2026-10-01 UTC). The previous values
+   (240ms / cubic-bezier(0.16, 1, 0.3, 1)) were not M3 tokens at all.
+
+     duration  short3 150ms · medium2 300ms · long2 500ms
+     easing    standard  cubic-bezier(0.2, 0, 0, 1)
+               standard-decelerate     cubic-bezier(0, 0, 0, 1)
+               emphasized-decelerate  cubic-bezier(0.05, 0.7, 0.1, 1)
+     state     hover 8% · focus 10% · pressed 10% · dragged 16%
+
+   Property routing follows M3's rule: translation/scale are spatial and
+   ride the emphasized-decelerate curve; opacity and colour are effects and
+   ride standard-decelerate. Nothing overshoots.
+   ===================================================================== */
+
+:root {
+  /* Fallback for first paint; src/App.jsx overwrites this with the real
+     TELEMETRY_RAMP_MS on mount so the two can never disagree. */
+  --ov-ramp: 1500ms;
+  --ov-dur-short: 150ms;
+  --ov-dur-medium: 300ms;
+  --ov-dur-long: 500ms;
+  --ov-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ov-ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ov-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ov-state-hover: 8%;
+  --ov-state-focus: 10%;
+  --ov-state-pressed: 10%;
+}
+
+.overview-card {
+  /* Without its own stacking context a hovered card lifts on transform but
+     is painted UNDER later siblings, so the CPU card would slide out of
+     sight behind the next one. Own the layer, and raise it on hover. */
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+  /* No overflow:hidden here. The cost tooltip is a DOM descendant of a trigger
+     inside this card, so clipping the card also clips the tooltip and traps it
+     inside the box. The state layer below gets the card's radius instead. */
+  transition:
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized),
+    box-shadow var(--ov-dur-medium) var(--ov-ease-standard),
+    border-color var(--ov-dur-short) var(--ov-ease-standard);
+}
+
+.overview-card:hover,
+.overview-card:focus-within {
+  z-index: 2;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.16);
+}
+
+.overview-card:active {
+  transform: translateY(-1px) scale(0.997);
+}
+
+/* M3 state layer: one content-coloured wash between container and content.
+   It sits under the content via isolation + negative z, never over the text. */
+.overview-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity var(--ov-dur-short) var(--ov-ease-standard);
+}
+.overview-card:hover::after   { opacity: 0.08; }
+.overview-card:focus-visible::after { opacity: 0.10; }
+.overview-card:active::after  { opacity: 0.10; }
+
+.overview-card-icon-shell {
+  position: relative;
+  z-index: 1;
+  transition:
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized),
+    background-color var(--ov-dur-short) var(--ov-ease-standard);
+}
+.overview-card:hover .overview-card-icon-shell {
+  transform: translateY(-1px) scale(1.04);
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.overview-card-icon {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  overflow: visible;
+  transition:
+    transform var(--ov-dur-medium) var(--ov-ease-emphasized),
+    filter var(--ov-dur-short) var(--ov-ease-standard);
+}
+.overview-card:hover .overview-card-icon {
+  transform: translateY(-0.5px) scale(1.04);
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.2));
+}
+
+/* Stroke draw-on: a spatial reveal, so it rides the emphasized curve at
+   medium2 rather than the previous unverified 240ms. */
+.overview-icon-draw {
+  stroke-dasharray: var(--overview-icon-dash);
+  stroke-dashoffset: var(--overview-icon-dash);
+  animation: overview-icon-draw-on var(--ov-dur-medium) var(--ov-ease-emphasized) both;
+}
+
+.overview-icon-depth {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform var(--ov-dur-medium) var(--ov-ease-emphasized);
+}
+.overview-card:hover .overview-icon-depth {
+  transform: translate(0.65px, 0.65px);
+}
+
+.overview-card-icon-active .overview-icon-active,
+.overview-card-icon-active {
+  animation: overview-icon-breathe var(--ov-dur-long) var(--ov-ease-emphasized) both;
+}
+
+@keyframes overview-icon-draw-on {
+  from { stroke-dashoffset: var(--overview-icon-dash); }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes overview-icon-breathe {
+  0%   { transform: scale(1); }
+  58%  { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-card,
+  .overview-card-icon-shell,
+  .overview-card-icon,
+  .overview-icon-draw,
+  .overview-icon-depth {
+    transition: none !important;
+    animation: none !important;
+  }
+  .overview-card:hover,
+  .overview-card:active,
+  .overview-card:focus-within {
+    transform: none;
+    box-shadow: none;
+  }
+  .overview-card::after { transition-duration: 1ms; }
+  .overview-card:hover .overview-card-icon-shell,
+  .overview-card:hover .overview-card-icon,
+  .overview-card:hover .overview-icon-depth {
+    transform: none;
+    filter: none;
+  }
+  .overview-icon-draw { stroke-dashoffset: 0; }
+}
+
+/* =====================================================================
+   Inside-the-icon motion.
+
+   The card icons used to animate only once on mount (a stroke draw that is
+   already over by the time you look at the page) plus a 0.65px hover shift,
+   which reads as nothing happening. These give each icon something that is
+   actually alive:
+
+     CPU     an arc orbits at a speed set by the real CPU percentage
+     Memory  the module fills to the real RAM percentage
+     Cost    light sweeps once around the coin rim
+     Models  each layer lifts in a staggered wave
+
+   Motion routing follows M3: the orbit and sweep are spatial so they ride
+   the emphasized curve; opacity on the load fills is an effect and uses the
+   decelerate curve, so nothing overshoots.
+   ===================================================================== */
+
+/* Resting state: animations disabled when idle to avoid processor spikes */
+.overview-icon-orbit,
+.overview-cpu-core,
+.overview-memory-bus,
+.overview-coin-sheen {
+  animation: none;
+}
+
+/* While hovered OR during the 5-second grace period: loop actively */
+.overview-card:hover .overview-icon-orbit,
+.overview-card.is-animating .overview-icon-orbit {
+  animation: overview-icon-orbit 1.8s linear infinite;
+}
+@keyframes overview-icon-orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.overview-icon-sweep {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.overview-card:hover .overview-icon-sweep,
+.overview-card.is-animating .overview-icon-sweep {
+  animation: overview-icon-sweep 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes overview-icon-sweep {
+  0%   { transform: rotate(0deg);   opacity: 0; }
+  12%  { opacity: 0.72; }
+  50%  { transform: rotate(190deg); opacity: 0.5; }
+  88%  { opacity: 0.72; }
+  100% { transform: rotate(360deg); opacity: 0; }
+}
+
+/* Load fills. Opacity is an effect: decelerate, no overshoot. The value is the
+   real percentage, so a busy machine visibly reads as busier. */
+.overview-icon-load {
+  opacity: calc(0.16 + var(--overview-load, 0) * 0.62);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity var(--ov-dur-long) var(--ov-ease-decelerate);
+}
+
+/* Dual CPU Core Die Pulse - active on hover + 5s cooldown */
+.overview-cpu-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: calc(0.5 + var(--overview-load, 0) * 0.4);
+}
+.overview-card:hover .overview-cpu-core,
+.overview-card.is-animating .overview-cpu-core {
+  animation: overview-core-pulse 1.8s ease-in-out infinite;
+}
+@keyframes overview-core-pulse {
+  0%, 100% { opacity: calc(0.45 + var(--overview-load, 0) * 0.45); transform: scale(1); }
+  50%      { opacity: calc(0.75 + var(--overview-load, 0) * 0.25); transform: scale(1.05); }
+}
+
+/* Staggered Neural Layer Floating Wave (Preserved for Model Provider) */
+.overview-neural-layer {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: overview-neural-float 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.overview-neural-layer:nth-of-type(1) { animation-delay: 0ms; }
+.overview-neural-layer:nth-of-type(2) { animation-delay: 260ms; }
+.overview-neural-layer:nth-of-type(3) { animation-delay: 520ms; }
+@keyframes overview-neural-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3.2px); }
+}
+
+/* Currency Coin Sheen & Glow - active on hover + 5s cooldown */
+.overview-coin-sheen {
+  opacity: 0.75;
+}
+.overview-card:hover .overview-coin-sheen,
+.overview-card.is-animating .overview-coin-sheen {
+  animation: overview-sheen-pulse 2s ease-in-out infinite;
+}
+@keyframes overview-sheen-pulse {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; filter: drop-shadow(0 0 2px var(--md-sys-color-primary)); }
+}
+.overview-coin-glow {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+/* Active memory bus flow - active on hover + 5s cooldown */
+.overview-memory-bus {
+  stroke-dasharray: 4 6;
+}
+.overview-card:hover .overview-memory-bus,
+.overview-card.is-animating .overview-memory-bus {
+  animation: overview-bus-flow 1.6s linear infinite;
+}
+@keyframes overview-bus-flow {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.overview-memory-chip {
+  transition: opacity var(--ov-dur-medium) var(--ov-ease-standard),
+              fill var(--ov-dur-medium) var(--ov-ease-standard);
+}
+
+/* A hover depth shift of 0.65px was invisible; 2px reads as a lift. Spatial
+   property, so it rides the emphasized curve at medium2. */
+.overview-card:hover .overview-icon-depth {
+  transform: translate(1.4px, 1.4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-icon-orbit,
+  .overview-icon-sweep,
+  .overview-icon-layer,
+  .overview-cpu-core,
+  .overview-neural-layer,
+  .overview-coin-sheen,
+  .overview-memory-bus {
+    animation: none !important;
+  }
+  .overview-icon-load,
+  .overview-memory-chip {
+    transition: none !important;
+  }
+  .overview-card:hover .overview-icon-depth {
+    transform: none;
+  }
+}
+
+/* The output-token cell deliberately keeps NO position, z-index or transform.
+   It previously carried `position: relative` for a hover lift, which promoted
+   it into a positioned box that painted over the tooltip's leader line - the
+   dandi then vanished behind the Input/Output boxes. A static element with no
+   transform cannot occlude the leader. */
+
+
+
+/* =====================================================================
+   Shared icon motion.
+
+   Every icon in this app is Lucide: viewBox "0 0 24 24", stroke-based, on
+   .lucide with path/circle/rect/line children. Rather than hand-animating
+   ~101 of them one by one, one layer covers the whole set.
+
+   Restrained on purpose: a 55-icon draw-in storm on page load reads as noise,
+   so motion is split into a single quick settle on entry and a self-tracing
+   stroke only on hover, when exactly one icon is under the cursor. Durations
+   and easings are the verified M3 tokens, not invented values.
+   ===================================================================== */
+
+.lucide {
+  transform-origin: center;
+  overflow: visible;
+  animation: lucide-settle var(--ov-dur-long) var(--ov-ease-emphasized) backwards;
+}
+
+.lucide path,
+.lucide circle,
+.lucide rect,
+.lucide line,
+.lucide polyline,
+.lucide polygon,
+.lucide ellipse {
+  transition: stroke-dashoffset var(--ov-dur-long) var(--ov-ease-standard);
+}
+
+/* Hover: the icon redraws its own outline. */
+.lucide:hover path,
+.lucide:hover circle,
+.lucide:hover rect,
+.lucide:hover line,
+.lucide:hover polyline,
+.lucide:hover polygon,
+.lucide:hover ellipse,
+a:hover > .lucide path,
+a:hover > .lucide circle,
+a:hover > .lucide rect,
+a:hover > .lucide line,
+button:hover > .lucide path,
+button:hover > .lucide circle,
+button:hover > .lucide rect,
+button:hover > .lucide line {
+  animation: lucide-trace 620ms var(--ov-ease-standard) forwards;
+}
+
+@keyframes lucide-settle {
+  from { opacity: 0; transform: translateY(3px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes lucide-trace {
+  from { stroke-dasharray: 48; stroke-dashoffset: 48; }
+  to   { stroke-dasharray: 48; stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lucide { animation: none; }
+  .lucide path,
+  .lucide circle,
+  .lucide rect,
+  .lucide line,
+  .lucide polyline,
+  .lucide polygon,
+  .lucide ellipse { transition: none; animation: none !important; }
+  .lucide:hover path,
+  .lucide:hover circle,
+  .lucide:hover rect,
+  .lucide:hover line { animation: none !important; }
 }

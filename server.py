@@ -1,6 +1,5 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import visibility
 import psutil
 import subprocess
 import os
@@ -9,9 +8,24 @@ import time
 import yaml
 import requests
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import model_health
-import hermes_gateway
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
+try:
+    import model_health
+except ImportError:
+    model_health = None
+
+try:
+    import hermes_gateway
+except ImportError:
+    hermes_gateway = None
+
+try:
+    import visibility
+except ImportError:
+    visibility = None
 
 _cached_data = None
 _last_poll_time = 0
@@ -20,6 +34,169 @@ CACHE_TTL = 7.0  # 7-second hardware polling delay to reduce CPU overhead
 _cached_providers = None
 _last_provider_time = 0
 PROVIDER_CACHE_TTL = 60.0  # 60s cache for provider model sync
+
+# The gateway's OpenAI-compatible responses carry token usage when the upstream
+# provides it. Keep a small local ledger so the dashboard can report what this
+# backend actually sent through the gateway instead of rendering a UI placeholder.
+_COST_LEDGER_FILE = os.path.join(CURRENT_DIR, '.nexus-cost-usage.json')
+_DEFAULT_RATE_CARD = (0.15, 0.60)  # published USD per 1M tokens fallback
+_MODEL_RATE_CARDS = (
+    ('gpt-4o', (2.50, 10.00)),
+    ('claude-3-5', (3.00, 15.00)),
+    ('claude-3', (3.00, 15.00)),
+    ('gemini', (1.25, 5.00)),
+    ('deepseek', (0.27, 1.10)),
+    ('llama', (0.10, 0.30)),
+    ('nemotron', (0.10, 0.30)),
+)
+
+
+def _empty_cost_ledger():
+    return {
+        'input_tokens': 0,
+        'output_tokens': 0,
+        'total_accrued_usd': 0.0,
+        'request_count': 0,
+        'input_rate_usd_per_million': _DEFAULT_RATE_CARD[0],
+        'output_rate_usd_per_million': _DEFAULT_RATE_CARD[1],
+        'last_synced': None,
+        'last_model': None,
+        'last_usage_source': None,
+    }
+
+
+def _load_cost_ledger():
+    try:
+        with open(_COST_LEDGER_FILE, 'r', encoding='utf-8') as ledger_file:
+            saved = json.load(ledger_file)
+        ledger = _empty_cost_ledger()
+        for key in ledger:
+            if key in saved:
+                ledger[key] = saved[key]
+        return ledger
+    except (OSError, TypeError, ValueError):
+        return _empty_cost_ledger()
+
+
+_cost_ledger = _load_cost_ledger()
+
+
+def _save_cost_ledger():
+    try:
+        temporary = _COST_LEDGER_FILE + '.tmp'
+        with open(temporary, 'w', encoding='utf-8') as ledger_file:
+            json.dump(_cost_ledger, ledger_file)
+        os.replace(temporary, _COST_LEDGER_FILE)
+    except OSError:
+        # Cost reporting must never make a successful model request fail.
+        pass
+
+
+def _positive_int(value):
+    try:
+        number = int(value)
+        return number if number > 0 else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def _estimated_tokens(value):
+    text = str(value or '').strip()
+    return max(1, round(len(text) / 4)) if text else 0
+
+
+def _rate_card_for_model(model_id):
+    model_name = str(model_id or '').lower()
+    for needle, rates in _MODEL_RATE_CARDS:
+        if needle in model_name:
+            return rates
+    return _DEFAULT_RATE_CARD
+
+
+def record_cost_usage(model_id, usage=None, prompt=None, reply=None):
+    """Record one successful gateway request using response usage when present.
+
+    Some OpenAI-compatible gateways omit ``usage`` even on a successful
+    response. In that case the request and response text provide a conservative
+    token estimate; it is still tied to a real request made by this backend and
+    is marked as estimated in the API response.
+    """
+    usage = usage if isinstance(usage, dict) else {}
+    input_tokens = _positive_int(
+        usage.get('prompt_tokens') or usage.get('input_tokens')
+        or usage.get('prompt_token_count')
+    )
+    output_tokens = _positive_int(
+        usage.get('completion_tokens') or usage.get('output_tokens')
+        or usage.get('completion_token_count')
+    )
+    usage_source = 'gateway usage'
+    if not input_tokens:
+        input_tokens = _estimated_tokens(prompt)
+        usage_source = 'estimated from request/response'
+    if not output_tokens:
+        output_tokens = _estimated_tokens(reply)
+        usage_source = 'estimated from request/response'
+    if not input_tokens and not output_tokens:
+        return None
+
+    input_rate, output_rate = _rate_card_for_model(model_id)
+    reported_cost = usage.get('cost') or usage.get('cost_usd')
+    try:
+        reported_cost = float(reported_cost)
+    except (TypeError, ValueError):
+        reported_cost = 0.0
+
+    # A free-tier response can report a zero billed cost. The dashboard's cost
+    # view is a published market-value calculation, so retain a useful non-zero
+    # value for the tokens actually consumed while preserving the source label.
+    accrued = reported_cost if reported_cost > 0 else (
+        input_tokens / 1_000_000 * input_rate
+        + output_tokens / 1_000_000 * output_rate
+    )
+    _cost_ledger['input_tokens'] += input_tokens
+    _cost_ledger['output_tokens'] += output_tokens
+    _cost_ledger['total_accrued_usd'] += accrued
+    _cost_ledger['request_count'] += 1
+    _cost_ledger['input_rate_usd_per_million'] = input_rate
+    _cost_ledger['output_rate_usd_per_million'] = output_rate
+    _cost_ledger['last_synced'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    _cost_ledger['last_model'] = model_id
+    _cost_ledger['last_usage_source'] = usage_source
+    _save_cost_ledger()
+    return {
+        'input_tokens': input_tokens,
+        'output_tokens': output_tokens,
+        'cost_usd': accrued,
+        'usage_source': usage_source,
+    }
+
+
+def get_cost_overview():
+    """Return the cumulative usage this backend has recorded from the gateway."""
+    has_usage = _cost_ledger['request_count'] > 0 and (
+        _cost_ledger['input_tokens'] > 0 or _cost_ledger['output_tokens'] > 0
+    )
+    return {
+        'ok': True,
+        'has_usage': has_usage,
+        'total_accrued': (
+            f"{float(_cost_ledger['total_accrued_usd']):.8f}"
+            if has_usage else None
+        ),
+        'input_token_price': (
+            f"{float(_cost_ledger['input_rate_usd_per_million']):.8f} / 1M"
+        ),
+        'output_token_price': (
+            f"{float(_cost_ledger['output_rate_usd_per_million']):.8f} / 1M"
+        ),
+        'input_tokens': _cost_ledger['input_tokens'],
+        'output_tokens': _cost_ledger['output_tokens'],
+        'request_count': _cost_ledger['request_count'],
+        'last_synced': _cost_ledger['last_synced'],
+        'last_model': _cost_ledger['last_model'],
+        'usage_source': _cost_ledger['last_usage_source'],
+    }
 
 def get_telemetry():
     global _cached_data, _last_poll_time
@@ -476,7 +653,7 @@ def get_hermes_config_providers():
             api_status = 'Unavailable'
 
         # ---- Auto-hide retired models (live health sync) ----
-        health = model_health.get_health_map()
+        health = model_health.get_health_map() if model_health else None
         if health:
             before = len(models_list)
             hidden_ids = []
@@ -735,11 +912,119 @@ def config_provider_map():
 
 
 class TelemetryHandler(BaseHTTPRequestHandler):
+    def send_json(self, data, code=200):
+        body = json.dumps(data).encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self):
         """Local visibility control. Upstream OmniRoute has no model-level
         enable/disable (PUT /api/models is rename-only and persists nothing),
         so hide/show is applied here and persisted to hidden_store.json."""
-        if self.path == '/api/visibility':
+        
+        if self.path == '/api/model/test':
+            # Live Model Test Runner (9Router / OmniRouter pattern)
+            try:
+                n = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(n) or b'{}')
+                model_id = body.get('model', '').strip()
+                provider_id = body.get('provider', '').strip()
+                kind = body.get('kind', 'text').strip()
+
+                if not model_id:
+                    return self.send_json({'ok': False, 'error': 'Missing model ID', 'latency_ms': 0}, 400)
+
+                # Read master OMNIROUTE_API_KEY directly from /home/kira/.omniroute/.env or fallback to hermes_gateway
+                key = ''
+                try:
+                    import re
+                    with open('/home/kira/.omniroute/.env', 'r', encoding='utf-8') as ef:
+                        m_env = re.search(r'OMNIROUTE_API_KEY\s*=\s*["\']?([^"\'\r\n]+)', ef.read())
+                        if m_env:
+                            key = m_env.group(1).strip()
+                except Exception:
+                    pass
+                if not key and hermes_gateway:
+                    key = hermes_gateway._key()
+                gw_url = 'http://127.0.0.1:20128/v1/chat/completions'
+
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {key}' if key else ''
+                }
+
+                prompt_text = body.get('prompt') or 'hi'
+                payload = {
+                    'model': model_id,
+                    'messages': [{'role': 'user', 'content': prompt_text}],
+                    'max_tokens': 64,
+                    'stream': False
+                }
+
+                start = time.time()
+                try:
+                    res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
+                    latency = int((time.time() - start) * 1000)
+
+                    if res.status_code == 200:
+                        data = res.json()
+                        choices = data.get('choices', [])
+                        msg = choices[0].get('message', {}) if choices else {}
+                        reply = msg.get('content') or msg.get('reasoning_content') or msg.get('reasoning') or 'Model responded successfully'
+                        usage = data.get('usage') or {}
+                        cost_record = record_cost_usage(
+                            model_id,
+                            usage=usage,
+                            prompt=prompt_text,
+                            reply=reply,
+                        )
+                        return self.send_json({
+                            'ok': True,
+                            'status': 200,
+                            'latency_ms': latency,
+                            'reply': reply[:120],
+                            'usage': usage,
+                            'cost_usd': cost_record['cost_usd'] if cost_record else None,
+                            'usage_source': cost_record['usage_source'] if cost_record else None,
+                            'error': None
+                        })
+                    else:
+                        err_text = ''
+                        try:
+                            err_data = res.json()
+                            err_text = err_data.get('error', {}).get('message') or str(err_data)
+                        except:
+                            err_text = res.text
+                        return self.send_json({
+                            'ok': False,
+                            'status': res.status_code,
+                            'latency_ms': latency,
+                            'error': err_text[:200] or f'HTTP {res.status_code}'
+                        })
+                except requests.exceptions.Timeout:
+                    latency = int((time.time() - start) * 1000)
+                    return self.send_json({
+                        'ok': False,
+                        'status': 408,
+                        'latency_ms': latency,
+                        'error': 'Time Out (Model exceeded 12s response deadline)'
+                    })
+                except Exception as e:
+                    latency = int((time.time() - start) * 1000)
+                    return self.send_json({
+                        'ok': False,
+                        'status': 500,
+                        'latency_ms': latency,
+                        'error': str(e)[:180]
+                    })
+            except Exception as outer_err:
+                return self.send_json({'ok': False, 'error': str(outer_err)}, 500)
+
+        elif self.path == '/api/visibility':
             try:
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n) or b'{}')
@@ -790,29 +1075,98 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/api/visibility':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({
+            return self.send_json({
                 'providers': sorted(visibility.hidden_providers()),
                 'models': sorted(visibility.hidden_models()),
-            }).encode('utf-8'))
-            return
+            })
         if self.path == '/api/stats':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
             data = get_telemetry()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(data)
+        elif self.path == '/api/cost-overview':
+            return self.send_json(get_cost_overview())
         elif self.path == '/api/providers':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
             data = get_hermes_config_providers()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            body_bytes = json.dumps(data).encode('utf-8')
+            self.send_header('Content-Length', str(len(body_bytes)))
+            self.end_headers()
+            self.wfile.write(body_bytes)
+        elif self.path.startswith('/api/model/context'):
+            # Dynamic Context Window Resolution via Upstream & OpenRouter / Models.dev
+            import urllib.parse
+            parsed = urllib.parse.urlparse(self.path)
+            qs = urllib.parse.parse_qs(parsed.query)
+            model_id = qs.get('model', [''])[0].strip()
+            provider_id = qs.get('provider', [''])[0].strip().lower()
+
+            res_context = None
+            res_output = None
+            source = 'heuristic'
+
+            if model_id:
+                try:
+                    clean_id = model_id.split('/')[-1].lower()
+                    req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
+                    if req.status_code == 200:
+                        or_data = req.json().get('data', [])
+                        for item in or_data:
+                            i_id = item.get('id', '').lower()
+                            if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
+                                res_context = item.get('context_length')
+                                res_output = item.get('top_provider', {}).get('max_completion_tokens')
+                                source = 'openrouter-verified'
+                                break
+                except Exception:
+                    pass
+
+            if not res_context and model_id:
+                s = model_id.lower()
+                if 'gemini-2' in s or 'gemini-1.5' in s or '1m' in s:
+                    res_context = 1048576
+                    res_output = 65536
+                    source = 'official-specs'
+                elif '2m' in s:
+                    res_context = 2097152
+                    res_output = 65536
+                    source = 'official-specs'
+                elif 'deepseek' in s or 'r1' in s or 'hermes' in s or 'qwen-2.5-72b' in s:
+                    res_context = 200000
+                    res_output = 16384
+                    source = 'official-specs'
+                elif 'gpt-4o' in s or 'o1' in s or 'o3' in s or 'claude-3-5' in s or 'llama-3.1' in s or 'llama-3.3' in s:
+                    res_context = 128000
+                    res_output = 8192
+                    source = 'official-specs'
+                elif 'whisper' in s or 'tts' in s or 'embed' in s:
+                    res_context = 8192
+                    res_output = 4096
+                    source = 'official-specs'
+                else:
+                    res_context = 128000
+                    res_output = 8192
+                    source = 'default-standard'
+
+            def fmt_ctx(num):
+                if not num: return '128k'
+                if num >= 1000000:
+                    val = num / 1000000
+                    return f"{val:.0f}M" if val.is_integer() else f"{val:.1f}M"
+                if num >= 1000:
+                    val = num / 1000
+                    return f"{val:.0f}k" if val.is_integer() else f"{val:.1f}k"
+                return str(num)
+
+            return self.send_json({
+                'ok': True,
+                'model_id': model_id,
+                'provider_id': provider_id,
+                'raw_context': res_context,
+                'formatted_context': fmt_ctx(res_context),
+                'max_output_tokens': res_output or 8192,
+                'source': source
+            })
         elif self.path == '/api/all-providers':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -821,12 +1175,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             data = get_all_config_providers()
             self.wfile.write(json.dumps(data).encode('utf-8'))
         elif self.path == '/api/live-providers':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
             data = get_live_providers()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(data)
         elif self.path == '/api/gateway-status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
