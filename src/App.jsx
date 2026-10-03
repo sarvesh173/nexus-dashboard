@@ -483,55 +483,163 @@ const CpuActiveIcon = ({ load = 0 }) => {
   );
 };
 
-const ModelsMetricIcon = () => (
-  <IconFrame>
+const ModelsStaticIcon = () => (
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 32 32"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="overview-models-svg overview-models-static"
+    aria-hidden="true"
+  >
+    {/* Clean reference orbit (invisible at rest) */}
+    <circle
+      cx="16" cy="16" r="13.5" fill="none"
+      stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
+      opacity="0"
+    />
+
     {/* Neural Layer 1 (Top / Input Latent Space) */}
-    <g className="overview-neural-layer">
+    <path
+      d="M16 6 L25 11 L16 16 L7 11 Z"
+      fill="var(--md-sys-color-surface-container-highest)"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+    />
+
+    {/* Synaptic Core Node (Top Center) */}
+    <circle cx="16" cy="11" r="2" fill="var(--md-sys-color-primary)" />
+
+    {/* Provider Corner Nodes */}
+    <circle cx="7" cy="11" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+    <circle cx="25" cy="11" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+    <circle cx="16" cy="6" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+    <circle cx="16" cy="16" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+
+    {/* Neural Layer 2 (Middle / Transformer Attention Plane) */}
+    <path
+      d="M7 16 L16 21 L25 16"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity="0.8"
+    />
+
+    {/* Interconnect Vectors */}
+    <path
+      d="M16 16.5 V19.5 M10 13 V16 M22 13 V16"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="0.85"
+      strokeDasharray="1.5 1.5"
+      opacity="0.6"
+    />
+
+    {/* Neural Layer 3 (Bottom / Output Projection & Providers) */}
+    <path
+      d="M7 21 L16 26 L25 21"
+      fill="none"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity="0.9"
+    />
+  </svg>
+);
+
+const ModelsActiveIcon = () => (
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 32 32"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="overview-models-svg overview-models-active"
+    aria-hidden="true"
+  >
+    <defs>
+      <radialGradient id="models-macro-glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.35" />
+        <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
+      </radialGradient>
+    </defs>
+
+    {/* Ambient breathing halo */}
+    <circle
+      cx="16" cy="16" r="14"
+      fill="url(#models-macro-glow)"
+      className="overview-models-halo"
+    />
+
+    {/* Bold sweeping neural telemetry orbit ring (Visible from 3 feet away at 100%!) */}
+    <circle
+      className="overview-models-orbit"
+      cx="16" cy="16" r="13.5" fill="none"
+      stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
+      strokeLinecap="round" strokeDasharray="18 13.9 18 13.9"
+      opacity="0.9"
+    />
+
+    {/* Neural Layer 1 (Top / Input Latent Space) - Floating Wave */}
+    <g className="overview-models-layer-0">
       <path
-        d="M16 4.5 L26.5 10 L16 15.5 L5.5 10 Z"
-        fill="var(--md-sys-color-primary)"
-        fillOpacity="0.25"
+        d="M16 6 L25 11 L16 16 L7 11 Z"
+        fill="var(--md-sys-color-surface-container-highest)"
         stroke="var(--md-sys-color-primary)"
         strokeWidth="1.4"
         strokeLinejoin="round"
       />
-      {/* Central Synaptic Nucleus */}
-      <circle cx="16" cy="10" r="1.8" fill="var(--md-sys-color-primary)" />
+      {/* Active Synaptic Core Node with Compute Glow */}
+      <circle
+        cx="16" cy="11" r="2.2"
+        fill="var(--md-sys-color-primary)"
+        className="overview-models-core"
+      />
+      {/* Provider Corner Nodes */}
+      <circle cx="7" cy="11" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
+      <circle cx="25" cy="11" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
+      <circle cx="16" cy="6" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
+      <circle cx="16" cy="16" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
     </g>
-    {/* Neural Layer 2 (Middle / Multi-Head Attention) */}
-    <g className="overview-neural-layer">
+
+    {/* Neural Layer 2 (Middle Attention Plane) */}
+    <g className="overview-models-layer-1">
       <path
-        d="M5.5 15 L16 20.5 L26.5 15"
+        d="M7 16 L16 21 L25 16"
         fill="none"
         stroke="var(--md-sys-color-primary)"
         strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.8"
+        opacity="0.85"
       />
       {/* Interconnect Vectors */}
       <path
-        d="M16 15.5 V19 M10 12.5 V16 M22 12.5 V16"
-        fill="none"
-        stroke="var(--md-sys-color-on-surface-variant)"
+        d="M16 16.5 V19.5 M10 13 V16 M22 13 V16"
+        stroke="var(--md-sys-color-primary)"
         strokeWidth="0.9"
-        strokeDasharray="1.5 2"
-        opacity="0.6"
+        strokeDasharray="1.5 1.5"
+        opacity="0.7"
       />
     </g>
-    {/* Neural Layer 3 (Bottom / Output Projection) */}
-    <g className="overview-neural-layer">
+
+    {/* Neural Layer 3 (Bottom Output / Provider Stack) */}
+    <g className="overview-models-layer-2">
       <path
-        d="M5.5 20 L16 25.5 L26.5 20"
+        d="M7 21 L16 26 L25 21"
         fill="none"
-        stroke="var(--md-sys-color-on-surface)"
+        stroke="var(--md-sys-color-primary)"
         strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.9"
+        opacity="0.95"
       />
     </g>
-  </IconFrame>
+  </svg>
 );
 
 const MemoryStaticIcon = () => (
@@ -4639,6 +4747,7 @@ export default function App() {
   const costHover = useHoverGraceTimer(5000);
   const cpuHover = useHoverGraceTimer(5000);
   const memoryHover = useHoverGraceTimer(5000);
+  const modelsHover = useHoverGraceTimer(5000);
 
   const fetchStats = async () => {
     setIsRefreshing(true);
@@ -5551,10 +5660,22 @@ export default function App() {
                   </div>
 
                   {/* CARD 4: Models & Providers */}
-                  <div className="overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer" onClick={() => navigate('/model')}>
+                  <div
+                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer ${modelsHover.isActive ? 'is-animating' : ''}`}
+                    onClick={() => navigate('/model')}
+                    onMouseEnter={modelsHover.onMouseEnter}
+                    onMouseLeave={modelsHover.onMouseLeave}
+                  >
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                          {modelsHover.isActive ? (
+                            <ModelsActiveIcon />
+                          ) : (
+                            <ModelsStaticIcon />
+                          )}
+                        </div>
                       </div>
 
                       <div className="my-2 flex items-baseline gap-6">

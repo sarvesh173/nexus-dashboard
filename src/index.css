@@ -756,6 +756,82 @@ body {
   50%      { opacity: 1; filter: drop-shadow(0 0 2.5px var(--md-sys-color-primary)); }
 }
 
+/* =========================================================================
+   OVERVIEW MODELS & PROVIDERS ICON (BOLD MACRO MOTION - VISIBLE AT 100%)
+   ========================================================================= */
+
+.overview-models-static {
+  transform: none;
+  filter: none;
+}
+
+.overview-models-active .overview-models-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: models-halo-pulse 2.2s ease-in-out infinite;
+}
+
+/* Bold sweeping neural telemetry orbit - visible without zooming in! */
+.overview-models-active .overview-models-orbit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: models-orbit-sweep 2.6s linear infinite;
+}
+
+/* Neural stack vertical breathing wave */
+.overview-models-active .overview-models-layer-0 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: models-layer-float 2s ease-in-out infinite;
+}
+
+.overview-models-active .overview-models-layer-1 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: models-layer-float 2s ease-in-out infinite 0.25s;
+}
+
+.overview-models-active .overview-models-layer-2 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: models-layer-float 2s ease-in-out infinite 0.5s;
+}
+
+/* Synaptic nucleus glow */
+.overview-models-active .overview-models-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: models-core-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes models-halo-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.96); }
+  50%      { opacity: 0.75; transform: scale(1.06); }
+}
+
+@keyframes models-orbit-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes models-layer-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.2px); }
+}
+
+@keyframes models-core-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 1px var(--md-sys-color-primary));
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--md-sys-color-primary));
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 /* Active memory bus flow - active on hover + 5s cooldown */
 .overview-memory-bus {
   stroke-dasharray: 4 6;
