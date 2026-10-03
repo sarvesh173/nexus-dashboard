@@ -113,7 +113,7 @@ function AgentSessionView({ navigate }) {
           <button
             onClick={() => navigate('/agents')}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] text-[var(--md-sys-color-on-surface)] transition-all active:scale-95 border border-[var(--md-sys-color-outline-variant)] shadow-sm"
-            title="Press ESC or Click to Close"
+
           >
             <span>Close (ESC)</span>
           </button>
@@ -1963,7 +1963,7 @@ function InteractiveModelPill({ model, telemetry, onSelect, align = null }) {
           <div className="w-64 p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_60px_rgba(0,0,0,0.7)] ring-1 ring-white/10 font-mono text-[10.5px] space-y-2.5 text-[var(--md-sys-color-on-surface)]">
             {/* Context Header */}
             <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-              <span className="font-bold text-[var(--md-sys-color-on-surface)] truncate max-w-[140px]" title={model.name || model.id}>
+              <span className="font-bold text-[var(--md-sys-color-on-surface)] truncate max-w-[140px]">
                 {model.name || model.id}
               </span>
               <span className="text-[9px] uppercase font-semibold text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 px-2 py-0.5 rounded-full border border-[var(--md-sys-color-primary)]/30">
@@ -2051,7 +2051,7 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
                   <div
                     key={m.id || i}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[var(--md-sys-color-surface-container)] text-[10px] text-[var(--md-sys-color-on-surface)] truncate hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)]/50"
-                    title={m.name || m.id}
+
                   >
                     <span className="w-1 h-1 rounded-full bg-[var(--md-sys-color-primary)] shrink-0" />
                     <span className="truncate">{m.name || m.id}</span>
@@ -2255,7 +2255,7 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
             onClick={handleAutoDetect}
             disabled={isFetchingAuto}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
-            title="Query real-time upstream context from live verified registry"
+
           >
             <RefreshCw size={12} className={isFetchingAuto ? 'animate-spin' : ''} />
             <span>{isFetchingAuto ? 'Querying API…' : 'Auto Fetch'}</span>
@@ -2365,7 +2365,7 @@ function ModelConfigModal({ model, currentConfig, onSave, onReset, onClose }) {
             <button
               type="button"
               onClick={handleReset}
-              title="Restore catalog original context & token limits"
+
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium text-rose-400/90 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs"
             >
               <Undo2 size={13} />
@@ -3171,7 +3171,7 @@ function ProviderEditModal({ provider, overrides, onSave, onReset, onClose }) {
           <button
             type="button"
             onClick={handleReset}
-            title="Purge custom uploaded image and restore official upstream logo"
+
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-rose-400/90 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 active:scale-95 transition-all cursor-pointer shadow-xs"
           >
             <Undo2 size={13} />
@@ -3219,7 +3219,7 @@ function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onToggleSelec
               ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_2px_8px_rgba(124,58,237,0.35)] scale-110 ring-2 ring-[var(--md-sys-color-primary)]/50'
               : 'bg-[var(--md-sys-color-surface-container-highest)]/85 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:scale-105'
           }`}
-          title=""
+
         >
           <svg
             viewBox="0 0 16 16"
@@ -5340,7 +5340,7 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() => setPalettePickerOpen(!palettePickerOpen)}
-              title="Material 3 Dynamic Themes"
+
               className="p-1.5 sm:p-2 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all active:scale-90"
             >
               <Palette size={15} />
@@ -5465,7 +5465,6 @@ export default function App() {
                         setCurrencyCode(next);
                       }}
                       className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] active:scale-95 transition-all flex items-center gap-1.5 text-xs font-bold font-mono shadow-2xs cursor-pointer"
-                      title={`Global Currency: ${activeCurrency.name} (${activeCurrency.symbol}) — Click to switch INR/USD/EUR/GBP/JPY`}
                     >
                       <span>{activeCurrency.flag}</span>
                       <span>{activeCurrency.symbol} {activeCurrency.id}</span>
@@ -5514,7 +5513,7 @@ export default function App() {
                             <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)] inline-block">
                               {costHasUsage
                                 ? convertFromUsd(costOverview.total_accrued, activeCurrency)
-                                : <span className="overview-pending" title="No gateway usage recorded yet">—</span>}
+                                : <span className="overview-pending">—</span>}
                             </span>
                           }
                         />
@@ -5750,7 +5749,7 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div className="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
                       <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider block font-semibold">Total Cumulative Spend</span>
-                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{costHasUsage ? convertFromUsd(costOverview.total_accrued, activeCurrency) : <span className="overview-pending" title="No gateway usage recorded yet">—</span>}</span>
+                      <span className="text-2xl font-bold font-mono text-[var(--md-sys-color-on-surface)] mt-1 block">{costHasUsage ? convertFromUsd(costOverview.total_accrued, activeCurrency) : <span className="overview-pending">—</span>}</span>
                       <span className="text-[10px] text-[var(--md-sys-color-primary)] font-mono">{costLoadState === 'error' ? 'Backend unreachable' : costHasUsage ? 'From gateway usage ledger' : 'No gateway usage recorded yet'}</span>
                     </div>
 
@@ -5780,7 +5779,7 @@ export default function App() {
                         <button
                           onClick={() => setSelectedProviderId(null)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs"
-                          title="Back to Providers"
+
                         >
                           <ArrowLeft size={14} />
                           <span>All Providers</span>
@@ -5800,7 +5799,7 @@ export default function App() {
                               setEditingProvider(currentProvider);
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer group"
-                            title="Edit provider name and logo"
+
                           >
                             <Edit2 size={13} className="svg-anim-edit transition-transform" />
                             <span>Edit Provider</span>
@@ -5814,7 +5813,7 @@ export default function App() {
                               setIsFetchModalOpen(true);
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
-                            title="Fetch newly released models for this provider"
+
                           >
                             <DownloadCloud size={13} className="text-cyan-400 svg-anim-fetch transition-transform" />
                             <span>Fetch</span>
@@ -5828,7 +5827,7 @@ export default function App() {
                               setIsAddModalOpen(true);
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
-                            title="Add model manually by name"
+
                           >
                             <Plus size={13} className="text-emerald-400 svg-anim-add transition-transform" />
                             <span>Add</span>
@@ -5898,7 +5897,7 @@ export default function App() {
                                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30 hover:scale-105'
                                 : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:scale-105'
                             }`}
-                            title=""
+
                           >
                             <svg viewBox="0 0 16 16" className="w-3 h-3 stroke-current stroke-2 fill-none">
                               <rect x="2" y="2" width="12" height="12" rx="3" />
@@ -5986,7 +5985,7 @@ export default function App() {
                               handleCancelAll();
                             }}
                             className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1.5 active:scale-95 whitespace-nowrap cursor-pointer"
-                            title=""
+
                           >
                             <span className={`w-3.5 h-3.5 rounded-sm flex items-center justify-center border transition-all ${
                               currentSelectionCount === (visibleProviders.length || 1)
@@ -6165,7 +6164,7 @@ export default function App() {
                                               return (
                                                 <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
                                                   <div className="flex items-center justify-between text-[10px]">
-                                                    <span className="font-semibold truncate max-w-[70px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
+                                                    <span className="font-semibold truncate max-w-[70px] text-[var(--md-sys-color-on-surface)]">
                                                       {p.display_name || p.name || p.id}
                                                     </span>
                                                     <span className="text-[7.5px] text-emerald-400 font-mono">{(p.models && p.models.length) || 0}m</span>
@@ -6295,7 +6294,7 @@ export default function App() {
                                                 return (
                                                   <div key={idx} className="p-1 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-0.5 hover:border-rose-500/30 transition-all duration-150">
                                                     <div className="flex items-center justify-between text-[9.5px]">
-                                                      <span className="font-semibold truncate max-w-[70px] text-[var(--md-sys-color-on-surface)]" title={p.display_name || p.name || p.id}>
+                                                      <span className="font-semibold truncate max-w-[70px] text-[var(--md-sys-color-on-surface)]">
                                                         {p.display_name || p.name || p.id}
                                                       </span>
                                                       <span className="text-[7.5px] text-rose-400 font-mono">Offline</span>
@@ -6397,7 +6396,7 @@ export default function App() {
                             key={h.kind + ':' + h.id}
                             onClick={() => setVisibility(
                               h.kind, h.id, false)}
-                            title={'Restore ' + h.label}
+
                             className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-mono border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] transition-colors"
                           >
                             {h.label}
@@ -6508,7 +6507,7 @@ export default function App() {
                         >
                           {/* Corner resize handle with LIVE GLOBAL synchronization across all cards */}
                           <div
-                            title="Drag to resize all cards (Strict min limit enforced)"
+
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
@@ -6598,7 +6597,7 @@ export default function App() {
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 min-w-0">
                                           <h3
-                                            title={cardName}
+
                                             className={`font-bold ${isUltraCompact ? 'text-xs' : isCompact ? 'text-sm' : 'text-base'} leading-tight text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors truncate min-w-0 flex-1`}
                                           >
                                             {cardName}
@@ -6620,7 +6619,7 @@ export default function App() {
                                               onClick={(e) => e.stopPropagation()}
                                               className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--md-sys-color-primary)] hover:underline truncate max-w-full"
                                             >
-                                              <span className="truncate block" title={prov.website_url || prov.base_url || 'n/a'}>
+                                              <span className="truncate block">
                                                 Source: {prov.website_url || prov.base_url || 'n/a'}
                                               </span>
                                               <ExternalLink size={11} className="shrink-0" />
@@ -6847,7 +6846,7 @@ export default function App() {
                           disabled={isTestingAll || filteredModels.length === 0}
                           onClick={() => runTestAll(filteredModels)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
-                          title="Sequentially ping and test every model in this list"
+
                         >
                           <RefreshCw size={12} className={isTestingAll ? 'animate-spin' : ''} />
                           <span>{isTestingAll ? `Testing ${testAllProgress.current}/${testAllProgress.total}…` : 'Test All'}</span>
@@ -6859,7 +6858,7 @@ export default function App() {
                           onClick={() => handleHideAllInView(filteredModels)}
                           disabled={filteredModels.length === 0}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 border border-[var(--md-sys-color-outline-variant)] hover:border-rose-500/30 transition-all apple-pressable cursor-pointer shadow-xs"
-                          title="Hide all models in current category tab"
+
                         >
                           <EyeOff size={12} />
                           <span>Hide Section</span>
@@ -6871,7 +6870,7 @@ export default function App() {
                           onClick={() => handleHideAllInView(activeModelsPool)}
                           disabled={activeModelsPool.length === 0}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-rose-500/10 text-rose-400/90 border border-rose-500/20 hover:bg-rose-500/20 transition-all apple-pressable cursor-pointer shadow-xs"
-                          title="Hide all models under this provider"
+
                         >
                           <Trash size={12} />
                           <span>Hide All</span>
@@ -6933,7 +6932,7 @@ export default function App() {
                                   ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] opacity-100 scale-100'
                                   : 'bg-[var(--md-sys-color-surface-container-highest)] border-[var(--md-sys-color-outline-variant)] text-transparent hover:border-[var(--md-sys-color-primary)]'
                               }`}
-                              title={isMSelected ? "Deselect model" : "Select model"}
+
                             >
                               ✓
                             </button>
@@ -6954,7 +6953,7 @@ export default function App() {
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap min-w-0">
                                   <span
-                                    title={item.id ?? '—'}
+
                                     className="font-semibold text-sm sm:text-base text-[var(--md-sys-color-on-surface)] truncate max-w-full"
                                   >
                                     {item.name ?? '—'}
@@ -6970,9 +6969,6 @@ export default function App() {
                                       setVisibility('models', item.id,
                                         !hidden.models.includes(item.id));
                                     }}
-                                    title={hidden.models.includes(item.id)
-                                      ? 'Restore ' + (item.name ?? item.id)
-                                      : 'Hide ' + (item.name ?? item.id)}
                                     aria-label={(hidden.models.includes(item.id)
                                       ? 'Restore ' : 'Hide ')
                                       + (item.name ?? item.id)}
@@ -7025,15 +7021,6 @@ export default function App() {
                                         ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                                         : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/30'
                                     }`}
-                                    title={
-                                      isOk
-                                        ? `Passed in ${testRes.latency_ms}ms${testRes.reply ? ': ' + testRes.reply : ''}`
-                                        : isTimeout
-                                        ? 'Time Out: Model took > 12s to respond'
-                                        : isError
-                                        ? `Error: ${testRes.error}`
-                                        : 'Test model ping & live latency'
-                                    }
                                   >
                                     <Activity size={12} className={isTesting ? 'animate-spin' : ''} />
                                     <span>
@@ -7061,7 +7048,7 @@ export default function App() {
                                   setConfiguringModel(item);
                                 }}
                                 className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-amber-400 border border-[var(--md-sys-color-outline-variant)] hover:border-amber-500/40 hover:bg-amber-500/10 transition-all active:scale-95 shadow-xs cursor-pointer"
-                                title="Configure custom context window & token limits"
+
                               >
                                 <Sliders size={12} className="svg-anim-config transition-transform" />
                                 <span className="hidden sm:inline">Context</span>
@@ -7143,7 +7130,7 @@ export default function App() {
               <button
                 type="button"
                 className="group flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]/40 transition-all apple-pressable cursor-pointer shadow-xs"
-                title="Model Selector (Configuring provider lists…)"
+
               >
                 <Sparkles size={13} className="text-[var(--md-sys-color-primary)]" />
                 <span className="font-semibold">Select Model</span>
@@ -7155,7 +7142,7 @@ export default function App() {
                 type="button"
                 onClick={() => navigate('/model')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-semibold bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-primary)]/25 hover:bg-[var(--md-sys-color-primary)]/20 transition-all apple-pressable cursor-pointer shadow-xs"
-                title="Open Models & Providers Catalog"
+
               >
                 <Boxes size={13} />
                 <span>/model</span>
@@ -7255,7 +7242,7 @@ export default function App() {
                   type="submit"
                   disabled={!playgroundInput.trim() || isPlaygroundSending}
                   className="w-10 h-10 rounded-2xl bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all apple-pressable cursor-pointer shadow-md shrink-0 disabled:opacity-40"
-                  title="Send Test Message"
+
                 >
                   <Send size={15} />
                 </button>
@@ -7524,12 +7511,12 @@ export default function App() {
                             key={item.kind + ':' + item.id}
                             className="p-2.5 rounded-xl border border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-between gap-1 text-xs font-mono"
                           >
-                            <span className="truncate" title={item.id}>{item.label}</span>
+                            <span className="truncate">{item.label}</span>
                             <button
                               type="button"
                               onClick={() => setVisibility(item.kind, item.id, false)}
                               className="text-[10px] text-[var(--md-sys-color-primary)] hover:underline ml-1 cursor-pointer shrink-0"
-                              title={`Restore ${item.label}`}
+
                             >
                               Restore
                             </button>
