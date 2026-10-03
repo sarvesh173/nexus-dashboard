@@ -167,59 +167,155 @@ const IconFrame = ({ children, active = false }) => (
     {children}
   </svg>
 );
-const CostStaticIcon = ({ symbol = '$' }) => (
-  <IconFrame>
-    <circle
-      cx="16" cy="16" r="12" fill="none"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1.5"
-      opacity="0.85"
-    />
-    <circle
-      cx="16" cy="16" r="9.5" fill="var(--md-sys-color-primary)" fillOpacity="0.06"
-      stroke="var(--md-sys-color-primary)" strokeWidth="0.9"
-      strokeDasharray="2.5 2"
-      opacity="0.6"
-    />
-    <text
-      x="16" y={symbol === '₹' ? "20" : "20.5"}
-      textAnchor="middle"
-      fontSize={symbol && symbol.length > 2 ? "10" : (symbol === '₹' ? "13" : "13.5")}
-      fontWeight="700"
-      fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-      fill="var(--md-sys-color-primary)"
-    >
-      {symbol}
-    </text>
-  </IconFrame>
-);
+const CostStaticIcon = ({ symbol = '$' }) => {
+  const isMultiChar = symbol && symbol.length > 2;
+  const isRupee = symbol === '₹';
+  const fontSize = isMultiChar ? '10' : (isRupee ? '13' : '13.5');
+  const yPos = isRupee ? '20' : '20.5';
 
-const CostActiveIcon = ({ symbol = '$' }) => (
-  <IconFrame active>
-    <circle
-      cx="16" cy="16" r="12" fill="none"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1.5"
-      opacity="0.95"
-      className="overview-coin-sheen"
-    />
-    <circle
-      cx="16" cy="16" r="9.5" fill="var(--md-sys-color-primary)" fillOpacity="0.12"
-      stroke="var(--md-sys-color-primary)" strokeWidth="0.9"
-      strokeDasharray="3 2"
-      opacity="0.8"
-    />
-    <text
-      x="16" y={symbol === '₹' ? "20" : "20.5"}
-      textAnchor="middle"
-      fontSize={symbol && symbol.length > 2 ? "10" : (symbol === '₹' ? "13" : "13.5")}
-      fontWeight="800"
-      fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-      fill="var(--md-sys-color-primary)"
-      className="overview-coin-glow"
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="overview-cost-svg overview-cost-static"
+      aria-hidden="true"
     >
-      {symbol}
-    </text>
-  </IconFrame>
-);
+      {/* Precision outer minted rim */}
+      <circle
+        cx="16"
+        cy="16"
+        r="13"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.6"
+        opacity="0.85"
+      />
+      {/* Inner reeded security edge */}
+      <circle
+        cx="16"
+        cy="16"
+        r="10.2"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1"
+        strokeDasharray="2.2 1.8"
+        opacity="0.55"
+      />
+      {/* Frosted coin center base */}
+      <circle
+        cx="16"
+        cy="16"
+        r="8.2"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity="0.08"
+      />
+      {/* Crisp static currency symbol */}
+      <text
+        x="16"
+        y={yPos}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fontWeight="800"
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fill="var(--md-sys-color-primary)"
+      >
+        {symbol}
+      </text>
+    </svg>
+  );
+};
+
+const CostActiveIcon = ({ symbol = '$' }) => {
+  const isMultiChar = symbol && symbol.length > 2;
+  const isRupee = symbol === '₹';
+  const fontSize = isMultiChar ? '10' : (isRupee ? '13' : '13.5');
+  const yPos = isRupee ? '20' : '20.5';
+
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="overview-cost-svg overview-cost-active"
+      aria-hidden="true"
+    >
+      <defs>
+        {/* Dynamic radial glow */}
+        <radialGradient id="cost-coin-radial" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
+        </radialGradient>
+        {/* Specular sheen linear gradient */}
+        <linearGradient id="cost-sheen-sweep" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.1" />
+          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+
+      {/* Ambient coin radial halo */}
+      <circle
+        cx="16"
+        cy="16"
+        r="14"
+        fill="url(#cost-coin-radial)"
+        className="overview-cost-halo"
+      />
+
+      {/* Outer spinning luster track */}
+      <circle
+        cx="16"
+        cy="16"
+        r="13"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeDasharray="24 16 24 16"
+        className="overview-cost-outer-spin"
+      />
+
+      {/* Reverse counter-rotating reeded rim */}
+      <circle
+        cx="16"
+        cy="16"
+        r="10.2"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.1"
+        strokeDasharray="2.5 2"
+        className="overview-cost-inner-spin"
+      />
+
+      {/* Sweeping diagonal sheen ray */}
+      <line
+        x1="7"
+        y1="25"
+        x2="25"
+        y2="7"
+        stroke="url(#cost-sheen-sweep)"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        className="overview-cost-sheen-ray"
+      />
+
+      {/* Glowing pulsating active currency glyph */}
+      <text
+        x="16"
+        y={yPos}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fontWeight="800"
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fill="var(--md-sys-color-primary)"
+        className="overview-cost-glyph-glow"
+      >
+        {symbol}
+      </text>
+    </svg>
+  );
+};
 
 const CpuStaticIcon = () => (
   <IconFrame>
@@ -5105,6 +5201,13 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                          {costHover.isActive ? (
+                            <CostActiveIcon symbol={activeCurrency.symbol} />
+                          ) : (
+                            <CostStaticIcon symbol={activeCurrency.symbol} />
+                          )}
+                        </div>
                       </div>
                       <div className="my-1">
                         <CostBreakdownTooltip

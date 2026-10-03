@@ -530,6 +530,70 @@ body {
 }
 
 /* Currency Coin Sheen & Glow - active on hover + 5s cooldown */
+.overview-cost-static {
+  transform: none;
+  filter: none;
+}
+
+.overview-cost-active .overview-cost-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cost-halo-breathe 2.4s ease-in-out infinite;
+}
+
+.overview-cost-active .overview-cost-outer-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cost-orbit-cw 3.2s linear infinite;
+}
+
+.overview-cost-active .overview-cost-inner-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cost-orbit-ccw 4s linear infinite;
+}
+
+.overview-cost-active .overview-cost-sheen-ray {
+  animation: cost-sheen-sweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.overview-cost-active .overview-cost-glyph-glow {
+  animation: cost-glyph-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes cost-halo-breathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.96); }
+  50%      { opacity: 0.85; transform: scale(1.04); }
+}
+
+@keyframes cost-orbit-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes cost-orbit-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+@keyframes cost-sheen-sweep {
+  0%   { opacity: 0; stroke-dashoffset: 20; }
+  30%  { opacity: 0.85; }
+  70%  { opacity: 0.85; }
+  100% { opacity: 0; stroke-dashoffset: -20; }
+}
+
+@keyframes cost-glyph-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 1px var(--md-sys-color-primary));
+    opacity: 0.92;
+  }
+  50% {
+    filter: drop-shadow(0 0 5px var(--md-sys-color-primary));
+    opacity: 1;
+  }
+}
+
 .overview-coin-sheen {
   opacity: 0.75;
 }
