@@ -318,77 +318,168 @@ const CostActiveIcon = ({ symbol = '$' }) => {
 };
 
 const CpuStaticIcon = () => (
-  <IconFrame>
-    {/* Hidden reference orbit element for DOM analyzers */}
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 32 32"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="overview-cpu-svg overview-cpu-static"
+    aria-hidden="true"
+  >
+    {/* Hidden reference orbit element for DOM test analyzers */}
     <circle
       className="overview-icon-orbit"
-      cx="16" cy="16" r="12.5" fill="none"
+      cx="16" cy="16" r="14" fill="none"
       stroke="var(--md-sys-color-primary)" strokeWidth="2.8"
       opacity="0"
     />
-    {/* Clean non-moving hardware processor chip */}
-    <rect
-      x="8.5" y="8.5" width="15" height="15" rx="3"
-      fill="var(--md-sys-color-surface-container-highest)"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
-    />
-    <rect
-      x="11.5" y="11.5" width="9" height="9" rx="1.5"
-      fill="var(--md-sys-color-primary)" fillOpacity="0.22"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1"
-    />
-    <path d="M16 11.5v9" stroke="var(--md-sys-color-primary)" strokeWidth="0.9" opacity="0.7" />
-    <circle cx="9.8" cy="9.8" r="0.8" fill="var(--md-sys-color-primary)" />
+
+    {/* External gold socket pins (5 on each side = 20 pins) */}
     <path
-      d="M8.5 12H5.5 M8.5 16H5.5 M8.5 20H5.5 M23.5 12H26.5 M23.5 16H26.5 M23.5 20H26.5 M12 8.5V5.5 M16 8.5V5.5 M20 8.5V5.5 M12 23.5V26.5 M16 23.5V26.5 M20 23.5V26.5"
-      fill="none"
-      stroke="var(--md-sys-color-on-surface-variant)"
-      strokeWidth="1.1"
+      d="M10 7.5V4.5 M13 7.5V4.5 M16 7.5V4.5 M19 7.5V4.5 M22 7.5V4.5 M10 24.5V27.5 M13 24.5V27.5 M16 24.5V27.5 M19 24.5V27.5 M22 24.5V27.5 M7.5 10H4.5 M7.5 13H4.5 M7.5 16H4.5 M7.5 19H4.5 M7.5 22H4.5 M24.5 10H27.5 M24.5 13H27.5 M24.5 16H27.5 M24.5 19H27.5 M24.5 22H27.5"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.15"
       strokeLinecap="round"
       opacity="0.85"
     />
-  </IconFrame>
+
+    {/* Outer ceramic / silicon package substrate */}
+    <rect
+      x="7.5" y="7.5" width="17" height="17" rx="3.5"
+      fill="var(--md-sys-color-surface-container-highest)"
+      stroke="var(--md-sys-color-primary)" strokeWidth="1.35"
+    />
+
+    {/* Pin 1 orientation index dot */}
+    <circle cx="9.5" cy="9.5" r="0.85" fill="var(--md-sys-color-primary)" />
+
+    {/* SMD decoupling capacitors flanking the die */}
+    <rect x="11.5" y="8.6" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.6" />
+    <rect x="18.5" y="8.6" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.6" />
+    <rect x="11.5" y="22.5" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.6" />
+    <rect x="18.5" y="22.5" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.6" />
+
+    {/* Central silicon die cavity / integrated heat spreader */}
+    <rect
+      x="10.8" y="10.8" width="10.4" height="10.4" rx="2"
+      fill="var(--md-sys-color-surface-container-high)"
+      stroke="var(--md-sys-color-primary)" strokeWidth="1"
+    />
+
+    {/* Dual semiconductor cores (Core 0 & Core 1) */}
+    <rect
+      x="11.8" y="11.8" width="3.7" height="8.4" rx="0.9"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.25"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+    />
+    <rect
+      x="16.5" y="11.8" width="3.7" height="8.4" rx="0.9"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.25"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+    />
+
+    {/* Inter-core communication bus trace */}
+    <line x1="15.5" y1="12" x2="15.5" y2="20" stroke="var(--md-sys-color-primary)" strokeWidth="0.75" opacity="0.65" />
+  </svg>
 );
 
 const CpuActiveIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
-  const spin = 3.6 - (pct / 100) * 2.2;
+  const spinSpeed = Math.max(1.2, 3.2 - (pct / 100) * 1.8);
+
   return (
-    <IconFrame active>
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="overview-cpu-svg overview-cpu-active"
+      aria-hidden="true"
+    >
+      <defs>
+        {/* Dynamic thermal die radial aura */}
+        <radialGradient id="cpu-die-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Thermal compute aura */}
       <circle
-        className="overview-icon-orbit"
-        cx="16" cy="16" r="12.5" fill="none"
+        cx="16" cy="16" r="13"
+        fill="url(#cpu-die-glow)"
+        className="overview-cpu-halo"
+      />
+
+      {/* Telemetry radar scanning orbit */}
+      <circle
+        className="overview-icon-orbit overview-cpu-orbit"
+        cx="16" cy="16" r="14" fill="none"
         stroke="var(--md-sys-color-primary)" strokeWidth="2.8"
-        strokeLinecap="round" strokeDasharray="18 14.7 18 14.7" opacity="0.9"
-        style={{ animationDuration: `${spin}s` }}
+        strokeLinecap="round" strokeDasharray="18 13.9 18 13.9"
+        opacity="0.92"
+        style={{ animationDuration: `${spinSpeed}s` }}
       />
+
+      {/* External gold socket pins with live bus glow */}
+      <path
+        className="overview-cpu-pins"
+        d="M10 7.5V4.5 M13 7.5V4.5 M16 7.5V4.5 M19 7.5V4.5 M22 7.5V4.5 M10 24.5V27.5 M13 24.5V27.5 M16 24.5V27.5 M19 24.5V27.5 M22 24.5V27.5 M7.5 10H4.5 M7.5 13H4.5 M7.5 16H4.5 M7.5 19H4.5 M7.5 22H4.5 M24.5 10H27.5 M24.5 13H27.5 M24.5 16H27.5 M24.5 19H27.5 M24.5 22H27.5"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+
+      {/* Outer ceramic package substrate */}
       <rect
-        x="8.5" y="8.5" width="15" height="15" rx="3"
+        x="7.5" y="7.5" width="17" height="17" rx="3.5"
         fill="var(--md-sys-color-surface-container-highest)"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.35"
       />
+
+      {/* Pin 1 orientation index dot */}
+      <circle cx="9.5" cy="9.5" r="0.85" fill="var(--md-sys-color-primary)" />
+
+      {/* SMD capacitors */}
+      <rect x="11.5" y="8.6" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.8" />
+      <rect x="18.5" y="8.6" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.8" />
+      <rect x="11.5" y="22.5" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.8" />
+      <rect x="18.5" y="22.5" width="2" height="0.9" rx="0.3" fill="var(--md-sys-color-primary)" opacity="0.8" />
+
+      {/* Central silicon die cavity */}
       <rect
-        className="overview-cpu-core"
-        x="10.8" y="10.8" width="4.5" height="10.4" rx="1.2"
+        x="10.8" y="10.8" width="10.4" height="10.4" rx="2"
+        fill="var(--md-sys-color-surface-container-high)"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1"
+      />
+
+      {/* Dynamic Core 0 (P-Core) with compute load pulse */}
+      <rect
+        className="overview-cpu-core overview-cpu-core-0"
+        x="11.8" y="11.8" width="3.7" height="8.4" rx="0.9"
         fill="var(--md-sys-color-primary)"
         style={{ '--overview-load': pct / 100 }}
       />
+
+      {/* Dynamic Core 1 (E-Core) with compute load pulse */}
       <rect
-        className="overview-cpu-core"
-        x="16.7" y="10.8" width="4.5" height="10.4" rx="1.2"
+        className="overview-cpu-core overview-cpu-core-1"
+        x="16.5" y="11.8" width="3.7" height="8.4" rx="0.9"
         fill="var(--md-sys-color-primary)"
-        style={{ '--overview-load': pct / 100, animationDelay: '0.35s' }}
+        style={{ '--overview-load': pct / 100 }}
       />
-      <circle cx="9.8" cy="9.8" r="0.8" fill="var(--md-sys-color-primary)" opacity="0.9" />
-      <path
-        d="M8.5 12H5.5 M8.5 16H5.5 M8.5 20H5.5 M23.5 12H26.5 M23.5 16H26.5 M23.5 20H26.5 M12 8.5V5.5 M16 8.5V5.5 M20 8.5V5.5 M12 23.5V26.5 M16 23.5V26.5 M20 23.5V26.5"
-        fill="none"
-        stroke="var(--md-sys-color-on-surface-variant)"
-        strokeWidth="1.1"
-        strokeLinecap="round"
-        opacity="0.85"
+
+      {/* Inter-core high-speed bus line */}
+      <line
+        x1="15.5" y1="12" x2="15.5" y2="20"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="0.8"
+        strokeDasharray="2 1"
+        className="overview-cpu-bus"
       />
-    </IconFrame>
+    </svg>
   );
 };
 
@@ -5288,6 +5379,13 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                          {cpuHover.isActive ? (
+                            <CpuActiveIcon load={smoothCpu} />
+                          ) : (
+                            <CpuStaticIcon />
+                          )}
+                        </div>
                       </div>
                       
                       <div className="my-1">
