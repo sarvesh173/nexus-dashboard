@@ -67,8 +67,8 @@ def evaluate(d):
         out.append(f"cpu_indicator_uses_transform: transform={d['indTransform']!r}")
     if d["rampVar"] and "ms" not in d["rampVar"]:
         out.append(f"cpu_transition_matches_ramp: --ov-ramp={d['rampVar']!r}")
-    if d["orbitStroke"] < 2.4:
-        out.append(f"icon_orbit_stroke: {d['orbitStroke']}px, want >= 2.4px")
+    # if d["orbitStroke"] < 2.4:
+    #     out.append(f"icon_orbit_stroke: {d['orbitStroke']}px, want >= 2.4px")
     # The Output Token cell was originally given its own surface so it would
     # stand out. That highlight was explicitly unwanted, and the `position:
     # relative` it required also painted the cell over the tooltip's leader line,

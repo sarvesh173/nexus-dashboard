@@ -5105,13 +5105,6 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {costHover.isActive ? (
-                            <CostActiveIcon symbol={activeCurrency.symbol} />
-                          ) : (
-                            <CostStaticIcon symbol={activeCurrency.symbol} />
-                          )}
-                        </div>
                       </div>
                       <div className="my-1">
                         <CostBreakdownTooltip
@@ -5192,13 +5185,6 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {cpuHover.isActive ? (
-                            <CpuActiveIcon load={smoothCpu} />
-                          ) : (
-                            <CpuStaticIcon />
-                          )}
-                        </div>
                       </div>
                       
                       <div className="my-1">
@@ -5248,13 +5234,6 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {memoryHover.isActive ? (
-                            <MemoryActiveIcon load={telemetry?.ram_percent ?? 0} />
-                          ) : (
-                            <MemoryStaticIcon />
-                          )}
-                        </div>
                       </div>
 
                       <div className="my-1">
@@ -5296,9 +5275,6 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          <ModelsMetricIcon />
-                        </div>
                       </div>
 
                       <div className="my-2 flex items-baseline gap-6">
