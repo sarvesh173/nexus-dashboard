@@ -544,58 +544,60 @@ const MemoryStaticIcon = () => (
     className="overview-memory-svg overview-memory-static"
     aria-hidden="true"
   >
-    {/* Main DDR5 DIMM PCB substrate */}
+    {/* Clean reference orbit (invisible at rest) */}
+    <circle
+      cx="16" cy="16" r="13.5" fill="none"
+      stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
+      opacity="0"
+    />
+
+    {/* Bold horizontal DDR module PCB */}
     <rect
-      x="3.8" y="8" width="24.4" height="14.8" rx="1.8"
+      x="5" y="10.5" width="22" height="11" rx="2"
       fill="var(--md-sys-color-surface-container-highest)"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+      stroke="var(--md-sys-color-primary)" strokeWidth="1.4"
     />
 
-    {/* Top anodized thermal fin / armor crest */}
-    <path
-      d="M4.5 8.2 H27.5 V10 H4.5 Z"
-      fill="var(--md-sys-color-primary)" fillOpacity="0.2"
+    {/* Top heat-spreader accent bar */}
+    <rect
+      x="5.5" y="10.5" width="21" height="2.2" rx="0.5"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.25"
     />
-    <line x1="6.5" y1="9.1" x2="9.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
-    <line x1="11.5" y1="9.1" x2="14.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
-    <line x1="17.5" y1="9.1" x2="20.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
-    <line x1="22.5" y1="9.1" x2="25.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
 
-    {/* Left and right retention notches */}
-    <rect x="3.2" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
-    <rect x="27.4" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+    {/* 3 Bold, high-contrast DRAM IC blocks (clearly distinct at 100% zoom) */}
+    <rect
+      x="7.5" y="13.8" width="4.2" height="5.2" rx="1"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.35"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+    />
+    <rect
+      x="13.9" y="13.8" width="4.2" height="5.2" rx="1"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.35"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+    />
+    <rect
+      x="20.3" y="13.8" width="4.2" height="5.2" rx="1"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.35"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+    />
 
-    {/* 4 Discrete BGA DRAM IC Chips */}
-    <rect x="5.4" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
-    <rect x="10.5" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
-    <rect x="17.7" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
-    <rect x="22.8" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
-
-    {/* Chip orientation index markers */}
-    <circle cx="6.4" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
-    <circle cx="11.5" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
-    <circle cx="18.7" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
-    <circle cx="23.8" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
-
-    {/* Horizontal memory data bus traces */}
-    <line x1="5" y1="19.4" x2="27" y2="19.4" stroke="var(--md-sys-color-primary)" strokeWidth="0.85" opacity="0.5" />
-
-    {/* Bottom alignment key notch */}
-    <rect x="14.8" y="21.5" width="2.4" height="1.6" rx="0.4" fill="var(--md-sys-color-surface-container)" />
-
-    {/* Gold edge contact fingers */}
+    {/* Bottom gold contact teeth (Bold 6 pins with clear gap for key notch) */}
     <path
-      d="M5.5 22.8 V24.8 M7.5 22.8 V24.8 M9.5 22.8 V24.8 M11.5 22.8 V24.8 M13.5 22.8 V24.8 M18.5 22.8 V24.8 M20.5 22.8 V24.8 M22.5 22.8 V24.8 M24.5 22.8 V24.8 M26.5 22.8 V24.8"
+      d="M7.5 21.5V23.5 M10 21.5V23.5 M12.5 21.5V23.5 M19.5 21.5V23.5 M22 21.5V23.5 M24.5 21.5V23.5"
       stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.1"
+      strokeWidth="1.3"
       strokeLinecap="round"
       opacity="0.85"
     />
+
+    {/* Center key notch */}
+    <rect x="14.8" y="20.5" width="2.4" height="1.8" rx="0.5" fill="var(--md-sys-color-surface-container)" />
   </svg>
 );
 
 const MemoryActiveIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
+  const spinSpeed = Math.max(1.2, 3.2 - (pct / 100) * 1.8);
 
   return (
     <svg
@@ -608,91 +610,76 @@ const MemoryActiveIcon = ({ load = 0 }) => {
       aria-hidden="true"
     >
       <defs>
-        {/* Memory module thermal aura */}
-        <radialGradient id="mem-thermal-aura" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.32" />
+        <radialGradient id="mem-macro-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.35" />
           <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
         </radialGradient>
       </defs>
 
-      {/* Ambient thermal aura */}
-      <ellipse
-        cx="16" cy="16" rx="14" ry="11"
-        fill="url(#mem-thermal-aura)"
+      {/* Ambient breathing halo */}
+      <circle
+        cx="16" cy="16" r="14"
+        fill="url(#mem-macro-glow)"
         className="overview-memory-halo"
       />
 
-      {/* Main DDR5 DIMM PCB substrate */}
+      {/* Bold high-speed memory telemetry orbit (Instantly visible from 3 feet away!) */}
+      <circle
+        className="overview-memory-orbit"
+        cx="16" cy="16" r="13.5" fill="none"
+        stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
+        strokeLinecap="round" strokeDasharray="18 13.9 18 13.9"
+        opacity="0.9"
+        style={{ animationDuration: `${spinSpeed}s` }}
+      />
+
+      {/* Bold DDR PCB substrate */}
       <rect
-        x="3.8" y="8" width="24.4" height="14.8" rx="1.8"
+        x="5" y="10.5" width="22" height="11" rx="2"
         fill="var(--md-sys-color-surface-container-highest)"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.4"
       />
 
-      {/* Top thermal fin armor crest */}
-      <path
-        d="M4.5 8.2 H27.5 V10 H4.5 Z"
-        fill="var(--md-sys-color-primary)" fillOpacity="0.25"
-      />
-      <line x1="6.5" y1="9.1" x2="9.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
-      <line x1="11.5" y1="9.1" x2="14.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
-      <line x1="17.5" y1="9.1" x2="20.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
-      <line x1="22.5" y1="9.1" x2="25.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
-
-      {/* Left and right retention notches */}
-      <rect x="3.2" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
-      <rect x="27.4" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
-
-      {/* 4 Dynamic DRAM IC Chips (Activated based on telemetry percentage) */}
+      {/* Top thermal fin armor */}
       <rect
-        className={`overview-memory-chip ${pct >= 15 ? 'overview-memory-chip-active' : ''}`}
-        x="5.4" y="11.4" width="3.8" height="6.6" rx="0.8"
+        x="5.5" y="10.5" width="21" height="2.2" rx="0.5"
+        fill="var(--md-sys-color-primary)" fillOpacity="0.3"
+      />
+
+      {/* 3 Bold DRAM IC Banks - Live cascading telemetry glow */}
+      <rect
+        className="overview-memory-bank overview-memory-bank-0"
+        x="7.5" y="13.8" width="4.2" height="5.2" rx="1"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 15 ? 0.95 : 0.25}
-        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
+        fillOpacity={pct >= 20 ? 0.95 : 0.3}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
       />
       <rect
-        className={`overview-memory-chip ${pct >= 40 ? 'overview-memory-chip-active' : ''}`}
-        x="10.5" y="11.4" width="3.8" height="6.6" rx="0.8"
+        className="overview-memory-bank overview-memory-bank-1"
+        x="13.9" y="13.8" width="4.2" height="5.2" rx="1"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 40 ? 0.95 : 0.25}
-        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
+        fillOpacity={pct >= 50 ? 0.95 : 0.3}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
       />
       <rect
-        className={`overview-memory-chip ${pct >= 65 ? 'overview-memory-chip-active' : ''}`}
-        x="17.7" y="11.4" width="3.8" height="6.6" rx="0.8"
+        className="overview-memory-bank overview-memory-bank-2"
+        x="20.3" y="13.8" width="4.2" height="5.2" rx="1"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 65 ? 0.95 : 0.25}
-        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
-      />
-      <rect
-        className={`overview-memory-chip ${pct >= 85 ? 'overview-memory-chip-active' : ''}`}
-        x="22.8" y="11.4" width="3.8" height="6.6" rx="0.8"
-        fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 85 ? 0.95 : 0.25}
-        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
+        fillOpacity={pct >= 75 ? 0.95 : 0.3}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
       />
 
-      {/* Dynamic Data Bus Flow Pulse */}
-      <path
-        className="overview-memory-bus"
-        d="M5 19.4 H27"
-        fill="none"
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.1"
-      />
-
-      {/* Bottom key notch */}
-      <rect x="14.8" y="21.5" width="2.4" height="1.6" rx="0.4" fill="var(--md-sys-color-surface-container)" />
-
-      {/* Gold edge contact fingers with active pulse */}
+      {/* Bold gold contact pins with active glow */}
       <path
         className="overview-memory-pins"
-        d="M5.5 22.8 V24.8 M7.5 22.8 V24.8 M9.5 22.8 V24.8 M11.5 22.8 V24.8 M13.5 22.8 V24.8 M18.5 22.8 V24.8 M20.5 22.8 V24.8 M22.5 22.8 V24.8 M24.5 22.8 V24.8 M26.5 22.8 V24.8"
+        d="M7.5 21.5V23.5 M10 21.5V23.5 M12.5 21.5V23.5 M19.5 21.5V23.5 M22 21.5V23.5 M24.5 21.5V23.5"
         stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.15"
+        strokeWidth="1.3"
         strokeLinecap="round"
       />
+
+      {/* Center key notch */}
+      <rect x="14.8" y="20.5" width="2.4" height="1.8" rx="0.5" fill="var(--md-sys-color-surface-container)" />
     </svg>
   );
 };

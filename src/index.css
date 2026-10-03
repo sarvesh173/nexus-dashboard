@@ -684,7 +684,7 @@ body {
 }
 
 /* =========================================================================
-   OVERVIEW MEMORY (RAM & SWAP) ICON (STATIC STUCK vs ANIMATED 5S COOLDOWN)
+   OVERVIEW MEMORY (RAM & SWAP) ICON (BOLD MACRO MOTION - VISIBLE AT 100%)
    ========================================================================= */
 
 .overview-memory-static {
@@ -695,46 +695,65 @@ body {
 .overview-memory-active .overview-memory-halo {
   transform-box: fill-box;
   transform-origin: center;
-  animation: mem-halo-pulse 2.4s ease-in-out infinite;
+  animation: mem-halo-pulse 2.2s ease-in-out infinite;
 }
 
-.overview-memory-active .overview-memory-chip-active {
-  animation: mem-chip-glow 1.8s ease-in-out infinite;
+/* Bold sweeping telemetry orbit - visible without zooming in! */
+.overview-memory-active .overview-memory-orbit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mem-orbit-sweep 2.6s linear infinite;
 }
 
-.overview-memory-active .overview-memory-bus {
-  stroke-dasharray: 4 4;
-  animation: mem-bus-flow 1.2s linear infinite;
+/* Bold DRAM IC banks pulsing with live cascading wave */
+.overview-memory-active .overview-memory-bank-0 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mem-bank-pulse 1.8s ease-in-out infinite;
+}
+
+.overview-memory-active .overview-memory-bank-1 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mem-bank-pulse 1.8s ease-in-out infinite 0.25s;
+}
+
+.overview-memory-active .overview-memory-bank-2 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mem-bank-pulse 1.8s ease-in-out infinite 0.5s;
 }
 
 .overview-memory-active .overview-memory-pins {
-  animation: mem-pins-glow 2s ease-in-out infinite;
+  animation: mem-pins-glow 1.8s ease-in-out infinite;
 }
 
 @keyframes mem-halo-pulse {
   0%, 100% { opacity: 0.25; transform: scale(0.96); }
-  50%      { opacity: 0.75; transform: scale(1.05); }
+  50%      { opacity: 0.75; transform: scale(1.06); }
 }
 
-@keyframes mem-chip-glow {
+@keyframes mem-orbit-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes mem-bank-pulse {
   0%, 100% {
     filter: drop-shadow(0 0 1px var(--md-sys-color-primary));
-    opacity: 0.88;
+    transform: scale(1);
+    opacity: 0.85;
   }
   50% {
-    filter: drop-shadow(0 0 4px var(--md-sys-color-primary));
+    filter: drop-shadow(0 0 5px var(--md-sys-color-primary));
+    transform: scale(1.06);
     opacity: 1;
   }
 }
 
-@keyframes mem-bus-flow {
-  from { stroke-dashoffset: 8; }
-  to   { stroke-dashoffset: 0; }
-}
-
 @keyframes mem-pins-glow {
   0%, 100% { opacity: 0.75; }
-  50%      { opacity: 1; filter: drop-shadow(0 0 2px var(--md-sys-color-primary)); }
+  50%      { opacity: 1; filter: drop-shadow(0 0 2.5px var(--md-sys-color-primary)); }
 }
 
 /* Active memory bus flow - active on hover + 5s cooldown */
