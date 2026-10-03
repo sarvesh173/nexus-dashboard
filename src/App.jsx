@@ -175,8 +175,8 @@ const CostStaticIcon = ({ symbol = '$' }) => {
 
   return (
     <svg
-      width="22"
-      height="22"
+      width="28"
+      height="28"
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -234,8 +234,8 @@ const CostActiveIcon = ({ symbol = '$' }) => {
 
   return (
     <svg
-      width="22"
-      height="22"
+      width="28"
+      height="28"
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -319,8 +319,8 @@ const CostActiveIcon = ({ symbol = '$' }) => {
 
 const CpuStaticIcon = () => (
   <svg
-    width="22"
-    height="22"
+    width="28"
+    height="28"
     viewBox="0 0 32 32"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -390,8 +390,8 @@ const CpuActiveIcon = ({ load = 0 }) => {
 
   return (
     <svg
-      width="22"
-      height="22"
+      width="28"
+      height="28"
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -485,8 +485,8 @@ const CpuActiveIcon = ({ load = 0 }) => {
 
 const ModelsStaticIcon = () => (
   <svg
-    width="22"
-    height="22"
+    width="28"
+    height="28"
     viewBox="0 0 32 32"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -551,8 +551,8 @@ const ModelsStaticIcon = () => (
 
 const ModelsActiveIcon = () => (
   <svg
-    width="22"
-    height="22"
+    width="28"
+    height="28"
     viewBox="0 0 32 32"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -637,8 +637,8 @@ const ModelsActiveIcon = () => (
 
 const MemoryStaticIcon = () => (
   <svg
-    width="22"
-    height="22"
+    width="28"
+    height="28"
     viewBox="0 0 32 32"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -712,8 +712,8 @@ const MemoryActiveIcon = ({ load = 0 }) => {
 
   return (
     <svg
-      width="22"
-      height="22"
+      width="28"
+      height="28"
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -5492,7 +5492,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                        <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {costHover.isActive ? (
                             <CostActiveIcon symbol={activeCurrency.symbol} />
                           ) : (
@@ -5579,7 +5579,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                        <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {cpuHover.isActive ? (
                             <CpuActiveIcon load={smoothCpu} />
                           ) : (
@@ -5635,7 +5635,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                        <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {memoryHover.isActive ? (
                             <MemoryActiveIcon load={telemetry?.ram_percent ?? 0} />
                           ) : (
@@ -5688,7 +5688,7 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
-                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                        <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {modelsHover.isActive ? (
                             <ModelsActiveIcon />
                           ) : (
