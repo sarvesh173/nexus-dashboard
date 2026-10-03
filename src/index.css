@@ -683,6 +683,60 @@ body {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
+/* =========================================================================
+   OVERVIEW MEMORY (RAM & SWAP) ICON (STATIC STUCK vs ANIMATED 5S COOLDOWN)
+   ========================================================================= */
+
+.overview-memory-static {
+  transform: none;
+  filter: none;
+}
+
+.overview-memory-active .overview-memory-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mem-halo-pulse 2.4s ease-in-out infinite;
+}
+
+.overview-memory-active .overview-memory-chip-active {
+  animation: mem-chip-glow 1.8s ease-in-out infinite;
+}
+
+.overview-memory-active .overview-memory-bus {
+  stroke-dasharray: 4 4;
+  animation: mem-bus-flow 1.2s linear infinite;
+}
+
+.overview-memory-active .overview-memory-pins {
+  animation: mem-pins-glow 2s ease-in-out infinite;
+}
+
+@keyframes mem-halo-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.96); }
+  50%      { opacity: 0.75; transform: scale(1.05); }
+}
+
+@keyframes mem-chip-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 1px var(--md-sys-color-primary));
+    opacity: 0.88;
+  }
+  50% {
+    filter: drop-shadow(0 0 4px var(--md-sys-color-primary));
+    opacity: 1;
+  }
+}
+
+@keyframes mem-bus-flow {
+  from { stroke-dashoffset: 8; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes mem-pins-glow {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; filter: drop-shadow(0 0 2px var(--md-sys-color-primary)); }
+}
+
 /* Active memory bus flow - active on hover + 5s cooldown */
 .overview-memory-bus {
   stroke-dasharray: 4 6;

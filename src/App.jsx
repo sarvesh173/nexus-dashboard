@@ -535,80 +535,165 @@ const ModelsMetricIcon = () => (
 );
 
 const MemoryStaticIcon = () => (
-  <IconFrame>
-    {/* Clean non-moving DDR memory stick */}
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 32 32"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="overview-memory-svg overview-memory-static"
+    aria-hidden="true"
+  >
+    {/* Main DDR5 DIMM PCB substrate */}
     <rect
-      x="4.5" y="8.8" width="23" height="13.2" rx="1.8"
+      x="3.8" y="8" width="24.4" height="14.8" rx="1.8"
       fill="var(--md-sys-color-surface-container-highest)"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1.25"
+      stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
     />
-    <rect x="6.2" y="10.4" width="3.6" height="6.2" rx="0.7" fill="var(--md-sys-color-primary)" fillOpacity="0.4" />
-    <rect x="11.2" y="10.4" width="3.6" height="6.2" rx="0.7" fill="var(--md-sys-color-primary)" fillOpacity="0.4" />
-    <rect x="16.2" y="10.4" width="3.6" height="6.2" rx="0.7" fill="var(--md-sys-color-primary)" fillOpacity="0.4" />
-    <rect x="21.2" y="10.4" width="3.6" height="6.2" rx="0.7" fill="var(--md-sys-color-primary)" fillOpacity="0.4" />
-    <path d="M6 18 H26" fill="none" stroke="var(--md-sys-color-primary)" strokeWidth="1" opacity="0.45" />
+
+    {/* Top anodized thermal fin / armor crest */}
     <path
-      d="M6.5 22 V23.8 M9 22 V23.8 M11.5 22 V23.8 M13.5 22 V23.8 M17.5 22 V23.8 M19.5 22 V23.8 M22 22 V23.8 M24.5 22 V23.8"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.15"
-      strokeLinecap="round"
-      opacity="0.8"
+      d="M4.5 8.2 H27.5 V10 H4.5 Z"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.2"
     />
-    <rect x="14.8" y="21.2" width="2.4" height="1.4" rx="0.4" fill="var(--md-sys-color-surface-container-high)" />
-  </IconFrame>
+    <line x1="6.5" y1="9.1" x2="9.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
+    <line x1="11.5" y1="9.1" x2="14.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
+    <line x1="17.5" y1="9.1" x2="20.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
+    <line x1="22.5" y1="9.1" x2="25.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.7" />
+
+    {/* Left and right retention notches */}
+    <rect x="3.2" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+    <rect x="27.4" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+
+    {/* 4 Discrete BGA DRAM IC Chips */}
+    <rect x="5.4" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
+    <rect x="10.5" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
+    <rect x="17.7" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
+    <rect x="22.8" y="11.4" width="3.8" height="6.6" rx="0.8" fill="var(--md-sys-color-primary)" fillOpacity="0.3" stroke="var(--md-sys-color-primary)" strokeWidth="0.7" />
+
+    {/* Chip orientation index markers */}
+    <circle cx="6.4" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
+    <circle cx="11.5" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
+    <circle cx="18.7" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
+    <circle cx="23.8" cy="12.4" r="0.4" fill="var(--md-sys-color-primary)" />
+
+    {/* Horizontal memory data bus traces */}
+    <line x1="5" y1="19.4" x2="27" y2="19.4" stroke="var(--md-sys-color-primary)" strokeWidth="0.85" opacity="0.5" />
+
+    {/* Bottom alignment key notch */}
+    <rect x="14.8" y="21.5" width="2.4" height="1.6" rx="0.4" fill="var(--md-sys-color-surface-container)" />
+
+    {/* Gold edge contact fingers */}
+    <path
+      d="M5.5 22.8 V24.8 M7.5 22.8 V24.8 M9.5 22.8 V24.8 M11.5 22.8 V24.8 M13.5 22.8 V24.8 M18.5 22.8 V24.8 M20.5 22.8 V24.8 M22.5 22.8 V24.8 M24.5 22.8 V24.8 M26.5 22.8 V24.8"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.1"
+      strokeLinecap="round"
+      opacity="0.85"
+    />
+  </svg>
 );
 
 const MemoryActiveIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
+
   return (
-    <IconFrame active>
-      <rect
-        x="4.5" y="8.8" width="23" height="13.2" rx="1.8"
-        fill="var(--md-sys-color-surface-container-highest)"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.25"
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="overview-memory-svg overview-memory-active"
+      aria-hidden="true"
+    >
+      <defs>
+        {/* Memory module thermal aura */}
+        <radialGradient id="mem-thermal-aura" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Ambient thermal aura */}
+      <ellipse
+        cx="16" cy="16" rx="14" ry="11"
+        fill="url(#mem-thermal-aura)"
+        className="overview-memory-halo"
       />
+
+      {/* Main DDR5 DIMM PCB substrate */}
       <rect
-        className="overview-memory-chip"
-        x="6.2" y="10.4" width="3.6" height="6.2" rx="0.7"
+        x="3.8" y="8" width="24.4" height="14.8" rx="1.8"
+        fill="var(--md-sys-color-surface-container-highest)"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
+      />
+
+      {/* Top thermal fin armor crest */}
+      <path
+        d="M4.5 8.2 H27.5 V10 H4.5 Z"
+        fill="var(--md-sys-color-primary)" fillOpacity="0.25"
+      />
+      <line x1="6.5" y1="9.1" x2="9.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
+      <line x1="11.5" y1="9.1" x2="14.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
+      <line x1="17.5" y1="9.1" x2="20.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
+      <line x1="22.5" y1="9.1" x2="25.5" y2="9.1" stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.8" />
+
+      {/* Left and right retention notches */}
+      <rect x="3.2" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+      <rect x="27.4" y="13.2" width="1.4" height="3" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+
+      {/* 4 Dynamic DRAM IC Chips (Activated based on telemetry percentage) */}
+      <rect
+        className={`overview-memory-chip ${pct >= 15 ? 'overview-memory-chip-active' : ''}`}
+        x="5.4" y="11.4" width="3.8" height="6.6" rx="0.8"
         fill="var(--md-sys-color-primary)"
         fillOpacity={pct >= 15 ? 0.95 : 0.25}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
       />
       <rect
-        className="overview-memory-chip"
-        x="11.2" y="10.4" width="3.6" height="6.2" rx="0.7"
+        className={`overview-memory-chip ${pct >= 40 ? 'overview-memory-chip-active' : ''}`}
+        x="10.5" y="11.4" width="3.8" height="6.6" rx="0.8"
         fill="var(--md-sys-color-primary)"
         fillOpacity={pct >= 40 ? 0.95 : 0.25}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
       />
       <rect
-        className="overview-memory-chip"
-        x="16.2" y="10.4" width="3.6" height="6.2" rx="0.7"
+        className={`overview-memory-chip ${pct >= 65 ? 'overview-memory-chip-active' : ''}`}
+        x="17.7" y="11.4" width="3.8" height="6.6" rx="0.8"
         fill="var(--md-sys-color-primary)"
         fillOpacity={pct >= 65 ? 0.95 : 0.25}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
       />
       <rect
-        className="overview-memory-chip"
-        x="21.2" y="10.4" width="3.6" height="6.2" rx="0.7"
+        className={`overview-memory-chip ${pct >= 85 ? 'overview-memory-chip-active' : ''}`}
+        x="22.8" y="11.4" width="3.8" height="6.6" rx="0.8"
         fill="var(--md-sys-color-primary)"
         fillOpacity={pct >= 85 ? 0.95 : 0.25}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.7"
       />
+
+      {/* Dynamic Data Bus Flow Pulse */}
       <path
         className="overview-memory-bus"
-        d="M6 18 H26"
+        d="M5 19.4 H27"
         fill="none"
         stroke="var(--md-sys-color-primary)"
-        strokeWidth="1"
+        strokeWidth="1.1"
       />
+
+      {/* Bottom key notch */}
+      <rect x="14.8" y="21.5" width="2.4" height="1.6" rx="0.4" fill="var(--md-sys-color-surface-container)" />
+
+      {/* Gold edge contact fingers with active pulse */}
       <path
-        d="M6.5 22 V23.8 M9 22 V23.8 M11.5 22 V23.8 M13.5 22 V23.8 M17.5 22 V23.8 M19.5 22 V23.8 M22 22 V23.8 M24.5 22 V23.8"
-        fill="none"
+        className="overview-memory-pins"
+        d="M5.5 22.8 V24.8 M7.5 22.8 V24.8 M9.5 22.8 V24.8 M11.5 22.8 V24.8 M13.5 22.8 V24.8 M18.5 22.8 V24.8 M20.5 22.8 V24.8 M22.5 22.8 V24.8 M24.5 22.8 V24.8 M26.5 22.8 V24.8"
         stroke="var(--md-sys-color-primary)"
         strokeWidth="1.15"
         strokeLinecap="round"
-        opacity="0.9"
       />
-      <rect x="14.8" y="21.2" width="2.4" height="1.4" rx="0.4" fill="var(--md-sys-color-surface-container-high)" />
-    </IconFrame>
+    </svg>
   );
 };
 
@@ -5435,6 +5520,13 @@ export default function App() {
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
+                        <div className="overview-card-icon-shell w-8 h-8 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
+                          {memoryHover.isActive ? (
+                            <MemoryActiveIcon load={telemetry?.ram_percent ?? 0} />
+                          ) : (
+                            <MemoryStaticIcon />
+                          )}
+                        </div>
                       </div>
 
                       <div className="my-1">
