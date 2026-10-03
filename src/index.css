@@ -684,7 +684,7 @@ body {
 }
 
 /* =========================================================================
-   OVERVIEW MEMORY (RAM & SWAP) ICON (BOLD MACRO MOTION - VISIBLE AT 100%)
+   OVERVIEW MEMORY (RAM & SWAP) ICON (LINEAR HARDWARE DIMM - NO ORBIT CIRCLE)
    ========================================================================= */
 
 .overview-memory-static {
@@ -693,71 +693,82 @@ body {
 }
 
 .overview-memory-active .overview-memory-halo {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: mem-halo-pulse 2.2s ease-in-out infinite;
+  animation: mem-halo-diffuse 2.2s ease-in-out infinite;
 }
 
-/* Bold sweeping telemetry orbit - visible without zooming in! */
-.overview-memory-active .overview-memory-orbit {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: mem-orbit-sweep 2.6s linear infinite;
+/* Linear RGB top lightbar scan beam */
+.overview-memory-active .overview-memory-rgb-beam {
+  animation: mem-rgb-sweep 1.8s ease-in-out infinite alternate;
 }
 
-/* Bold DRAM IC banks pulsing with live cascading wave */
+/* 4 DRAM Banks Hardware Equalizer Wave */
 .overview-memory-active .overview-memory-bank-0 {
   transform-box: fill-box;
-  transform-origin: center;
-  animation: mem-bank-pulse 1.8s ease-in-out infinite;
+  transform-origin: bottom;
+  animation: mem-bank-eq 1.4s ease-in-out infinite;
 }
 
 .overview-memory-active .overview-memory-bank-1 {
   transform-box: fill-box;
-  transform-origin: center;
-  animation: mem-bank-pulse 1.8s ease-in-out infinite 0.25s;
+  transform-origin: bottom;
+  animation: mem-bank-eq 1.4s ease-in-out infinite 0.2s;
 }
 
 .overview-memory-active .overview-memory-bank-2 {
   transform-box: fill-box;
-  transform-origin: center;
-  animation: mem-bank-pulse 1.8s ease-in-out infinite 0.5s;
+  transform-origin: bottom;
+  animation: mem-bank-eq 1.4s ease-in-out infinite 0.4s;
+}
+
+.overview-memory-active .overview-memory-bank-3 {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: mem-bank-eq 1.4s ease-in-out infinite 0.6s;
+}
+
+/* Horizontal data stream line */
+.overview-memory-active .overview-memory-data-stream {
+  stroke-dasharray: 4 3;
+  animation: mem-stream-flow 1s linear infinite;
 }
 
 .overview-memory-active .overview-memory-pins {
-  animation: mem-pins-glow 1.8s ease-in-out infinite;
+  animation: mem-pins-signal 1.6s ease-in-out infinite;
 }
 
-@keyframes mem-halo-pulse {
-  0%, 100% { opacity: 0.25; transform: scale(0.96); }
-  50%      { opacity: 0.75; transform: scale(1.06); }
+@keyframes mem-halo-diffuse {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.75; }
 }
 
-@keyframes mem-orbit-sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+@keyframes mem-rgb-sweep {
+  0%   { transform: translateX(0); opacity: 0.6; }
+  100% { transform: translateX(13px); opacity: 1; }
 }
 
-@keyframes mem-bank-pulse {
+@keyframes mem-bank-eq {
   0%, 100% {
+    transform: scaleY(1);
     filter: drop-shadow(0 0 1px var(--md-sys-color-primary));
-    transform: scale(1);
-    opacity: 0.85;
   }
   50% {
-    filter: drop-shadow(0 0 5px var(--md-sys-color-primary));
-    transform: scale(1.06);
-    opacity: 1;
+    transform: scaleY(1.12);
+    filter: drop-shadow(0 0 4.5px var(--md-sys-color-primary));
   }
 }
 
-@keyframes mem-pins-glow {
-  0%, 100% { opacity: 0.75; }
+@keyframes mem-stream-flow {
+  from { stroke-dashoffset: 7; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes mem-pins-signal {
+  0%, 100% { opacity: 0.7; }
   50%      { opacity: 1; filter: drop-shadow(0 0 2.5px var(--md-sys-color-primary)); }
 }
 
 /* =========================================================================
-   OVERVIEW MODELS & PROVIDERS ICON (BOLD MACRO MOTION - VISIBLE AT 100%)
+   OVERVIEW MODELS & PROVIDERS (3D LAYER-BY-LAYER FANNING - NO ORBIT CIRCLE)
    ========================================================================= */
 
 .overview-models-static {
@@ -766,42 +777,44 @@ body {
 }
 
 .overview-models-active .overview-models-halo {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: models-halo-pulse 2.2s ease-in-out infinite;
+  animation: models-halo-pulse 2.4s ease-in-out infinite;
 }
 
-/* Bold sweeping neural telemetry orbit - visible without zooming in! */
-.overview-models-active .overview-models-orbit {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: models-orbit-sweep 2.6s linear infinite;
+/* Vertical synaptic laser beam shooting through all 3 sheets */
+.overview-models-active .overview-models-laser {
+  animation: models-laser-shoot 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* Neural stack vertical breathing wave */
-.overview-models-active .overview-models-layer-0 {
+/* Layer 1 (Top Sheet): floats UPWARD in 3D perspective */
+.overview-models-active .overview-models-layer-top {
   transform-box: fill-box;
   transform-origin: center;
-  animation: models-layer-float 2s ease-in-out infinite;
+  animation: models-layer-float-up 2.2s ease-in-out infinite;
 }
 
-.overview-models-active .overview-models-layer-1 {
+/* Layer 2 (Middle Sheet): expands horizontally with multi-head attention */
+.overview-models-active .overview-models-layer-middle {
   transform-box: fill-box;
   transform-origin: center;
-  animation: models-layer-float 2s ease-in-out infinite 0.25s;
+  animation: models-layer-expand 2.2s ease-in-out infinite 0.2s;
 }
 
-.overview-models-active .overview-models-layer-2 {
+/* Layer 3 (Bottom Sheet): sinks DOWNWARD in 3D perspective */
+.overview-models-active .overview-models-layer-bottom {
   transform-box: fill-box;
   transform-origin: center;
-  animation: models-layer-float 2s ease-in-out infinite 0.5s;
+  animation: models-layer-sink-down 2.2s ease-in-out infinite 0.4s;
 }
 
-/* Synaptic nucleus glow */
+/* Synaptic nucleus and corner provider nodes glow */
 .overview-models-active .overview-models-core {
   transform-box: fill-box;
   transform-origin: center;
-  animation: models-core-pulse 1.6s ease-in-out infinite;
+  animation: models-core-glow 1.5s ease-in-out infinite;
+}
+
+.overview-models-active .overview-models-node {
+  animation: models-node-glow 1.8s ease-in-out infinite;
 }
 
 @keyframes models-halo-pulse {
@@ -809,27 +822,43 @@ body {
   50%      { opacity: 0.75; transform: scale(1.06); }
 }
 
-@keyframes models-orbit-sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+@keyframes models-laser-shoot {
+  0%   { opacity: 0; stroke-dasharray: 6 20; stroke-dashoffset: 26; }
+  40%  { opacity: 1; }
+  100% { opacity: 0; stroke-dasharray: 6 20; stroke-dashoffset: -26; }
 }
 
-@keyframes models-layer-float {
+@keyframes models-layer-float-up {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-1.2px); }
+  50%      { transform: translateY(-2.6px); }
 }
 
-@keyframes models-core-pulse {
+@keyframes models-layer-expand {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 3px var(--md-sys-color-primary)); }
+}
+
+@keyframes models-layer-sink-down {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(2.2px); }
+}
+
+@keyframes models-core-glow {
   0%, 100% {
     filter: drop-shadow(0 0 1px var(--md-sys-color-primary));
     transform: scale(1);
     opacity: 0.85;
   }
   50% {
-    filter: drop-shadow(0 0 6px var(--md-sys-color-primary));
-    transform: scale(1.15);
+    filter: drop-shadow(0 0 7px var(--md-sys-color-primary));
+    transform: scale(1.2);
     opacity: 1;
   }
+}
+
+@keyframes models-node-glow {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; filter: drop-shadow(0 0 2px var(--md-sys-color-primary)); }
 }
 
 /* Active memory bus flow - active on hover + 5s cooldown */

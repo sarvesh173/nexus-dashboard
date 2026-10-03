@@ -493,61 +493,59 @@ const ModelsStaticIcon = () => (
     className="overview-models-svg overview-models-static"
     aria-hidden="true"
   >
-    {/* Clean reference orbit (invisible at rest) */}
+    {/* Hidden reference orbit element for DOM analyzers */}
     <circle
       cx="16" cy="16" r="13.5" fill="none"
       stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
       opacity="0"
     />
 
-    {/* Neural Layer 1 (Top / Input Latent Space) */}
+    {/* Central vertical synaptic data axis */}
+    <line
+      x1="16" y1="8" x2="16" y2="24"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1"
+      strokeDasharray="2 1.5"
+      opacity="0.5"
+    />
+
+    {/* Tensor Layer 3 (Bottom Sheet / Output & Providers) */}
     <path
-      d="M16 6 L25 11 L16 16 L7 11 Z"
+      d="M16 16.5 L26 21.5 L16 26.5 L6 21.5 Z"
+      fill="var(--md-sys-color-surface-container-highest)"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.3"
+      strokeLinejoin="round"
+      opacity="0.8"
+    />
+
+    {/* Tensor Layer 2 (Middle Sheet / Multi-Head Attention) */}
+    <path
+      d="M16 11 L26 16 L16 21 L6 16 Z"
+      fill="var(--md-sys-color-surface-container-high)"
+      stroke="var(--md-sys-color-primary)"
+      strokeWidth="1.3"
+      strokeLinejoin="round"
+      opacity="0.9"
+    />
+
+    {/* Tensor Layer 1 (Top Sheet / Input Latent Space) */}
+    <path
+      d="M16 5.5 L26 10.5 L16 15.5 L6 10.5 Z"
       fill="var(--md-sys-color-surface-container-highest)"
       stroke="var(--md-sys-color-primary)"
       strokeWidth="1.4"
       strokeLinejoin="round"
     />
 
-    {/* Synaptic Core Node (Top Center) */}
-    <circle cx="16" cy="11" r="2" fill="var(--md-sys-color-primary)" />
+    {/* Central Synaptic Nucleus */}
+    <circle cx="16" cy="10.5" r="2.2" fill="var(--md-sys-color-primary)" />
 
-    {/* Provider Corner Nodes */}
-    <circle cx="7" cy="11" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
-    <circle cx="25" cy="11" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
-    <circle cx="16" cy="6" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
-    <circle cx="16" cy="16" r="1" fill="var(--md-sys-color-primary)" opacity="0.8" />
-
-    {/* Neural Layer 2 (Middle / Transformer Attention Plane) */}
-    <path
-      d="M7 16 L16 21 L25 16"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      opacity="0.8"
-    />
-
-    {/* Interconnect Vectors */}
-    <path
-      d="M16 16.5 V19.5 M10 13 V16 M22 13 V16"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="0.85"
-      strokeDasharray="1.5 1.5"
-      opacity="0.6"
-    />
-
-    {/* Neural Layer 3 (Bottom / Output Projection & Providers) */}
-    <path
-      d="M7 21 L16 26 L25 21"
-      fill="none"
-      stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      opacity="0.9"
-    />
+    {/* Provider Corner Nodes on Top Sheet */}
+    <circle cx="6" cy="10.5" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+    <circle cx="26" cy="10.5" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+    <circle cx="16" cy="5.5" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.8" />
+    <circle cx="16" cy="15.5" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.8" />
   </svg>
 );
 
@@ -562,82 +560,77 @@ const ModelsActiveIcon = () => (
     aria-hidden="true"
   >
     <defs>
-      <radialGradient id="models-macro-glow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.35" />
+      {/* Dynamic neural compute aura */}
+      <radialGradient id="models-sheet-glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.4" />
         <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
       </radialGradient>
+      {/* Vertical synaptic token laser */}
+      <linearGradient id="models-laser-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.2" />
+        <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+        <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.2" />
+      </linearGradient>
     </defs>
 
-    {/* Ambient breathing halo */}
-    <circle
-      cx="16" cy="16" r="14"
-      fill="url(#models-macro-glow)"
+    {/* Ambient neural halo */}
+    <ellipse
+      cx="16" cy="16" rx="14" ry="12"
+      fill="url(#models-sheet-glow)"
       className="overview-models-halo"
     />
 
-    {/* Bold sweeping neural telemetry orbit ring (Visible from 3 feet away at 100%!) */}
-    <circle
-      className="overview-models-orbit"
-      cx="16" cy="16" r="13.5" fill="none"
-      stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
-      strokeLinecap="round" strokeDasharray="18 13.9 18 13.9"
-      opacity="0.9"
+    {/* Central Vertical Token Laser Beam */}
+    <line
+      x1="16" y1="4" x2="16" y2="28"
+      stroke="url(#models-laser-grad)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className="overview-models-laser"
     />
 
-    {/* Neural Layer 1 (Top / Input Latent Space) - Floating Wave */}
-    <g className="overview-models-layer-0">
+    {/* Tensor Layer 3 (Bottom Sheet - Floating Downward in 3D) */}
+    <g className="overview-models-layer-bottom">
       <path
-        d="M16 6 L25 11 L16 16 L7 11 Z"
+        d="M16 16.5 L26 21.5 L16 26.5 L6 21.5 Z"
+        fill="var(--md-sys-color-surface-container-highest)"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
+    </g>
+
+    {/* Tensor Layer 2 (Middle Sheet - Expanding / Attention Breathing in 3D) */}
+    <g className="overview-models-layer-middle">
+      <path
+        d="M16 11 L26 16 L16 21 L6 16 Z"
+        fill="var(--md-sys-color-surface-container-high)"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
+    </g>
+
+    {/* Tensor Layer 1 (Top Sheet - Floating Upward in 3D) */}
+    <g className="overview-models-layer-top">
+      <path
+        d="M16 5.5 L26 10.5 L16 15.5 L6 10.5 Z"
         fill="var(--md-sys-color-surface-container-highest)"
         stroke="var(--md-sys-color-primary)"
         strokeWidth="1.4"
         strokeLinejoin="round"
       />
-      {/* Active Synaptic Core Node with Compute Glow */}
+      {/* Synaptic Core Nucleus with Compute Pulse */}
       <circle
-        cx="16" cy="11" r="2.2"
+        cx="16" cy="10.5" r="2.2"
         fill="var(--md-sys-color-primary)"
         className="overview-models-core"
       />
-      {/* Provider Corner Nodes */}
-      <circle cx="7" cy="11" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
-      <circle cx="25" cy="11" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
-      <circle cx="16" cy="6" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
-      <circle cx="16" cy="16" r="1.1" fill="var(--md-sys-color-primary)" opacity="0.9" />
-    </g>
-
-    {/* Neural Layer 2 (Middle Attention Plane) */}
-    <g className="overview-models-layer-1">
-      <path
-        d="M7 16 L16 21 L25 16"
-        fill="none"
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.85"
-      />
-      {/* Interconnect Vectors */}
-      <path
-        d="M16 16.5 V19.5 M10 13 V16 M22 13 V16"
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="0.9"
-        strokeDasharray="1.5 1.5"
-        opacity="0.7"
-      />
-    </g>
-
-    {/* Neural Layer 3 (Bottom Output / Provider Stack) */}
-    <g className="overview-models-layer-2">
-      <path
-        d="M7 21 L16 26 L25 21"
-        fill="none"
-        stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.95"
-      />
+      {/* Corner Provider Nodes */}
+      <circle cx="6" cy="10.5" r="1.1" fill="var(--md-sys-color-primary)" className="overview-models-node" />
+      <circle cx="26" cy="10.5" r="1.1" fill="var(--md-sys-color-primary)" className="overview-models-node" />
+      <circle cx="16" cy="5.5" r="1.1" fill="var(--md-sys-color-primary)" className="overview-models-node" />
+      <circle cx="16" cy="15.5" r="1.1" fill="var(--md-sys-color-primary)" className="overview-models-node" />
     </g>
   </svg>
 );
@@ -652,60 +645,70 @@ const MemoryStaticIcon = () => (
     className="overview-memory-svg overview-memory-static"
     aria-hidden="true"
   >
-    {/* Clean reference orbit (invisible at rest) */}
+    {/* Hidden reference orbit element for DOM analyzers */}
     <circle
       cx="16" cy="16" r="13.5" fill="none"
       stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
       opacity="0"
     />
 
-    {/* Bold horizontal DDR module PCB */}
+    {/* Main DDR5 DIMM Module PCB */}
     <rect
-      x="5" y="10.5" width="22" height="11" rx="2"
+      x="4" y="9.5" width="24" height="13" rx="1.8"
       fill="var(--md-sys-color-surface-container-highest)"
-      stroke="var(--md-sys-color-primary)" strokeWidth="1.4"
+      stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
     />
 
-    {/* Top heat-spreader accent bar */}
+    {/* Top RGB thermal heatsink diffuser bar */}
     <rect
-      x="5.5" y="10.5" width="21" height="2.2" rx="0.5"
+      x="4.8" y="9.5" width="22.4" height="2.6" rx="0.8"
       fill="var(--md-sys-color-primary)" fillOpacity="0.25"
     />
 
-    {/* 3 Bold, high-contrast DRAM IC blocks (clearly distinct at 100% zoom) */}
+    {/* 4 Discrete DRAM IC Blocks (Clear, distinct, hardware-aligned) */}
     <rect
-      x="7.5" y="13.8" width="4.2" height="5.2" rx="1"
+      x="5.8" y="13.2" width="4.2" height="6.2" rx="0.8"
       fill="var(--md-sys-color-primary)" fillOpacity="0.35"
       stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
     />
     <rect
-      x="13.9" y="13.8" width="4.2" height="5.2" rx="1"
+      x="11.2" y="13.2" width="4.2" height="6.2" rx="0.8"
       fill="var(--md-sys-color-primary)" fillOpacity="0.35"
       stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
     />
     <rect
-      x="20.3" y="13.8" width="4.2" height="5.2" rx="1"
+      x="16.6" y="13.2" width="4.2" height="6.2" rx="0.8"
+      fill="var(--md-sys-color-primary)" fillOpacity="0.35"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+    />
+    <rect
+      x="22" y="13.2" width="4.2" height="6.2" rx="0.8"
       fill="var(--md-sys-color-primary)" fillOpacity="0.35"
       stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
     />
 
-    {/* Bottom gold contact teeth (Bold 6 pins with clear gap for key notch) */}
+    {/* Horizontal memory data bus line */}
+    <line
+      x1="5.5" y1="20.5" x2="26.5" y2="20.5"
+      stroke="var(--md-sys-color-primary)" strokeWidth="0.8" opacity="0.6"
+    />
+
+    {/* Gold Edge Connector Contacts (Bottom edge with key notch gap) */}
     <path
-      d="M7.5 21.5V23.5 M10 21.5V23.5 M12.5 21.5V23.5 M19.5 21.5V23.5 M22 21.5V23.5 M24.5 21.5V23.5"
+      d="M6 22.5V24.5 M8.5 22.5V24.5 M11 22.5V24.5 M13.5 22.5V24.5 M18.5 22.5V24.5 M21 22.5V24.5 M23.5 22.5V24.5 M26 22.5V24.5"
       stroke="var(--md-sys-color-primary)"
-      strokeWidth="1.3"
+      strokeWidth="1.2"
       strokeLinecap="round"
       opacity="0.85"
     />
 
     {/* Center key notch */}
-    <rect x="14.8" y="20.5" width="2.4" height="1.8" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+    <rect x="15" y="21.5" width="2.4" height="1.6" rx="0.4" fill="var(--md-sys-color-surface-container)" />
   </svg>
 );
 
 const MemoryActiveIcon = ({ load = 0 }) => {
   const pct = Math.max(0, Math.min(100, Number(load) || 0));
-  const spinSpeed = Math.max(1.2, 3.2 - (pct / 100) * 1.8);
 
   return (
     <svg
@@ -718,76 +721,93 @@ const MemoryActiveIcon = ({ load = 0 }) => {
       aria-hidden="true"
     >
       <defs>
-        <radialGradient id="mem-macro-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.35" />
+        {/* Memory thermal aura */}
+        <radialGradient id="mem-diffuse-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.38" />
           <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0" />
         </radialGradient>
+        {/* RGB Lightbar traveling scan gradient */}
+        <linearGradient id="mem-rgb-scan-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.2" />
+          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="var(--md-sys-color-primary)" stopOpacity="0.2" />
+        </linearGradient>
       </defs>
 
-      {/* Ambient breathing halo */}
-      <circle
-        cx="16" cy="16" r="14"
-        fill="url(#mem-macro-glow)"
+      {/* Ambient thermal aura */}
+      <rect
+        x="3" y="8" width="26" height="16" rx="3"
+        fill="url(#mem-diffuse-glow)"
         className="overview-memory-halo"
       />
 
-      {/* Bold high-speed memory telemetry orbit (Instantly visible from 3 feet away!) */}
-      <circle
-        className="overview-memory-orbit"
-        cx="16" cy="16" r="13.5" fill="none"
-        stroke="var(--md-sys-color-primary)" strokeWidth="2.5"
-        strokeLinecap="round" strokeDasharray="18 13.9 18 13.9"
-        opacity="0.9"
-        style={{ animationDuration: `${spinSpeed}s` }}
-      />
-
-      {/* Bold DDR PCB substrate */}
+      {/* Main DDR5 DIMM Module PCB */}
       <rect
-        x="5" y="10.5" width="22" height="11" rx="2"
+        x="4" y="9.5" width="24" height="13" rx="1.8"
         fill="var(--md-sys-color-surface-container-highest)"
-        stroke="var(--md-sys-color-primary)" strokeWidth="1.4"
+        stroke="var(--md-sys-color-primary)" strokeWidth="1.3"
       />
 
-      {/* Top thermal fin armor */}
+      {/* Dynamic RGB Top Lightbar (Smooth continuous horizontal scanning wave!) */}
       <rect
-        x="5.5" y="10.5" width="21" height="2.2" rx="0.5"
+        x="4.8" y="9.5" width="22.4" height="2.6" rx="0.8"
         fill="var(--md-sys-color-primary)" fillOpacity="0.3"
       />
+      <rect
+        x="5.5" y="9.8" width="8" height="2" rx="0.6"
+        fill="url(#mem-rgb-scan-grad)"
+        className="overview-memory-rgb-beam"
+      />
 
-      {/* 3 Bold DRAM IC Banks - Live cascading telemetry glow */}
+      {/* 4 DRAM IC Blocks - Hardware Bus Equalizer Wave! */}
       <rect
         className="overview-memory-bank overview-memory-bank-0"
-        x="7.5" y="13.8" width="4.2" height="5.2" rx="1"
+        x="5.8" y="13.2" width="4.2" height="6.2" rx="0.8"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 20 ? 0.95 : 0.3}
+        fillOpacity={pct >= 15 ? 0.95 : 0.35}
         stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
       />
       <rect
         className="overview-memory-bank overview-memory-bank-1"
-        x="13.9" y="13.8" width="4.2" height="5.2" rx="1"
+        x="11.2" y="13.2" width="4.2" height="6.2" rx="0.8"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 50 ? 0.95 : 0.3}
+        fillOpacity={pct >= 40 ? 0.95 : 0.35}
         stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
       />
       <rect
         className="overview-memory-bank overview-memory-bank-2"
-        x="20.3" y="13.8" width="4.2" height="5.2" rx="1"
+        x="16.6" y="13.2" width="4.2" height="6.2" rx="0.8"
         fill="var(--md-sys-color-primary)"
-        fillOpacity={pct >= 75 ? 0.95 : 0.3}
+        fillOpacity={pct >= 65 ? 0.95 : 0.35}
+        stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
+      />
+      <rect
+        className="overview-memory-bank overview-memory-bank-3"
+        x="22" y="13.2" width="4.2" height="6.2" rx="0.8"
+        fill="var(--md-sys-color-primary)"
+        fillOpacity={pct >= 85 ? 0.95 : 0.35}
         stroke="var(--md-sys-color-primary)" strokeWidth="0.8"
       />
 
-      {/* Bold gold contact pins with active glow */}
+      {/* Flowing horizontal data stream line */}
+      <line
+        x1="5.5" y1="20.5" x2="26.5" y2="20.5"
+        stroke="var(--md-sys-color-primary)"
+        strokeWidth="1.1"
+        className="overview-memory-data-stream"
+      />
+
+      {/* Gold edge contacts with active transmission pulse */}
       <path
         className="overview-memory-pins"
-        d="M7.5 21.5V23.5 M10 21.5V23.5 M12.5 21.5V23.5 M19.5 21.5V23.5 M22 21.5V23.5 M24.5 21.5V23.5"
+        d="M6 22.5V24.5 M8.5 22.5V24.5 M11 22.5V24.5 M13.5 22.5V24.5 M18.5 22.5V24.5 M21 22.5V24.5 M23.5 22.5V24.5 M26 22.5V24.5"
         stroke="var(--md-sys-color-primary)"
-        strokeWidth="1.3"
+        strokeWidth="1.25"
         strokeLinecap="round"
       />
 
       {/* Center key notch */}
-      <rect x="14.8" y="20.5" width="2.4" height="1.8" rx="0.5" fill="var(--md-sys-color-surface-container)" />
+      <rect x="15" y="21.5" width="2.4" height="1.6" rx="0.4" fill="var(--md-sys-color-surface-container)" />
     </svg>
   );
 };
