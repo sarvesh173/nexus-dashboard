@@ -97,6 +97,24 @@ async def check():
         page = await browser.new_page(viewport={"width": 1440, "height": 900})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
+        await page.route(
+            "**/api/cost-overview",
+            lambda route: route.fulfill(
+                status=200,
+                headers={"Access-Control-Allow-Origin": "*"},
+                content_type="application/json",
+                body='{"ok": true, "has_usage": true, "total_accrued": "0.00", "input_token_price": "$0.15 / 1M", "output_token_price": "$0.60 / 1M", "request_count": 1, "last_synced": "2026-10-03T00:00:00Z"}'
+            )
+        )
+        await page.route(
+            "**/api/stats",
+            lambda route: route.fulfill(
+                status=200,
+                headers={"Access-Control-Allow-Origin": "*"},
+                content_type="application/json",
+                body='{"ram_total_mb": 16000, "ram_used_mb": 8000, "ram_free_mb": 8000, "ram_percent": 50.0, "swap_total_mb": 0, "swap_used_mb": 0, "swap_free_mb": 0, "swap_percent": 0.0, "cpu_percent": 25.0, "cpu_cores": [25.0, 25.0], "disk_percent": 30.0, "nexus_mem_mb": 120.0}'
+            )
+        )
         await page.goto("http://localhost:5173/", wait_until="load", timeout=20000)
         # Wait for the rates themselves, not for a removed element: the cells
         # render a pending dash until /api/cost-overview resolves.
