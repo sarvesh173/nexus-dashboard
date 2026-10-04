@@ -456,11 +456,14 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   }
 
   /* =========================================================================
-     5-STAGE CYCLING DYNAMIC ANIMATIONS (0 -> 1 -> 2 -> 3 -> 4 -> 0...)
-     Each consecutive hover unlocks a new sensory tactile physics interaction.
+     5-STAGE LUXURY THEME-COHESIVE PHYSICAL INTERACTION SUITE
+     100% theme-aligned. ZERO foreign colors. Pure M3/Apple glassmorphism.
      ========================================================================= */
 
-  /* --- STAGE 0: PURE 3D TACTICAL TILT (Verified Baseline Signature) --- */
+  /* -------------------------------------------------------------------------
+     VARIANT 0: THE PLAYGROUND 3D CHAMFER & SPECULAR SHEEN (The Original)
+     Subtle 3D perspective tilt + frosted well pop + specular glare sweep + ripple
+     ------------------------------------------------------------------------- */
   .nav-overview-button[data-variant="0"]:hover .nav-overview-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(-12deg) rotateY(-14deg) translate3d(0, -1px, 3px) scale(1.1);
@@ -486,63 +489,48 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(90deg) translate3d(0, -1px, 3px) scale(1.12);
   }
 
-  /* --- STAGE 1: KINETIC GYRO & ORBITAL BARREL ROLL --- */
-  @keyframes gyro-barrel-roll {
-    0% { transform: perspective(520px) rotate3d(1, 1, 0, 0deg) scale(1); }
-    50% { transform: perspective(520px) rotate3d(1, 1, 0, 180deg) scale(1.22); }
-    100% { transform: perspective(520px) rotate3d(1, 1, 0, 360deg) scale(1.12); }
+  /* -------------------------------------------------------------------------
+     VARIANT 1: MAGNETIC LEVITATION & DUAL CONCENTRIC HARMONIC WAVE
+     Weightless floating elevation + ambient theme shadow + harmonic dual wave
+     ------------------------------------------------------------------------- */
+  @keyframes harmonic-dual-wave {
+    0%   { opacity: 0;   transform: scale(0.65); }
+    30%  { opacity: 0.9; }
+    100% { opacity: 0;   transform: scale(1.65); }
   }
-  @keyframes models-3d-tumble {
-    0% { transform: perspective(520px) rotateX(0) rotateY(0) scale(1); }
-    40% { transform: perspective(520px) rotateX(-30deg) rotateY(60deg) scale(1.24); }
-    100% { transform: perspective(520px) rotateX(18deg) rotateY(360deg) scale(1.14); }
+  @keyframes magnetic-float-elevation {
+    0%   { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 transparent); }
+    50%  { transform: translateY(-3px) scale(1.14); filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent)); }
+    100% { transform: translateY(-2px) scale(1.1); filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent)); }
   }
-  @keyframes agents-vortex-surge {
-    0% { transform: perspective(520px) rotateZ(0deg) scale(1); }
-    50% { transform: perspective(520px) rotateZ(180deg) scale(1.25); filter: drop-shadow(0 0 8px var(--nav-agent-glow)); }
-    100% { transform: perspective(520px) rotateZ(360deg) scale(1.12); }
-  }
-  @keyframes pg-console-flip {
-    0% { transform: perspective(520px) rotateX(0deg) scale(1); }
-    50% { transform: perspective(520px) rotateX(180deg) scale(1.2); }
-    100% { transform: perspective(520px) rotateX(360deg) scale(1.12); }
-  }
-  @keyframes cost-coin-toss {
-    0% { transform: perspective(520px) rotateY(0deg) translateY(0) scale(1); }
-    45% { transform: perspective(520px) rotateY(180deg) translateY(-4px) scale(1.26); filter: drop-shadow(0 4px 10px var(--md-sys-color-primary)); }
-    100% { transform: perspective(520px) rotateY(360deg) translateY(-1px) scale(1.15); }
-  }
-  @keyframes settings-turbo-planetary {
-    0% { transform: perspective(520px) rotate(0deg) scale(1); }
-    100% { transform: perspective(520px) rotate(360deg) scale(1.16); }
-  }
-
-  .nav-overview-button[data-variant="1"]:hover .nav-overview-icon {
-    animation: gyro-barrel-roll 620ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
-  }
-  .nav-model-button[data-variant="1"]:hover .nav-model-icon {
-    animation: models-3d-tumble 650ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
-  }
-  .nav-agent-button[data-variant="1"]:hover .nav-agent-icon {
-    animation: agents-vortex-surge 600ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
-  }
-  .nav-playground-button[data-variant="1"]:hover .nav-playground-icon {
-    animation: pg-console-flip 620ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
-  }
-  .nav-cost-button[data-variant="1"]:hover .nav-cost-icon {
-    animation: cost-coin-toss 640ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
-  }
+  .nav-overview-button[data-variant="1"]:hover .nav-overview-icon,
+  .nav-model-button[data-variant="1"]:hover .nav-model-icon,
+  .nav-agent-button[data-variant="1"]:hover .nav-agent-icon,
+  .nav-playground-button[data-variant="1"]:hover .nav-playground-icon,
+  .nav-cost-button[data-variant="1"]:hover .nav-cost-icon,
   .nav-settings-button[data-variant="1"]:hover .nav-settings-icon {
-    animation: settings-turbo-planetary 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: magnetic-float-elevation 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .nav-tab[data-variant="1"]:hover [class*="-ring"] {
+    animation: harmonic-dual-wave 1.3s cubic-bezier(0.16, 1, 0.3, 1) infinite !important;
+    border-color: color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
   }
 
-  /* --- STAGE 2: HYPER-SPRING JELLO PULSE --- */
-  @keyframes hyper-spring-jello {
-    0% { transform: scale(1); }
-    25% { transform: scale(1.35, 0.72) translateY(2px); }
-    50% { transform: scale(0.78, 1.3) translateY(-3px); }
-    75% { transform: scale(1.15, 0.92); }
-    100% { transform: scale(1.1) translateY(-0.5px); }
+  /* -------------------------------------------------------------------------
+     VARIANT 2: MECHANICAL SHUTTER SNAP & DIAGONAL EDGE RAY
+     Micro-recess snap-forward + sharp specular blade sweep + crisp squircle ring
+     ------------------------------------------------------------------------- */
+  @keyframes shutter-snap-rebound {
+    0%   { transform: perspective(520px) translateZ(0) scale(1); }
+    22%  { transform: perspective(520px) translateZ(-4px) scale(0.94); }
+    65%  { transform: perspective(520px) translateZ(4px) scale(1.15); }
+    100% { transform: perspective(520px) translateZ(2px) scale(1.1); }
+  }
+  @keyframes shutter-edge-sweep {
+    0%   { opacity: 0; transform: translateX(-14px) rotate(35deg); }
+    30%  { opacity: 1; }
+    100% { opacity: 0; transform: translateX(18px) rotate(35deg); }
   }
   .nav-overview-button[data-variant="2"]:hover .nav-overview-icon,
   .nav-model-button[data-variant="2"]:hover .nav-model-icon,
@@ -550,17 +538,27 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-playground-button[data-variant="2"]:hover .nav-playground-icon,
   .nav-cost-button[data-variant="2"]:hover .nav-cost-icon,
   .nav-settings-button[data-variant="2"]:hover .nav-settings-icon {
-    animation: hyper-spring-jello 560ms cubic-bezier(0.25, 1.4, 0.35, 1) both;
-    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 75%, transparent));
+    animation: shutter-snap-rebound 520ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 60%, transparent));
+  }
+  .nav-tab[data-variant="2"]:hover [class*="-icon"]::after {
+    animation: shutter-edge-sweep 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
-  /* --- STAGE 3: QUANTUM PRISM GLARE & CHROMATIC ABERRATION --- */
-  @keyframes quantum-prism-glare {
-    0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
-    20% { transform: scale(1.18) skewX(-6deg); filter: drop-shadow(-2px 0 3px #00f0ff) drop-shadow(2px 0 3px #ff0077); }
-    45% { transform: scale(1.12) skewX(4deg); filter: drop-shadow(2px 0 4px #00f0ff) drop-shadow(-2px 0 4px #ff0077); }
-    70% { transform: scale(1.16) skewX(-2deg); filter: drop-shadow(-1px 0 2px #00f0ff) drop-shadow(1px 0 2px #ff0077); }
-    100% { transform: scale(1.1) skewX(0); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent)); }
+  /* -------------------------------------------------------------------------
+     VARIANT 3: AMBIENT BREATHING HALO & SOFT RADIAL BLOOM
+     Organic living oscillation + soft primary radial diffusion + floating aura
+     ------------------------------------------------------------------------- */
+  @keyframes ambient-breathing-halo {
+    0%   { transform: scale(1) rotate(0deg); }
+    35%  { transform: scale(1.08) rotate(-3deg); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent)); }
+    70%  { transform: scale(1.12) rotate(3deg); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 80%, transparent)); }
+    100% { transform: scale(1.1) rotate(0deg); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent)); }
+  }
+  @keyframes ambient-halo-pulse {
+    0%   { opacity: 0; transform: scale(0.7); }
+    40%  { opacity: 0.85; }
+    100% { opacity: 0; transform: scale(1.5); }
   }
   .nav-overview-button[data-variant="3"]:hover .nav-overview-icon,
   .nav-model-button[data-variant="3"]:hover .nav-model-icon,
@@ -568,24 +566,29 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-playground-button[data-variant="3"]:hover .nav-playground-icon,
   .nav-cost-button[data-variant="3"]:hover .nav-cost-icon,
   .nav-settings-button[data-variant="3"]:hover .nav-settings-icon {
-    animation: quantum-prism-glare 650ms ease-out both;
+    animation: ambient-breathing-halo 700ms ease-in-out both;
   }
   .nav-tab[data-variant="3"]:hover [class*="-ring"] {
-    border-color: #00f0ff !important;
-    box-shadow: 0 0 8px #ff0077;
+    animation: ambient-halo-pulse 1.4s ease-out infinite !important;
+    border-color: color-mix(in srgb, var(--md-sys-color-primary) 75%, white);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
   }
 
-  /* --- STAGE 4: SUPERNOVA SHOCKWAVE BLOOM --- */
-  @keyframes supernova-shockwave {
-    0% { transform: scale(0.85); opacity: 0.2; }
-    30% { transform: scale(1.28); opacity: 1; filter: drop-shadow(0 0 12px var(--md-sys-color-primary)); }
-    60% { transform: scale(0.96); }
-    100% { transform: scale(1.14); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 85%, white)); }
+  /* -------------------------------------------------------------------------
+     VARIANT 4: LIQUID MORPH SPRING & EXPANDING SURFACE RIPPLE
+     Fluid droplet inertia + center-outward specular bloom + liquid water ring
+     ------------------------------------------------------------------------- */
+  @keyframes liquid-droplet-spring {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.22, 0.82) translateY(1px); }
+    60%  { transform: scale(0.88, 1.18) translateY(-2px); }
+    82%  { transform: scale(1.12, 0.95); }
+    100% { transform: scale(1.1) translateY(0); }
   }
-  @keyframes supernova-ring-wave {
-    0% { opacity: 0; transform: scale(0.4); border-width: 3px; }
-    25% { opacity: 1; border-width: 2px; }
-    100% { opacity: 0; transform: scale(2.2); border-width: 1px; }
+  @keyframes liquid-surface-ripple {
+    0%   { opacity: 0; transform: scale(0.6); border-width: 2px; }
+    25%  { opacity: 0.95; }
+    100% { opacity: 0; transform: scale(1.75); border-width: 1px; }
   }
   .nav-overview-button[data-variant="4"]:hover .nav-overview-icon,
   .nav-model-button[data-variant="4"]:hover .nav-model-icon,
@@ -593,12 +596,13 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-playground-button[data-variant="4"]:hover .nav-playground-icon,
   .nav-cost-button[data-variant="4"]:hover .nav-cost-icon,
   .nav-settings-button[data-variant="4"]:hover .nav-settings-icon {
-    animation: supernova-shockwave 680ms cubic-bezier(0.18, 0.9, 0.2, 1) both;
+    animation: liquid-droplet-spring 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent));
   }
   .nav-tab[data-variant="4"]:hover [class*="-ring"] {
-    animation: supernova-ring-wave 1.1s cubic-bezier(0.16, 1, 0.3, 1) infinite !important;
-    border-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, white);
-    box-shadow: 0 0 14px var(--md-sys-color-primary);
+    animation: liquid-surface-ripple 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) infinite !important;
+    border-color: color-mix(in srgb, var(--md-sys-color-primary) 85%, white);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
   }
 
   @media (prefers-reduced-motion: reduce) {
