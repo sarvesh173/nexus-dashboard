@@ -290,6 +290,27 @@ class TestBackgroundLoopSurvivesAndReports(unittest.TestCase):
             ls._sync_once_locked = orig
 
 
+class TestRunSyncFetchSpecsImports(unittest.TestCase):
+    """BUG: `run_sync.fetch_specs()` called `hermes_config_path()` which was not imported.
+
+    When an NVIDIA API key was present in configuration, `run_sync.py` crashed
+    with `NameError: name 'hermes_config_path' is not defined`.
+    """
+
+    def test_fetch_specs_resolves_hermes_config_path_without_name_error(self):
+        from unittest.mock import patch
+        import run_sync
+
+        with patch("model_health._api_key", return_value="dummy_key"), \
+             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"):
+            try:
+                run_sync.fetch_specs()
+            except FileNotFoundError:
+                pass  # hermes_config_path was successfully called and resolved
+            except NameError as exc:
+                self.fail(f"run_sync.fetch_specs raised NameError: {exc}")
+
+
 class TestMetaCountsAgreeWithRows(unittest.TestCase):
     """The counts are what every consumer quotes, so they must be self-consistent."""
 
