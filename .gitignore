@@ -15,3 +15,6 @@ artifacts/
 hidden_store.json
 model_health.json
 .nexus-cost-usage.json
+
+# live-sync cache (regenerated every 30s)
+cache/

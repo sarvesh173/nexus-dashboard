@@ -1177,6 +1177,18 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         elif self.path == '/api/live-providers':
             data = get_live_providers()
             return self.send_json(data)
+        elif self.path == '/api/synced-models':
+            # Live-synced catalogue: Hermes config + OmniRoute merged by live_sync.py
+            import live_sync
+            data = live_sync.read_cache()
+            return self.send_json(data)
+        elif self.path == '/api/sync-status':
+            import live_sync
+            return self.send_json(live_sync.read_cache().get('_meta', {}))
+        elif self.path == '/api/sync-now':
+            import live_sync
+            _p, sync_result = live_sync.sync_once()
+            return self.send_json(sync_result)
         elif self.path == '/api/gateway-status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -1199,5 +1211,15 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         pass
 
 if __name__ == '__main__':
+    # Live sync: keep the merged catalogue (Hermes config + OmniRoute) fresh.
+    # Read-only on both sources; a failure here never blocks the HTTP server.
+    try:
+        import live_sync
+        live_sync.sync_once()                      # prime the cache before serving
+        live_sync.start_background()               # then refresh every 30s
+        print('[nexus] live sync started', flush=True)
+    except Exception as e:                        # noqa: BLE001
+        print(f'[nexus] live sync failed to start: {type(e).__name__}: {e}', flush=True)
+
     server = HTTPServer(('127.0.0.1', 5174), TelemetryHandler)
     server.serve_forever()
