@@ -1,53 +1,75 @@
-# Nexus Agent Telemetry & Model Engine
+# Nexus Dashboard
 
-> **Status:** Active development.
-> **What it is:** a self-hosted cockpit for live inference, multi-provider model
-> catalogues, cost intelligence, and hardware health.
+One screen for every model you can reach, and what it costs to run.
 
-Nexus Dashboard polls every provider you have configured, merges the
-catalogues into one cache, and renders it. Add a model anywhere upstream and it
-appears within one sync cycle. Nothing is hand-listed.
+You have the same vendor configured in three places: your agent gateway, a CLI
+agent's config file, and an OpenAI-compatible proxy that fronts a dozen other
+vendors. Nexus reads all three, works out who actually serves what, merges them
+into one catalogue, and refreshes it every 30 seconds. Add a model anywhere
+upstream and it appears on its own. Nothing is hand-listed.
 
----
+```
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│  agent       │   │  CLI agent   │   │  LLM proxy   │
+│  gateway     │   │  config      │   │  (12 vendors)│
+└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          ▼
+              ┌───────────────────────┐
+              │  merge + canonicalise │
+              │  vendor attribution   │
+              └───────────┬───────────┘
+                          ▼  every 30s, atomic write
+              ┌───────────────────────┐
+              │  cache  →  HTTP API   │
+              └───────────┬───────────┘
+                          ▼
+                  React dashboard
+```
 
-## What it does
+## Why a proxy makes counting hard
 
-- **Live catalogue merge.** Polls the agent gateway, the agent config file, and
-  an OpenAI-compatible proxy endpoint, then merges all three into one cache on
-  a 30-second cycle.
-- **Real vendor attribution.** A proxy endpoint fronts many vendors, so its
-  model ids are regrouped by the true owner instead of being filed under the
-  proxy.
-- **Duplicate-free providers.** Provider ids are canonicalised before merging,
-  so the same vendor spelled two ways (`free-ai` / `freeai`) collapses into one
-  row.
-- **Honest counts.** Reports provider-to-model rows *and* distinct model ids,
-  so a total is never inflated by overlap.
-- **Fail-soft.** A dead provider degrades to a warning; the last good cache
-  keeps serving instead of rendering an empty page.
-- **5-modality breakdown.** `LLM`, `Vision`, `Embedding`, `STT`, `TTS`.
-- **Hide and restore.** Hide any model or provider non-destructively, per-model
-  test runner with latency reporting, interactive playground, cost scanner,
-  hardware overview.
+A proxy in front of twelve vendors returns twelve vendors' models under one
+endpoint name. Counting rows gives you a number that looks authoritative and is
+wrong. Nexus reports both, and you quote the second:
 
----
+```
+providers       76      distinct vendors
+rows          1161      what the UI renders
+unique models  925      what actually exists
+duplicates     236      rows naming the same model twice
+```
 
-## Tech stack
+Rows are routes. A model reachable directly *and* through the proxy really is
+two routes, so it stays visible as two rows. It is counted once.
 
-- **Frontend:** React 19, Vite, Tailwind CSS v4, Lucide, React Router v7.
-- **Backend:** Python 3 stdlib HTTP server (no framework).
-- **Design:** Material Design 3 tokenised themes with palette switching.
+Every row also keeps a `sources` list, so you can see whether a vendor came
+from the gateway, the config, the proxy, or more than one.
 
----
+## The three sources
 
-## Getting started
+| Source | What it contributes |
+|---|---|
+| Agent gateway | The models the gateway is serving right now |
+| CLI agent config | Providers on disk, including ones the gateway does not list |
+| OpenAI-compatible proxy | Everything the proxy fronts, regrouped by real vendor |
 
-### Prerequisites
+All three are **read-only**. Nexus never writes to a provider config or to the
+proxy. Writes go to its own cache and its own visibility store, nothing else.
 
-- Node.js 20+
-- Python 3.11+ with `PyYAML`
+The proxy's model ids are regrouped using the vendor prefix in the id, so
+`qwen/...` files under Qwen rather than under the proxy. Router namespaces and
+routing modifiers such as `auto/`, `fast:` and `reliable/` are recognised and
+skipped, so they never invent a vendor that does not exist.
 
-### Run it
+Provider ids are canonicalised before merging, alias first and punctuation
+second, so the same vendor written two ways (`free-ai/freeai`, `zhipu/zai`)
+collapses into one row.
+
+## Running it
+
+Requires Node.js 20+ and Python 3.11+ with PyYAML.
 
 ```bash
 git clone git@github.com:sarvesh173/nexus-dashboard.git
@@ -55,105 +77,132 @@ cd nexus-dashboard
 
 npm install
 
-# backend on :5174
-python3 server.py
-
-# frontend on :5173
-npm run build && npm run preview
+python3 server.py                  # backend on :5174
+npm run build && npm run preview   # frontend on :5173
 ```
 
-The frontend proxies `/api` to `127.0.0.1:5174`. Poll intervals are set to
-match the backend's sync cadence so the two never disagree.
+Both run. The frontend proxies `/api` to `127.0.0.1:5174` and polls it.
 
-### Tests
+No key is needed to start. Nexus reads whichever credentials already exist
+where your agent keeps them, and never stores one.
 
-```bash
-npm test                                        # all five python suites
+### Configuration
 
-python3 tests/test_dashboard_mounts.py    # real-browser mount check (separate)
-```
+Every input location resolves from the environment, so no path is hardcoded and
+a checkout carries no username.
 
-Run them by path, not via `python3 -m unittest tests.x`.
-
-The mount check is not optional. A passing build does **not** mean a page
-renders: one undefined identifier unmounts the whole React tree and ships a
-black screen that no build step catches.
-
----
-
-## Architecture
-
-```
-  agent gateway  ─┐
-  agent config   ─┼─→  merge engine  ─→  cache  ─→  HTTP API  ─→  dashboard
-  proxy endpoint ─┘     (dedup,              (30s)      (:5174)    (:5173)
-                         vendor split)
-```
-
-The merge engine is **read-only** on all three sources. Write paths are a
-separate concern and deliberately absent.
-
-### Why the merge is not a simple union
-
-A proxy endpoint in front of ten vendors reports ten vendors' models, and the
-agent gateway usually reports many of the same ones. A naive union
-double-counts. So:
-
-1. Models are regrouped under the real provider prefix in their id.
-2. Provider ids are canonicalised, then merged, with a `sources` list per row.
-3. Both `models` (rows rendered) and `unique_models` (distinct ids) are
-   reported. Quote the second when you state a total.
-
-### API
-
-Each row was verified by calling it against a running backend.
-
-| Method | Path | Returns |
+| Variable | Purpose | Default |
 |---|---|---|
-| `/api/all-providers` | GET | every provider, including hidden ones |
-| `/api/cost-overview` | GET | token pricing rollup |
-| `/api/gateway-status` | GET | gateway reachability and whether data is stale |
-| `/api/health` | GET | liveness |
-| `/api/live-providers` | GET | the gateway catalogue, unmerged |
-| `/api/model/test` | POST | per-model latency probe (body: `model_id`) |
-| `/api/providers` | GET | provider cards with model counts |
-| `/api/stats` | GET | CPU, RAM, sessions, latency |
-| `/api/sync-now` | GET | forces a sync, returns the new status |
-| `/api/sync-status` | GET | last sync time, counts, per-source status |
-| `/api/synced-models` | GET | merged catalogue plus sync metadata |
-| `/api/visibility` | GET | hidden set (GET) / hide one entry (POST) |
-| `/api/visibility/reset` | POST | restore everything |
-
-`/api/visibility` is the only path that accepts both verbs.
-
----
-
-## Configuration
-
-Every path that identifies this machine is resolved from the environment by
-`paths.py`. No home directory is hardcoded anywhere in the source, so a public
-checkout carries no username and runs unchanged elsewhere.
-
-| Variable | Read by | Default |
-|---|---|---|
-| `HERMES_HOME` | `paths.py` | `~/.hermes` |
-| `HERMES_CONFIG` | `paths.py` | `$HERMES_HOME/config.yaml` |
-| `OMNIROUTE_HOME` | `paths.py` | `~/.omniroute` |
-| `OMNIROUTE_BASE_URL` | `paths.py` | `http://127.0.0.1:20128/v1` |
-| `NEXUS_DIR` | `paths.py`, `run_sync.py` | the checkout |
-| `HERMES_GATEWAY_URL` | `hermes_gateway.py` | the value above |
+| `HERMES_HOME` | Agent config and credentials | `~/.hermes` |
+| `HERMES_CONFIG` | The agent config to read | `$HERMES_HOME/config.yaml` |
+| `OMNIROUTE_HOME` | Proxy credentials | `~/.omniroute` |
+| `OMNIROUTE_BASE_URL` | Proxy endpoint | `http://127.0.0.1:20128/v1` |
+| `NEXUS_DIR` | This project's own directory | the checkout |
+| `HERMES_GATEWAY_URL` | Gateway endpoint | the proxy value above |
 
 The refresh cadence and the listen port are module constants, not environment
 variables: `SYNC_INTERVAL = 30` in `live_sync.py`, port `5174` in `server.py`.
-Change them there.
 
-`HERMES_CONFIG` and `NEXUS_DIR` are read at import time; `HERMES_HOME` and
-`OMNIROUTE_HOME` are also read per call, so exporting them after startup works.
+`HERMES_CONFIG` and `NEXUS_DIR` are read at import time. `HERMES_HOME` and
+`OMNIROUTE_HOME` are read per call, so exporting them after startup works.
 
-Provider credentials are read from the agent's own env file at mode `600`. This
-project never writes or stores a key.
+See `examples/env.example`, `examples/linking.json.example` and
+`examples/nexus-telemetry.service` for a runnable service unit. The agent-facing
+contract is in `SKILL.md`.
 
----
+## API
+
+Each verb below was verified by calling it against a running backend.
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/api/synced-models` | merged catalogue plus sync metadata |
+| GET | `/api/sync-status` | counts, last sync, per-source health |
+| GET | `/api/sync-now` | forces a sync, returns the new status |
+| GET | `/api/visibility` | hidden models and providers |
+| POST | `/api/visibility` | hide one entry |
+| POST | `/api/visibility/reset` | restore everything |
+| GET | `/api/stats` | CPU, RAM, sessions, latency |
+| GET | `/api/cost-overview` | token pricing rollup |
+| POST | `/api/model/test` | latency probe, body `model_id` |
+| GET | `/api/providers` | provider cards with model counts |
+| GET | `/api/all-providers` | every provider, including hidden |
+| GET | `/api/live-providers` | the gateway catalogue, unmerged |
+| GET | `/api/gateway-status` | reachability, and whether data is stale |
+| GET | `/api/health` | liveness |
+
+```bash
+curl -s localhost:5174/api/sync-status | jq
+```
+
+```json
+{
+  "providers": 76,
+  "models": 1161,
+  "unique_models": 925,
+  "duplicate_rows": 236,
+  "status": {
+    "ok": true,
+    "sources": { "gateway": 81, "hermes": 23, "omniroute": 41 }
+  }
+}
+```
+
+Those are a live snapshot, not constants. Re-read them.
+
+Three refresh rates run on purpose: the catalogue every 30s, CPU and RAM every
+2s, the model-health registry every 15 minutes.
+
+## What it does
+
+- **5-modality breakdown.** `LLM`, `Vision`, `Embedding`, `STT`, `TTS`.
+- **Hide and restore.** Any model or provider, non-destructive, and restorable.
+- **Per-model test runner** with latency reporting.
+- **Interactive playground.**
+- **Cost scanner** across every provider.
+- **Hardware overview** for the machine running it.
+- **Model icons.** 82 model and 107 provider marks, resolved from the model
+  family in its id. Official and open-source sources only, no invented marks.
+
+## Layout
+
+```
+server.py          HTTP API, provider merge, icon assignment
+live_sync.py       the three-source sync engine and its cache
+hermes_gateway.py  gateway client, with stale detection
+model_health.py    model registry and health classification
+visibility.py      hide and restore store
+assign_icons.py    model family to icon resolver
+paths.py           every filesystem path, from the environment
+src/               React frontend
+tests/             six suites, all offline
+```
+
+## Tests
+
+```bash
+npm test                                 # the three backend suites
+python3 tests/test_dashboard_mounts.py   # real-browser mount check
+```
+
+Run them by path rather than via `python3 -m unittest tests.x`.
+
+| Suite | Covers |
+|---|---|
+| `test_audit_fixes.py` | cache-write race, malformed proxy payload, path resolution |
+| `test_live_sync.py` | canonical provider ids, alias ordering, merge precedence |
+| `test_server_nvidia.py` | provider enumeration and per-modality dedup |
+| `test_nav_animations.py` | navigation transitions in Chromium |
+| `test_overview_motion.py` | overview timing and indicator states |
+| `test_dashboard_mounts.py` | the app mounts with zero console errors |
+
+The mount check is not optional. A passing build does **not** mean a page
+renders: one undefined identifier unmounts the whole React tree and ships a
+black screen that no build step catches. That has happened here once.
+
+CI runs all six, and first proves `no-undef` is actually live by injecting a
+canary. A linter that cannot load its own config is indistinguishable from a
+clean codebase, and this repo shipped exactly that bug once.
 
 ## Roadmap
 
@@ -164,20 +213,27 @@ project never writes or stores a key.
 - [x] Upstream catalogue fetch and custom model injection.
 - [x] Live three-source merge with 30-second auto-refresh.
 - [x] Non-destructive model and provider hiding.
-- [ ] Real-time WebSocket sync for token streaming.
+- [ ] WebSocket sync for token streaming.
 - [ ] Autonomous model health and failover metrics.
 - [ ] Write path: switch the live model across CLI agents.
-
----
 
 ## Security
 
 - Never commit `.env` or any key. Credentials are read from the agent's env
-  file at mode `600`.
+  file at mode `600`, and this project never writes or stores one.
 - Keep all catalogue sources read-only.
 - Anything surfaced in the API is public by default. If it can leak a key, do
   not put it behind an endpoint.
+- `paths.py` is the only module allowed to know a filesystem location.
+
+## Stack
+
+- **Frontend:** React 19, Vite, Tailwind CSS v4, Lucide, React Router v7.
+- **Backend:** Python 3 standard library only, no framework.
+- **Design:** Material Design 3 tokenised themes with palette switching.
+
+MIT licensed. See `LICENSE`.
 
 ---
 
-*Engineered by [@sarvesh173](https://github.com/sarvesh173).*
+Engineered by [@sarvesh173](https://github.com/sarvesh173).

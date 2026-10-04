@@ -1,0 +1,14 @@
+# Keep the language bar honest. This repository is Python and JavaScript; the
+# hundreds of model and provider logos are assets, not source. Without this,
+# SVG files outnumber the code and the bar claims the project is mostly
+# something it is not.
+*.svg   linguist-generated=false
+*.svg   linguist-vendored
+*.png   linguist-vendored
+*.jpg   linguist-vendored
+*.ico   linguist-vendored
+*.woff2 linguist-vendored
+
+# Documentation and fixtures.
+package-lock.json linguist-generated=true
+examples/**            linguist-documentation

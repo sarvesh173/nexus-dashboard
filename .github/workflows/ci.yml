@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, feat/model-section-apple-wow-overhaul]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -19,6 +19,23 @@ jobs:
 
       - run: npm ci
 
+      # oxlint runs with --deny no-undef. That rule is the one that catches an
+      # identifier used as though it were a local binding, which is exactly the
+      # class of bug that blanks the whole app. It is worthless if it is
+      # allowed to be silently inactive, so prove it fires on a canary before
+      # trusting a green run below.
+      - name: Prove no-undef is actually enforced
+        run: |
+          cp src/App.jsx /tmp/App.jsx.orig
+          printf '\nfunction __canary(){ return __neverDefined; }\n' >> src/App.jsx
+          if npx oxlint src/App.jsx 2>&1 | grep -q "__neverDefined"; then
+            echo "no-undef fired on the canary, the rule is live"
+          else
+            echo "::error::no-undef is inert, it did not catch a canary. Fix the lint config before trusting a green run."
+            exit 1
+          fi
+          cp /tmp/App.jsx.orig src/App.jsx
+
       - name: Lint
         run: npm run lint
 
@@ -28,6 +45,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+
+      # The backend suites are offline: HTTP is stubbed and no key is needed.
+      # They cover the cache-write race, the malformed-proxy guard, canonical
+      # provider ids, the model-health registry and path resolution.
+      - name: Backend unit tests
+        run: |
+          python3 tests/test_audit_fixes.py
+          python3 tests/test_live_sync.py
+          python3 tests/test_server_nvidia.py
 
       - run: pip install playwright && python -m playwright install --with-deps chromium
 
@@ -47,3 +73,9 @@ jobs:
 
       - name: Overview motion tests
         run: python3 tests/test_overview_motion.py
+
+      # The guard against a blank screen. A component that throws while
+      # mounting leaves an empty root, and every check above it can still look
+      # healthy, so this runs last and fails loudly.
+      - name: Mount regression
+        run: python3 tests/test_dashboard_mounts.py
