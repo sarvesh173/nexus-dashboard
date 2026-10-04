@@ -455,6 +455,152 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
   }
 
+  /* =========================================================================
+     5-STAGE CYCLING DYNAMIC ANIMATIONS (0 -> 1 -> 2 -> 3 -> 4 -> 0...)
+     Each consecutive hover unlocks a new sensory tactile physics interaction.
+     ========================================================================= */
+
+  /* --- STAGE 0: PURE 3D TACTICAL TILT (Verified Baseline Signature) --- */
+  .nav-overview-button[data-variant="0"]:hover .nav-overview-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(-12deg) rotateY(-14deg) translate3d(0, -1px, 3px) scale(1.1);
+  }
+  .nav-model-button[data-variant="0"]:hover .nav-model-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(18deg) rotateY(-22deg) translate3d(0, -1px, 3px) scale(1.12);
+  }
+  .nav-agent-button[data-variant="0"]:hover .nav-agent-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 66%, transparent));
+    transform: perspective(520px) rotateX(-14deg) rotateY(12deg) translate3d(0, -1px, 3px) scale(1.1);
+  }
+  .nav-playground-button[data-variant="0"]:hover .nav-playground-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(-14deg) rotateY(16deg) translate3d(0, -1px, 3px) scale(1.1);
+  }
+  .nav-cost-button[data-variant="0"]:hover .nav-cost-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(-12deg) rotateY(18deg) rotate(-16deg) translate3d(0, -1px, 3px) scale(1.13);
+  }
+  .nav-settings-button[data-variant="0"]:hover .nav-settings-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(90deg) translate3d(0, -1px, 3px) scale(1.12);
+  }
+
+  /* --- STAGE 1: KINETIC GYRO & ORBITAL BARREL ROLL --- */
+  @keyframes gyro-barrel-roll {
+    0% { transform: perspective(520px) rotate3d(1, 1, 0, 0deg) scale(1); }
+    50% { transform: perspective(520px) rotate3d(1, 1, 0, 180deg) scale(1.22); }
+    100% { transform: perspective(520px) rotate3d(1, 1, 0, 360deg) scale(1.12); }
+  }
+  @keyframes models-3d-tumble {
+    0% { transform: perspective(520px) rotateX(0) rotateY(0) scale(1); }
+    40% { transform: perspective(520px) rotateX(-30deg) rotateY(60deg) scale(1.24); }
+    100% { transform: perspective(520px) rotateX(18deg) rotateY(360deg) scale(1.14); }
+  }
+  @keyframes agents-vortex-surge {
+    0% { transform: perspective(520px) rotateZ(0deg) scale(1); }
+    50% { transform: perspective(520px) rotateZ(180deg) scale(1.25); filter: drop-shadow(0 0 8px var(--nav-agent-glow)); }
+    100% { transform: perspective(520px) rotateZ(360deg) scale(1.12); }
+  }
+  @keyframes pg-console-flip {
+    0% { transform: perspective(520px) rotateX(0deg) scale(1); }
+    50% { transform: perspective(520px) rotateX(180deg) scale(1.2); }
+    100% { transform: perspective(520px) rotateX(360deg) scale(1.12); }
+  }
+  @keyframes cost-coin-toss {
+    0% { transform: perspective(520px) rotateY(0deg) translateY(0) scale(1); }
+    45% { transform: perspective(520px) rotateY(180deg) translateY(-4px) scale(1.26); filter: drop-shadow(0 4px 10px var(--md-sys-color-primary)); }
+    100% { transform: perspective(520px) rotateY(360deg) translateY(-1px) scale(1.15); }
+  }
+  @keyframes settings-turbo-planetary {
+    0% { transform: perspective(520px) rotate(0deg) scale(1); }
+    100% { transform: perspective(520px) rotate(360deg) scale(1.16); }
+  }
+
+  .nav-overview-button[data-variant="1"]:hover .nav-overview-icon {
+    animation: gyro-barrel-roll 620ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+  .nav-model-button[data-variant="1"]:hover .nav-model-icon {
+    animation: models-3d-tumble 650ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+  .nav-agent-button[data-variant="1"]:hover .nav-agent-icon {
+    animation: agents-vortex-surge 600ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+  .nav-playground-button[data-variant="1"]:hover .nav-playground-icon {
+    animation: pg-console-flip 620ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+  .nav-cost-button[data-variant="1"]:hover .nav-cost-icon {
+    animation: cost-coin-toss 640ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+  .nav-settings-button[data-variant="1"]:hover .nav-settings-icon {
+    animation: settings-turbo-planetary 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* --- STAGE 2: HYPER-SPRING JELLO PULSE --- */
+  @keyframes hyper-spring-jello {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.35, 0.72) translateY(2px); }
+    50% { transform: scale(0.78, 1.3) translateY(-3px); }
+    75% { transform: scale(1.15, 0.92); }
+    100% { transform: scale(1.1) translateY(-0.5px); }
+  }
+  .nav-overview-button[data-variant="2"]:hover .nav-overview-icon,
+  .nav-model-button[data-variant="2"]:hover .nav-model-icon,
+  .nav-agent-button[data-variant="2"]:hover .nav-agent-icon,
+  .nav-playground-button[data-variant="2"]:hover .nav-playground-icon,
+  .nav-cost-button[data-variant="2"]:hover .nav-cost-icon,
+  .nav-settings-button[data-variant="2"]:hover .nav-settings-icon {
+    animation: hyper-spring-jello 560ms cubic-bezier(0.25, 1.4, 0.35, 1) both;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 75%, transparent));
+  }
+
+  /* --- STAGE 3: QUANTUM PRISM GLARE & CHROMATIC ABERRATION --- */
+  @keyframes quantum-prism-glare {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+    20% { transform: scale(1.18) skewX(-6deg); filter: drop-shadow(-2px 0 3px #00f0ff) drop-shadow(2px 0 3px #ff0077); }
+    45% { transform: scale(1.12) skewX(4deg); filter: drop-shadow(2px 0 4px #00f0ff) drop-shadow(-2px 0 4px #ff0077); }
+    70% { transform: scale(1.16) skewX(-2deg); filter: drop-shadow(-1px 0 2px #00f0ff) drop-shadow(1px 0 2px #ff0077); }
+    100% { transform: scale(1.1) skewX(0); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent)); }
+  }
+  .nav-overview-button[data-variant="3"]:hover .nav-overview-icon,
+  .nav-model-button[data-variant="3"]:hover .nav-model-icon,
+  .nav-agent-button[data-variant="3"]:hover .nav-agent-icon,
+  .nav-playground-button[data-variant="3"]:hover .nav-playground-icon,
+  .nav-cost-button[data-variant="3"]:hover .nav-cost-icon,
+  .nav-settings-button[data-variant="3"]:hover .nav-settings-icon {
+    animation: quantum-prism-glare 650ms ease-out both;
+  }
+  .nav-tab[data-variant="3"]:hover [class*="-ring"] {
+    border-color: #00f0ff !important;
+    box-shadow: 0 0 8px #ff0077;
+  }
+
+  /* --- STAGE 4: SUPERNOVA SHOCKWAVE BLOOM --- */
+  @keyframes supernova-shockwave {
+    0% { transform: scale(0.85); opacity: 0.2; }
+    30% { transform: scale(1.28); opacity: 1; filter: drop-shadow(0 0 12px var(--md-sys-color-primary)); }
+    60% { transform: scale(0.96); }
+    100% { transform: scale(1.14); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 85%, white)); }
+  }
+  @keyframes supernova-ring-wave {
+    0% { opacity: 0; transform: scale(0.4); border-width: 3px; }
+    25% { opacity: 1; border-width: 2px; }
+    100% { opacity: 0; transform: scale(2.2); border-width: 1px; }
+  }
+  .nav-overview-button[data-variant="4"]:hover .nav-overview-icon,
+  .nav-model-button[data-variant="4"]:hover .nav-model-icon,
+  .nav-agent-button[data-variant="4"]:hover .nav-agent-icon,
+  .nav-playground-button[data-variant="4"]:hover .nav-playground-icon,
+  .nav-cost-button[data-variant="4"]:hover .nav-cost-icon,
+  .nav-settings-button[data-variant="4"]:hover .nav-settings-icon {
+    animation: supernova-shockwave 680ms cubic-bezier(0.18, 0.9, 0.2, 1) both;
+  }
+  .nav-tab[data-variant="4"]:hover [class*="-ring"] {
+    animation: supernova-ring-wave 1.1s cubic-bezier(0.16, 1, 0.3, 1) infinite !important;
+    border-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, white);
+    box-shadow: 0 0 14px var(--md-sys-color-primary);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .nav-tab,
     .nav-overview-icon,
@@ -761,6 +907,23 @@ export function NavigationFeature(props) {
   const { isRefreshing, navigate, location, isModelsNavActive, isAgentsNavActive,
     isPlaygroundNavActive, activeCurrency, palettePickerOpen, setPalettePickerOpen,
     palettes, theme, changePalette, toast } = props;
+
+  const [hoverVariants, setHoverVariants] = React.useState({
+    overview: 0,
+    models: 0,
+    agents: 0,
+    playground: 0,
+    cost: 0,
+    settings: 0,
+  });
+
+  const cycleVariant = (key) => {
+    setHoverVariants((prev) => ({
+      ...prev,
+      [key]: (prev[key] + 1) % 5,
+    }));
+  };
+
   return (<>
     <style>{navMicroAnimationStyles}</style>
 
@@ -795,6 +958,8 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/')}
+            data-variant={hoverVariants.overview}
+            onMouseLeave={() => cycleVariant('overview')}
             aria-current={location.pathname === '/' ? 'page' : undefined}
             className={`nav-tab nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/'
@@ -814,6 +979,8 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/model')}
+            data-variant={hoverVariants.models}
+            onMouseLeave={() => cycleVariant('models')}
             aria-current={isModelsNavActive ? 'page' : undefined}
             className={`nav-tab nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isModelsNavActive
@@ -831,6 +998,8 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/agents')}
+            data-variant={hoverVariants.agents}
+            onMouseLeave={() => cycleVariant('agents')}
             aria-current={isAgentsNavActive ? 'page' : undefined}
             className={`nav-tab nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isAgentsNavActive
@@ -852,6 +1021,8 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/playground')}
+            data-variant={hoverVariants.playground}
+            onMouseLeave={() => cycleVariant('playground')}
             aria-current={isPlaygroundNavActive ? 'page' : undefined}
             className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isPlaygroundNavActive
@@ -877,6 +1048,8 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/cost')}
+            data-variant={hoverVariants.cost}
+            onMouseLeave={() => cycleVariant('cost')}
             aria-current={location.pathname === '/cost' ? 'page' : undefined}
             className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/cost'
@@ -900,6 +1073,8 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/settings')}
+            data-variant={hoverVariants.settings}
+            onMouseLeave={() => cycleVariant('settings')}
             aria-current={location.pathname === '/settings' ? 'page' : undefined}
             className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/settings'
