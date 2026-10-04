@@ -88,6 +88,90 @@ export function AgentSessionView({ navigate, agents, activeAgentId }) {
 
 export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliActive, activeAgentId }) {
   return (<>
+        <style>{`
+          .agent-card {
+            position: relative;
+            overflow: hidden;
+            transition: transform 380ms cubic-bezier(0.22, 1.4, 0.36, 1),
+                        box-shadow 320ms ease,
+                        border-color 240ms ease;
+            will-change: transform;
+          }
+          .agent-card:hover {
+            transform: translateY(-3.5px) scale(1.012);
+            border-color: color-mix(in srgb, var(--md-sys-color-primary) 55%, transparent);
+            box-shadow: 0 16px 32px -8px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent),
+                        0 4px 12px rgba(0, 0, 0, 0.15);
+          }
+          .agent-card:active {
+            transform: scale(0.98);
+            transition-duration: 90ms;
+          }
+
+          .agent-card-logo-shell {
+            perspective: 520px;
+            transform-style: preserve-3d;
+            transition: transform 420ms cubic-bezier(0.22, 1.4, 0.36, 1),
+                        box-shadow 260ms ease,
+                        border-color 260ms ease;
+            will-change: transform;
+            position: relative;
+          }
+          .agent-card:hover .agent-card-logo-shell {
+            transform: perspective(520px) rotateX(-12deg) rotateY(15deg) translate3d(0, -1px, 4px) scale(1.1);
+            box-shadow: 0 0 14px color-mix(in srgb, var(--md-sys-color-primary) 38%, transparent);
+            border-color: var(--md-sys-color-primary);
+          }
+
+          .agent-card-ring {
+            position: absolute;
+            inset: -3px;
+            border-radius: 14px;
+            border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 80%, white);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+          }
+          .agent-card:hover .agent-card-ring {
+            animation: agentCardRing 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+          }
+          @keyframes agentCardRing {
+            0%   { opacity: 0; transform: scale(0.7); }
+            26%  { opacity: 0.85; }
+            100% { opacity: 0; transform: scale(1.4); }
+          }
+
+          .agent-card-sheen {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(
+              90deg,
+              transparent,
+              rgba(255, 255, 255, 0.12),
+              transparent
+            );
+            transform: skewX(-25deg);
+            pointer-events: none;
+            transition: none;
+          }
+          .agent-card:hover .agent-card-sheen {
+            left: 200%;
+            transition: left 850ms cubic-bezier(0.2, 0.8, 0.2, 1);
+          }
+
+          .agent-enter-btn {
+            transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+          }
+          .agent-enter-btn:hover {
+            transform: translateY(-0.5px) scale(1.04);
+          }
+          .agent-enter-btn:active {
+            transform: scale(0.95);
+          }
+        `}</style>
         <div className={`w-full space-y-5 ${isAgentsNavActive ? 'block apple-view-pane' : 'hidden'}`}>
                 {/* Header Toolbar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -112,14 +196,16 @@ export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliA
                     <div
                       key={agent.id}
                       onDoubleClick={() => navigate(`/agents/${agent.id}`)}
-                      className="p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:shadow-md transition-all flex flex-col justify-between shadow-xs gap-3 group cursor-pointer select-none"
+                      className="agent-card p-5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex flex-col justify-between shadow-xs gap-3 group cursor-pointer select-none"
                     >
-                      <div className="space-y-3">
+                      <div className="agent-card-sheen" />
+                      <div className="space-y-3 relative z-[1]">
                         {/* Title, Official Company Logo & Badge */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-                              <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain" />
+                            <div className="agent-card-logo-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center p-1.5 shrink-0">
+                              <span className="agent-card-ring" />
+                              <img src={agent.logo} alt={agent.name} className="w-full h-full object-contain relative z-[1]" />
                             </div>
                             <div>
                               <span className="font-bold text-sm text-[var(--md-sys-color-on-surface)] block leading-snug">
@@ -137,10 +223,10 @@ export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliA
                       </div>
 
                       {/* Footer Row (Double-Click Button & Status) */}
-                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] relative z-[1]">
                         <button
                           onClick={() => navigate(`/agents/${agent.id}`)}
-                          className="text-[10px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] active:scale-95"
+                          className="agent-enter-btn text-[10px] px-2.5 py-1 rounded-full bg-[var(--md-sys-color-surface-container-high)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)]"
                         >
                           Double-Click to Enter
                         </button>
