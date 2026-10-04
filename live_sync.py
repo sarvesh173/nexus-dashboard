@@ -16,6 +16,8 @@ Design rules:
 import json
 import os
 import re
+import sys
+import tempfile
 import threading
 import time
 import urllib.request
@@ -150,6 +152,9 @@ _ROUTER_KEYWORDS = {
     "best", "pro", "cheap", "fast", "faster", "free", "coding", "chat",
     "vision", "reasoning", "multimodal", "ultra-fast", "smart", "offline",
     "thrifty", "chaos", "demo", "space", "subscription", "default", "auto",
+    # "auto/coding:reliable" is a router category. Without this the token was
+    # read as a vendor and produced a phantom "codingreliable" provider.
+    "reliable",
 }
 
 
@@ -186,10 +191,19 @@ def omniroute_vendor(model_id):
     keeps those rows under the "omniroute" bucket.
     """
     parts = [p for p in (model_id or "").split("/") if p]
-    if not parts:
+    # A single path segment names a model, not a provider. "nemotron-ultra"
+    # has no vendor prefix at all, so treating it as one fabricated a provider
+    # row that duplicated nvidia.
+    if len(parts) < 2:
         return None
     idx = 0
     while idx < len(parts) - 1 and parts[idx].lower() in _MODIFIER_PREFIXES:
+        # `auto/` is OmniRoute's routing namespace, never a vendor prefix.
+        # Stripping it and reading the NEXT token as a vendor invented
+        # providers like "claudeopus" from "auto/claude-opus", and piled junk
+        # single-model rows onto real vendors (gemini, deepseek, zhipu).
+        if parts[idx].lower() == "auto":
+            return None
         idx += 1
     token = parts[idx].lower()
     # a remaining modifier, or a router category token, means no real owner
@@ -219,14 +233,34 @@ def fetch_omniroute():
     except Exception as exc:
         return {}, f"omniroute unreachable: {type(exc).__name__}"
 
-    rows = data.get("data", data if isinstance(data, list) else [])
+    # Guard the payload shape BEFORE indexing. data.get(...) was called first,
+    # so a top-level JSON array raised AttributeError and escaped this function
+    # entirely — taking the gateway and Hermes results down with it and leaving
+    # the cache frozen at its last good state.
+    if isinstance(data, list):
+        rows = data
+    elif isinstance(data, dict):
+        rows = data.get("data")
+    else:
+        rows = None
+    if not isinstance(rows, list):
+        rows = []
+
     buckets = {}
     for m in rows:
+        if not isinstance(m, dict):
+            continue
         mid = m.get("id")
+        # a non-string id would explode on .split() inside omniroute_vendor.
+        # A whitespace-only id is just as useless and used to create an empty
+        # "omniroute" bucket.
+        if not isinstance(mid, str):
+            continue
+        mid = mid.strip()
         if not mid:
             continue
         vendor = omniroute_vendor(mid) or "omniroute"
-        buckets.setdefault(vendor, []).append({"id": mid, "name": m.get("id")})
+        buckets.setdefault(vendor, []).append({"id": mid, "name": mid})
 
     return {vid: {
         "id": vid,
@@ -333,16 +367,31 @@ def merge(*provider_maps):
 
 
 # ── cache ──────────────────────────────────────────────────────────────────
+# sync_once is reached from two independent callers: the 30s daemon thread and
+# the /api/sync-now HTTP handler. Without a lock they can both write the same
+# `path + ".tmp"` and one os.replace() wins while the other finds its temp file
+# already gone, losing the write or leaving invalid JSON behind. The lock makes
+# the second caller wait rather than collide.
+_sync_lock = threading.Lock()
+
+
 def read_cache(path=CACHE_PATH):
     try:
         with open(path, encoding="utf-8") as fh:
-            return json.load(fh)
+            data = json.load(fh)
     except (OSError, ValueError):
         return {}
+    # A syntactically valid but non-object document ("hi", 5, []) is returned
+    # as-is by json.load. Callers immediately call .get() on the result, so a
+    # truthy non-dict raised AttributeError inside the HTTP handler and turned a
+    # cache read into a 500 instead of the documented fail-soft response.
+    return data if isinstance(data, dict) else {}
 
 
 def write_cache(data, path=CACHE_PATH, status=None):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # os.path.dirname("relcache.json") is "", and os.makedirs("") raises
+    # FileNotFoundError. Fall back to the current directory.
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     real = {k: v for k, v in data.items() if not k.startswith("_")}
     entries = sum(len(p.get("models") or []) for p in real.values())
     unique = len({m["id"] for p in real.values() for m in (p.get("models") or [])})
@@ -359,10 +408,24 @@ def write_cache(data, path=CACHE_PATH, status=None):
         }
     }
     payload.update(data)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2)
-    os.replace(tmp, path)
+    # The temp name must be unique per CALL, not per process. A pid-suffixed
+    # name is still shared by every thread in the same process, so two
+    # concurrent write_cache calls still clobbered each other's temp file and
+    # one os.replace() lost. mkstemp hands out a name nothing else can guess.
+    tmp_fd, tmp = tempfile.mkstemp(
+        prefix=os.path.basename(path) + ".", suffix=".tmp", dir=os.path.dirname(path) or "."
+    )
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+        os.replace(tmp, path)
+    except BaseException:
+        # Do not leave an orphan temp file behind on a failed write.
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return payload
 
 
@@ -379,6 +442,18 @@ def sync_once(path=CACHE_PATH):
     Source 1 is what the dashboard has always shown (81 providers); sources 2-3
     add anything the gateway does not expose. Nothing is lost.
     """
+    # The daemon thread and /api/sync-now both land here. Serialise them so a
+    # manual sync cannot collide with the periodic one mid-write.
+    if not _sync_lock.acquire(blocking=False):
+        # A sync is already running; wait for it rather than piling on.
+        _sync_lock.acquire()
+    try:
+        return _sync_once_locked(path)
+    finally:
+        _sync_lock.release()
+
+
+def _sync_once_locked(path=CACHE_PATH):
     gateway, gw_err = fetch_gateway()
     hermes, herr_err = fetch_hermes_config()
     omni, omni_err = fetch_omniroute()
@@ -416,8 +491,11 @@ def start_background(path=CACHE_PATH, interval=SYNC_INTERVAL):
         while True:
             try:
                 sync_once(path)
-            except Exception:
-                pass                      # a sync failure must never kill the thread
+            except Exception as exc:
+                # Never let a failure kill the thread, but do not swallow it
+                # silently either: a frozen cache looks exactly like a healthy
+                # one from the outside. Keep the last reason visible.
+                print(f"[live-sync] sync failed: {type(exc).__name__}: {exc}", flush=True)
             time.sleep(interval)
 
     t = threading.Thread(target=_loop, daemon=True, name="nexus-live-sync")

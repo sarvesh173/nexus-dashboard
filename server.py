@@ -210,14 +210,24 @@ def get_telemetry():
     cpu_pct = psutil.cpu_percent(interval=None)
     disk = psutil.disk_usage('/')
     
+    # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
+    # preview server (a different process, ~45 MB), so querying it reported a
+    # plausible-looking number for the wrong process.
     nexus_mem_mb = 0
-    try:
-        res = subprocess.check_output(['systemctl', '--user', 'show', 'nexus-dashboard.service', '--property=MemoryCurrent'], text=True)
-        val = res.strip().split('=')[1]
+    for svc in ('nexus-telemetry.service', 'nexus-dashboard'):
+        try:
+            res = subprocess.check_output(
+                ['systemctl', '--user', 'show', svc, '--property=MemoryCurrent'],
+                text=True, stderr=subprocess.DEVNULL, timeout=3)
+        except Exception:
+            continue
+        # systemd returns "MemoryCurrent=[not set]" for a service that has not
+        # been running; split('=')[1] would yield a non-digit and be skipped,
+        # but guard the split itself so a value-less line cannot raise IndexError.
+        val = res.strip().partition('=')[2]
         if val.isdigit():
             nexus_mem_mb = round(int(val) / (1024 * 1024), 1)
-    except Exception:
-        pass
+            break
     
     _cached_data = {
         'ram_total_mb': round(mem.total / (1024 * 1024)),
@@ -1129,23 +1139,23 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 if 'gemini-2' in s or 'gemini-1.5' in s or '1m' in s:
                     res_context = 1048576
                     res_output = 65536
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif '2m' in s:
                     res_context = 2097152
                     res_output = 65536
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif 'deepseek' in s or 'r1' in s or 'hermes' in s or 'qwen-2.5-72b' in s:
                     res_context = 200000
                     res_output = 16384
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif 'gpt-4o' in s or 'o1' in s or 'o3' in s or 'claude-3-5' in s or 'llama-3.1' in s or 'llama-3.3' in s:
                     res_context = 128000
                     res_output = 8192
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif 'whisper' in s or 'tts' in s or 'embed' in s:
                     res_context = 8192
                     res_output = 4096
-                    source = 'official-specs'
+                    source = 'estimated'
                 else:
                     res_context = 128000
                     res_output = 8192
@@ -1203,8 +1213,18 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             return self.send_json(live_sync.read_cache().get('_meta', {}))
         elif self.path == '/api/sync-now':
             import live_sync
-            _p, sync_result = live_sync.sync_once()
-            return self.send_json(sync_result)
+            # sync_once is documented never to raise, but an unguarded call here
+            # meant a failure dropped the connection with no HTTP response at
+            # all (RemoteDisconnected) instead of an error the UI can show.
+            try:
+                _p, sync_result = live_sync.sync_once()
+                return self.send_json(sync_result)
+            except Exception as exc:
+                print(f"[sync-now] {type(exc).__name__}: {exc}", flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                }, code=500)
         elif self.path == '/api/gateway-status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

@@ -18,3 +18,4 @@ model_health.json
 
 # live-sync cache (regenerated every 30s)
 cache/
+.audit/

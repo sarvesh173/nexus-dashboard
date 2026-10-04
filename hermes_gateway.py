@@ -23,7 +23,7 @@ KEY_NAMES = ('OMNIROUTE_API_KEY', 'OMNIROUTER_API_KEY', 'API_KEY')
 ROUTER_HINTS = ('auto', 'freee', 'drd', 'cf', 'free-ai', 'router', 'openrouter',
                 'charm-hyper', 'qwc', 'kenari', 'electronhub')
 
-_cache = {'models': [], 'at': 0}
+_cache = {'models': [], 'at': 0, 'error': None}
 TTL = 120
 
 
@@ -62,10 +62,14 @@ def list_models(force=False):
         return _cache['models']
     try:
         data = _get('/models')
-    except Exception:
+    except Exception as exc:
+        # Serving the stale list is the right behaviour, but the failure has to
+        # be recorded. Silently returning it made status() report ok: True while
+        # the gateway was returning 401, so a dead gateway looked healthy.
+        _cache['error'] = f'{type(exc).__name__}: {exc}'
         return _cache['models']
     ids = sorted({m.get('id') for m in data.get('data', []) if m.get('id')})
-    _cache.update({'models': ids, 'at': time.time()})
+    _cache.update({'models': ids, 'at': time.time(), 'error': None})
     return ids
 
 
@@ -240,5 +244,12 @@ def catalog():
 
 def status():
     ids = list_models()
-    return {'ok': bool(ids), 'models': len(ids),
+    err = _cache.get('error')
+    # ok must mean "the gateway answered", not "we have something cached".
+    # A 401 or a dead gateway was reporting ok: True with stale models, which is
+    # the same masking failure as the NVIDIA NameError.
+    return {'ok': bool(ids) and not err,
+            'stale': bool(err),
+            'error': err,
+            'models': len(ids),
             'gateway': GATEWAY, 'cached_at': _cache['at']}
