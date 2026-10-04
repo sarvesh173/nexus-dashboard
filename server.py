@@ -898,11 +898,13 @@ def get_live_providers():
                 card['total_models'] = card['model_count']
         merged = [c for c in merged if not c.get('hidden')]
 
-    visibility.prune({c['id'] for c in merged}
-                     | visibility.hidden_providers(),
+    # Prune against what the catalogue actually contains. The hidden set was
+    # previously unioned into the "known" set, which made every hidden entry
+    # trivially known and therefore never prunable - prune() was a guaranteed
+    # no-op and hidden_store.json grew without bound.
+    visibility.prune({c['id'] for c in merged},
                      {m.get('id') for c in merged
-                      for m in (c.get('models') or [])}
-                     | visibility.hidden_models())
+                      for m in (c.get('models') or [])})
 
     return merged
 

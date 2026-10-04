@@ -68,10 +68,9 @@ match the backend's sync cadence so the two never disagree.
 ### Tests
 
 ```bash
-python3 tests/test_dashboard_mounts.py    # real-browser mount check
-python3 tests/test_nav_animations.py
-python3 tests/test_overview_motion.py
-python3 tests/test_server_nvidia.py
+npm test                                        # all five python suites
+
+python3 tests/test_dashboard_mounts.py    # real-browser mount check (separate)
 ```
 
 Run them by path, not via `python3 -m unittest tests.x`.
@@ -107,17 +106,25 @@ double-counts. So:
 
 ### API
 
+Each row was verified by calling it against a running backend.
+
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/api/synced-models` | merged catalogue plus sync metadata |
-| GET | `/api/sync-status` | sync time, counts, per-source status |
-| GET | `/api/sync-now` | forces a sync |
-| GET | `/api/visibility` | hidden models and providers |
-| POST | `/api/visibility` | hide a model or provider |
-| POST | `/api/visibility/reset` | restore everything |
-| GET | `/api/stats` | CPU, RAM, sessions, latency |
-| GET | `/api/cost-overview` | token pricing rollup |
-| GET | `/api/model/test` | per-model latency probe |
+| `/api/all-providers` | GET | every provider, including hidden ones |
+| `/api/cost-overview` | GET | token pricing rollup |
+| `/api/gateway-status` | GET | gateway reachability and whether data is stale |
+| `/api/health` | GET | liveness |
+| `/api/live-providers` | GET | the gateway catalogue, unmerged |
+| `/api/model/test` | POST | per-model latency probe (body: `model_id`) |
+| `/api/providers` | GET | provider cards with model counts |
+| `/api/stats` | GET | CPU, RAM, sessions, latency |
+| `/api/sync-now` | GET | forces a sync, returns the new status |
+| `/api/sync-status` | GET | last sync time, counts, per-source status |
+| `/api/synced-models` | GET | merged catalogue plus sync metadata |
+| `/api/visibility` | GET | hidden set (GET) / hide one entry (POST) |
+| `/api/visibility/reset` | POST | restore everything |
+
+`/api/visibility` is the only path that accepts both verbs.
 
 ---
 
@@ -127,12 +134,18 @@ Every path that identifies this machine is resolved from the environment by
 `paths.py`. No home directory is hardcoded anywhere in the source, so a public
 checkout carries no username and runs unchanged elsewhere.
 
-| Variable | Meaning | Default |
+| Variable | Read by | Default |
 |---|---|---|
-| `HERMES_HOME` | agent config and credentials | `~/.hermes` |
-| `HERMES_CONFIG` | the agent config to read | `$HERMES_HOME/config.yaml` |
-| `OMNIROUTE_HOME` | proxy credentials | `~/.omniroute` |
-| `NEXUS_DIR` | this project's own directory | the checkout |
+| `HERMES_HOME` | `paths.py` | `~/.hermes` |
+| `HERMES_CONFIG` | `paths.py` | `$HERMES_HOME/config.yaml` |
+| `OMNIROUTE_HOME` | `paths.py` | `~/.omniroute` |
+| `OMNIROUTE_BASE_URL` | `paths.py` | `http://127.0.0.1:20128/v1` |
+| `NEXUS_DIR` | `paths.py`, `run_sync.py` | the checkout |
+| `HERMES_GATEWAY_URL` | `hermes_gateway.py` | the value above |
+
+The refresh cadence and the listen port are module constants, not environment
+variables: `SYNC_INTERVAL = 30` in `live_sync.py`, port `5174` in `server.py`.
+Change them there.
 
 `HERMES_CONFIG` and `NEXUS_DIR` are read at import time; `HERMES_HOME` and
 `OMNIROUTE_HOME` are also read per call, so exporting them after startup works.

@@ -3743,13 +3743,28 @@ const CUSTOM_MODELS_KEY = 'nexus_custom_models';
 const MODEL_CONFIGS_KEY = 'nexus_model_configs';
 const CUSTOM_PROVIDERS_KEY = 'nexus_custom_providers';
 
-function readCustomProviders() {
+// localStorage round-trips through JSON, and these readers have to survive
+// whatever is actually in there. The trap: localStorage stores the STRING
+// "null", which is truthy, so `raw ? JSON.parse(raw) : fallback` returns the
+// value null. The caller then does `parsed.x || []`, and that guards the
+// INDEXED value, never the container - so null.x throws.
+// `typeof null === 'object'`, so a typeof check alone does not help either.
+function readJsonStore(key, fallback) {
   try {
-    const raw = localStorage.getItem(CUSTOM_PROVIDERS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (parsed === null || parsed === undefined) return fallback;
+    if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+    if (!Array.isArray(fallback) && typeof parsed !== 'object') return fallback;
+    return parsed;
   } catch {
-    return [];
+    return fallback;
   }
+}
+
+function readCustomProviders() {
+  return readJsonStore(CUSTOM_PROVIDERS_KEY, []);
 }
 
 // 9Router / OmniRoute extracted Model Context Resolution Engine
@@ -3767,31 +3782,15 @@ function resolve9RouterContext(modelId, rawUpstream) {
 
 
 function readModelConfigs() {
-  try {
-    const raw = localStorage.getItem(MODEL_CONFIGS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  return readJsonStore(MODEL_CONFIGS_KEY, {});
 }
 
 function readCustomModels() {
-  try {
-    const raw = localStorage.getItem(CUSTOM_MODELS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  return readJsonStore(CUSTOM_MODELS_KEY, {});
 }
 
 function readProviderOverrides() {
-  try {
-    const raw = localStorage.getItem(PROVIDER_OVERRIDES_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
+  return readJsonStore(PROVIDER_OVERRIDES_KEY, {});
 }
 
 // Global "Page Not Found" canvas for any route the dashboard does not own.
