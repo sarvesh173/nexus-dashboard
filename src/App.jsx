@@ -1686,6 +1686,7 @@ function getProviderModalityStats(provider) {
 
 const ProviderModalityStats = React.memo(function ProviderModalityStats({ provider, align }) {
   const stats = React.useMemo(() => getProviderModalityStats(provider), [provider]);
+  const providerName = provider.display_name || provider.name || provider.id;
   return (
     <div className="grid grid-cols-5 gap-1.5 pt-1 items-stretch">
       {PROVIDER_MODALITIES.map(({ id, label, description, color }) => (
@@ -1695,7 +1696,7 @@ const ProviderModalityStats = React.memo(function ProviderModalityStats({ provid
           rawValue={stats[id].count}
           label={description}
           boxLabel={label}
-          providerName={provider.display_name || provider.name || provider.id}
+          providerName={providerName}
           showProviderName={Boolean(providerName)}
           colorClass={`text-xs font-bold font-mono ${color} block leading-none`}
         />
