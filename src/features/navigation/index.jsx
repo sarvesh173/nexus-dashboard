@@ -43,9 +43,20 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     perspective: 520px;
   }
 
-  /* Clean 3D rotation without weird background chassis artifacts */
   .nav-model-icon::before {
-    display: none;
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 6px;
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent),
+      transparent 62%
+    );
+    opacity: 0;
+    transform: scale(0.72);
+    transition: opacity 260ms ease, transform 380ms cubic-bezier(0.22, 1.4, 0.36, 1);
+    pointer-events: none;
   }
 
   /* The moving highlight is deliberately brief: each hover feels like a
@@ -82,7 +93,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-model-button:focus-visible .nav-model-icon,
   .nav-model-button.nav-model-active:hover .nav-model-icon,
   .nav-model-button.nav-model-active:focus-visible .nav-model-icon {
-    filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.28));
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(18deg) rotateY(-22deg)
       translate3d(0, -1px, 3px) scale(1.12);
   }
@@ -90,16 +101,8 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-model-button:hover .nav-model-icon::before,
   .nav-model-button:focus-visible .nav-model-icon::before,
   .nav-model-button.nav-model-active .nav-model-icon::before {
-    box-shadow:
-      inset 1px 1px 0 rgb(255 255 255 / 0.34),
-      inset -2px -2px 0 rgb(0 0 0 / 0.24),
-      3px 4px 0 color-mix(in srgb, var(--md-sys-color-primary) 54%, var(--md-sys-color-surface-container)),
-      4px 7px 9px rgb(0 0 0 / 0.28);
-  }
-
-  .nav-model-button:hover .nav-model-icon::before,
-  .nav-model-button:focus-visible .nav-model-icon::before {
-    transform: translate3d(2px, 2px, -4px) rotateX(58deg) rotateZ(-5deg);
+    opacity: 1;
+    transform: scale(1.06);
   }
 
   .nav-model-button:hover .nav-model-icon::after,
@@ -287,15 +290,122 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-overview-cell:nth-child(2) { top: 2px; right: 2px; }
   .nav-overview-cell:nth-child(3) { bottom: 2px; left: 2px; }
   .nav-overview-cell:nth-child(4) { bottom: 2px; right: 2px; }
+  .nav-overview-icon,
+  .nav-cost-icon,
+  .nav-settings-icon {
+    perspective: 520px;
+  }
+
+  /* Frosted glass well for tactile 3D depth across tabs */
+  .nav-overview-icon::before,
+  .nav-cost-icon::before,
+  .nav-settings-icon::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 6px;
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent),
+      transparent 62%
+    );
+    opacity: 0;
+    transform: scale(0.72);
+    transition: opacity 260ms ease, transform 380ms cubic-bezier(0.22, 1.4, 0.36, 1);
+    pointer-events: none;
+  }
+
+  .nav-cost-icon::before,
+  .nav-settings-icon::before {
+    border-radius: 50%;
+  }
+
+  .nav-overview-button:hover .nav-overview-icon::before,
+  .nav-overview-button:focus-visible .nav-overview-icon::before,
+  .nav-cost-button:hover .nav-cost-icon::before,
+  .nav-cost-button:focus-visible .nav-cost-icon::before,
+  .nav-settings-button:hover .nav-settings-icon::before,
+  .nav-settings-button:focus-visible .nav-settings-icon::before {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  /* Specular light glare sweeps across each icon on hover */
+  .nav-overview-icon::after,
+  .nav-settings-icon::after,
+  .nav-cost-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    top: -3px;
+    left: -7px;
+    width: 3px;
+    height: 21px;
+    border-radius: 2px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+    transform: translateX(-10px) rotate(25deg);
+  }
+
+  .nav-overview-button:hover .nav-overview-icon::after,
+  .nav-overview-button:focus-visible .nav-overview-icon::after,
+  .nav-settings-button:hover .nav-settings-icon::after,
+  .nav-settings-button:focus-visible .nav-settings-icon::after,
+  .nav-cost-button:hover .nav-cost-icon::after,
+  .nav-cost-button:focus-visible .nav-cost-icon::after {
+    animation: nav-model-metal-sheen 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  /* Outward ripple rings on hover for all tabs */
+  .nav-overview-ring,
+  .nav-model-ring,
+  .nav-agent-ring,
+  .nav-playground-ring,
+  .nav-cost-ring,
+  .nav-settings-ring {
+    position: absolute;
+    inset: -3px;
+    z-index: 0;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 82%, white);
+    border-radius: 7px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav-cost-ring,
+  .nav-settings-ring {
+    border-radius: 50%;
+  }
+
+  .nav-agent-ring {
+    border-color: color-mix(in srgb, var(--nav-agent-glow) 82%, white);
+  }
+
+  .nav-overview-button:hover .nav-overview-ring,
+  .nav-overview-button:focus-visible .nav-overview-ring,
+  .nav-model-button:hover .nav-model-ring,
+  .nav-model-button:focus-visible .nav-model-ring,
+  .nav-agent-button:hover .nav-agent-ring,
+  .nav-agent-button:focus-visible .nav-agent-ring,
+  .nav-playground-button:hover .nav-playground-ring,
+  .nav-playground-button:focus-visible .nav-playground-ring,
+  .nav-cost-button:hover .nav-cost-ring,
+  .nav-cost-button:focus-visible .nav-cost-ring,
+  .nav-settings-button:hover .nav-settings-ring,
+  .nav-settings-button:focus-visible .nav-settings-ring {
+    animation: nav-pg-ring 1.5s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+
   .nav-overview-button.nav-overview-active .nav-overview-icon {
-    transform: translateY(-0.5px) scale(1.05);
+    transform: perspective(520px) rotateX(-8deg) rotateY(-10deg) translate3d(0, -0.5px, 2px) scale(1.05);
   }
   .nav-overview-button:hover .nav-overview-icon,
   .nav-overview-button:focus-visible .nav-overview-icon,
   .nav-overview-button.nav-overview-active:hover .nav-overview-icon,
   .nav-overview-button.nav-overview-active:focus-visible .nav-overview-icon {
-    transform: translateY(-1px) scale(1.12);
-    filter: drop-shadow(0 0 4px currentColor);
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(-12deg) rotateY(-14deg) translate3d(0, -1px, 3px) scale(1.1);
   }
   .nav-overview-button:hover .nav-overview-cell,
   .nav-overview-button:focus-visible .nav-overview-cell {
@@ -310,105 +420,39 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     100% { opacity: 0.55; transform: translate(0, 0) scale(1); }
   }
 
-  /* Cost combines a coin rim with the same spring-loaded tactile response as
-     the 3D Models icon, while keeping the dollar mark readable. */
+  /* Cost combines a coin rim with 3D tactile response */
   .nav-cost-button.nav-cost-active .nav-cost-icon {
-    transform: rotate(8deg) scale(1.05);
+    transform: perspective(520px) rotateX(-8deg) rotateY(12deg) rotate(-8deg) scale(1.05);
   }
   .nav-cost-button:hover .nav-cost-icon,
   .nav-cost-button:focus-visible .nav-cost-icon,
   .nav-cost-button.nav-cost-active:hover .nav-cost-icon,
   .nav-cost-button.nav-cost-active:focus-visible .nav-cost-icon {
-    transform: translateY(-1px) rotate(-16deg) scale(1.13);
-    filter: drop-shadow(0 0 4px currentColor);
-  }
-  .nav-cost-button:active .nav-cost-icon,
-  .nav-cost-button.nav-cost-active:active .nav-cost-icon {
-    animation: nav-cost-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
-  }
-  @keyframes nav-cost-spring {
-    0% { transform: rotate(8deg) scale(1.05); }
-    22% { transform: translateY(2px) rotate(22deg) scale(0.86, 0.9); }
-    52% { transform: translateY(-2px) rotate(-24deg) scale(1.16); }
-    76% { transform: translateY(0.5px) rotate(-4deg) scale(1.02); }
-    100% { transform: rotate(8deg) scale(1.05); }
-  }
-
-  /* Orbital dynamic spinning loop with balanced luminous ring that keeps the currency symbol 100% visible */
-  .nav-cost-icon::before {
-    content: '';
-    position: absolute;
-    inset: -3.5px;
-    border: 1.5px dashed var(--md-sys-color-primary);
-    border-top-color: transparent;
-    border-radius: 50%;
-    opacity: 0;
-    pointer-events: none;
-    transform: rotate(0deg) scale(0.8);
-    transition: opacity 240ms ease, transform 300ms ease;
-  }
-  .nav-cost-icon::after {
-    content: '';
-    position: absolute;
-    z-index: 0;
-    inset: -1px;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent) 0%,
-      transparent 70%
-    );
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 280ms ease;
-  }
-  .nav-cost-button:hover .nav-cost-icon::before,
-  .nav-cost-button:focus-visible .nav-cost-icon::before {
-    opacity: 0.95;
-    border-style: solid;
-    border-top-color: color-mix(in srgb, var(--md-sys-color-primary) 90%, white);
-    border-right-color: var(--md-sys-color-primary);
-    border-bottom-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
-    border-left-color: transparent;
-    box-shadow: 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
-    animation: nav-cost-spin-orbit 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-  .nav-cost-button:hover .nav-cost-icon::after,
-  .nav-cost-button:focus-visible .nav-cost-icon::after {
-    opacity: 0.85;
-  }
-  .nav-cost-button:active .nav-cost-icon::before {
-    animation-duration: 0.5s;
-    box-shadow: 0 0 12px var(--md-sys-color-primary);
-  }
-  @keyframes nav-cost-spin-orbit {
-    0% { transform: rotate(0deg) scale(1.1); }
-    50% { transform: rotate(180deg) scale(1.18); }
-    100% { transform: rotate(360deg) scale(1.1); }
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(-12deg) rotateY(18deg) rotate(-16deg) translate3d(0, -1px, 3px) scale(1.13);
   }
 
   .nav-settings-button.nav-settings-active .nav-settings-icon {
-    transform: rotate(45deg) scale(1.05);
+    transform: perspective(520px) rotateX(10deg) rotateY(-12deg) rotate(45deg) scale(1.05);
   }
   .nav-settings-button:hover .nav-settings-icon,
   .nav-settings-button:focus-visible .nav-settings-icon {
-    transform: rotate(90deg) scale(1.12);
-    filter: drop-shadow(0 0 4px currentColor);
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(90deg) translate3d(0, -1px, 3px) scale(1.12);
   }
   .nav-settings-button.nav-settings-active:hover .nav-settings-icon,
   .nav-settings-button.nav-settings-active:focus-visible .nav-settings-icon {
-    transform: rotate(135deg) scale(1.12);
-    filter: drop-shadow(0 0 4px currentColor);
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(135deg) translate3d(0, -1px, 3px) scale(1.12);
   }
+
   .nav-overview-button:active .nav-overview-icon,
   .nav-overview-button.nav-overview-active:active .nav-overview-icon,
   .nav-cost-button:active .nav-cost-icon,
-  .nav-cost-button.nav-cost-active:active .nav-cost-icon {
-    transform: translateY(1px) scale(0.92);
-  }
+  .nav-cost-button.nav-cost-active:active .nav-cost-icon,
   .nav-settings-button:active .nav-settings-icon,
   .nav-settings-button.nav-settings-active:active .nav-settings-icon {
-    transform: rotate(180deg) scale(0.92);
+    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -647,7 +691,9 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     align-items: center;
     justify-content: center;
     flex: 0 0 16px;
-    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    perspective: 520px;
+    transform-style: preserve-3d;
+    transition: transform 420ms cubic-bezier(0.22, 1.4, 0.36, 1), filter 240ms ease;
   }
 
   .nav-tab {
@@ -750,13 +796,14 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/')}
             aria-current={location.pathname === '/' ? 'page' : undefined}
-            className={`nav-tab nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+            className={`nav-tab nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/'
                 ? 'nav-overview-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
             <span className="nav-overview-icon" aria-hidden="true">
+              <span className="nav-overview-ring" />
               <span className="nav-overview-cell" /><span className="nav-overview-cell" />
               <span className="nav-overview-cell" /><span className="nav-overview-cell" />
               <LayoutDashboard size={14} className={location.pathname === '/' ? '' : 'text-[var(--md-sys-color-primary)]'} />
@@ -768,13 +815,14 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/model')}
             aria-current={isModelsNavActive ? 'page' : undefined}
-            className={`nav-tab nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+            className={`nav-tab nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isModelsNavActive
                 ? 'nav-model-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
             <span className="nav-model-icon" aria-hidden="true">
+              <span className="nav-model-ring" />
               <Boxes size={14} className={isModelsNavActive ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Models</span>
@@ -784,13 +832,14 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/agents')}
             aria-current={isAgentsNavActive ? 'page' : undefined}
-            className={`nav-tab nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+            className={`nav-tab nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isAgentsNavActive
                 ? 'nav-agent-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
             <span className="nav-agent-icon" aria-hidden="true">
+              <span className="nav-agent-ring" />
               <span className="nav-agent-pulse" />
               <span className="nav-agent-spark nav-agent-spark-a" />
               <span className="nav-agent-spark nav-agent-spark-b" />
@@ -829,13 +878,14 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/cost')}
             aria-current={location.pathname === '/cost' ? 'page' : undefined}
-            className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+            className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/cost'
                 ? 'nav-cost-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
             <span className="nav-cost-icon" aria-hidden="true">
+              <span className="nav-cost-ring" />
               {activeCurrency.id === 'USD' ? (
                 <DollarSign size={14} className={location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'} />
               ) : (
@@ -851,13 +901,14 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/settings')}
             aria-current={location.pathname === '/settings' ? 'page' : undefined}
-            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group ${
+            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/settings'
                 ? 'nav-settings-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
             }`}
           >
             <span className="nav-settings-icon" aria-hidden="true">
+              <span className="nav-settings-ring" />
               <Settings size={14} className={location.pathname === '/settings' ? '' : 'text-[var(--md-sys-color-primary)]'} />
             </span>
             <span>Settings</span>
