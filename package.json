@@ -2,12 +2,35 @@
   "name": "nexus-dashboard",
   "private": true,
   "version": "0.0.0",
+  "description": "Self-hosted agent telemetry and model engine: live multi-provider catalogue merge, cost intelligence, and hardware telemetry.",
+  "keywords": [
+    "dashboard",
+    "llm",
+    "telemetry",
+    "model-router",
+    "agents",
+    "openai-compatible",
+    "observability",
+    "react"
+  ],
+  "author": "sarvesh173",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sarvesh173/nexus-dashboard.git"
+  },
+  "homepage": "https://github.com/sarvesh173/nexus-dashboard#readme",
+  "bugs": {
+    "url": "https://github.com/sarvesh173/nexus-dashboard/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "lint": "oxlint --deny no-undef",
+    "preview": "vite preview",
+    "lint:fix": "oxlint --fix",
+    "test": "python3 tests/test_audit_fixes.py && python3 tests/test_live_sync.py && python3 tests/test_server_nvidia.py && python3 tests/test_overview_motion.py && python3 tests/test_nav_animations.py"
   },
   "dependencies": {
     "clsx": "^2.1.1",

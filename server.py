@@ -7,6 +7,7 @@ import sys
 import time
 import yaml
 import requests
+from paths import hermes_config_path, omniroute_env_path, OMNI_BASE
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -210,14 +211,24 @@ def get_telemetry():
     cpu_pct = psutil.cpu_percent(interval=None)
     disk = psutil.disk_usage('/')
     
+    # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
+    # preview server (a different process, ~45 MB), so querying it reported a
+    # plausible-looking number for the wrong process.
     nexus_mem_mb = 0
-    try:
-        res = subprocess.check_output(['systemctl', '--user', 'show', 'nexus-dashboard.service', '--property=MemoryCurrent'], text=True)
-        val = res.strip().split('=')[1]
+    for svc in ('nexus-telemetry.service', 'nexus-dashboard'):
+        try:
+            res = subprocess.check_output(
+                ['systemctl', '--user', 'show', svc, '--property=MemoryCurrent'],
+                text=True, stderr=subprocess.DEVNULL, timeout=3)
+        except Exception:
+            continue
+        # systemd returns "MemoryCurrent=[not set]" for a service that has not
+        # been running; split('=')[1] would yield a non-digit and be skipped,
+        # but guard the split itself so a value-less line cannot raise IndexError.
+        val = res.strip().partition('=')[2]
         if val.isdigit():
             nexus_mem_mb = round(int(val) / (1024 * 1024), 1)
-    except Exception:
-        pass
+            break
     
     _cached_data = {
         'ram_total_mb': round(mem.total / (1024 * 1024)),
@@ -242,7 +253,7 @@ def get_hermes_config_providers():
     if _cached_providers is not None and (now - _last_provider_time) < PROVIDER_CACHE_TTL:
         return _cached_providers
 
-    config_path = '/home/kira/.hermes/config.yaml'
+    config_path = hermes_config_path()
     try:
         with open(config_path, 'r') as f:
             cfg = yaml.safe_load(f)
@@ -640,8 +651,11 @@ def get_hermes_config_providers():
                         }
                     }
                 ]
+                # Dedup against what models_list already holds. This used to reference an
+                # undefined name, raising NameError and taking the whole NVIDIA
+                # provider down with it.
                 for vm in visual_genai_models:
-                    if vm['id'] not in existing_ids:
+                    if not any(m['id'] == vm['id'] for m in models_list):
                         models_list.append(vm)
 
                 for sm in speech_models:
@@ -729,7 +743,7 @@ def _logo_for(pid):
 def get_all_config_providers():
     """Every provider in the Hermes config (routers included, marked as such)."""
     try:
-        with open('/home/kira/.hermes/config.yaml', 'r') as f:
+        with open(hermes_config_path(), 'r') as f:
             cfg = yaml.safe_load(f) or {}
     except Exception:
         cfg = {}
@@ -884,11 +898,13 @@ def get_live_providers():
                 card['total_models'] = card['model_count']
         merged = [c for c in merged if not c.get('hidden')]
 
-    visibility.prune({c['id'] for c in merged}
-                     | visibility.hidden_providers(),
+    # Prune against what the catalogue actually contains. The hidden set was
+    # previously unioned into the "known" set, which made every hidden entry
+    # trivially known and therefore never prunable - prune() was a guaranteed
+    # no-op and hidden_store.json grew without bound.
+    visibility.prune({c['id'] for c in merged},
                      {m.get('id') for c in merged
-                      for m in (c.get('models') or [])}
-                     | visibility.hidden_models())
+                      for m in (c.get('models') or [])})
 
     return merged
 
@@ -902,7 +918,7 @@ def config_provider_map():
     if _cfg_cache['map'] is not None and _t.time() - _cfg_cache['at'] < 60:
         return _cfg_cache['map']
     try:
-        with open('/home/kira/.hermes/config.yaml', 'r') as f:
+        with open(hermes_config_path(), 'r') as f:
             cfg = yaml.safe_load(f) or {}
         pm = cfg.get('providers', {}) or {}
     except Exception:
@@ -938,11 +954,12 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 if not model_id:
                     return self.send_json({'ok': False, 'error': 'Missing model ID', 'latency_ms': 0}, 400)
 
-                # Read master OMNIROUTE_API_KEY directly from /home/kira/.omniroute/.env or fallback to hermes_gateway
+                # Read the proxy's master key from its own env file, falling
+                # back to whatever the gateway helper already resolved.
                 key = ''
                 try:
                     import re
-                    with open('/home/kira/.omniroute/.env', 'r', encoding='utf-8') as ef:
+                    with open(omniroute_env_path(), 'r', encoding='utf-8') as ef:
                         m_env = re.search(r'OMNIROUTE_API_KEY\s*=\s*["\']?([^"\'\r\n]+)', ef.read())
                         if m_env:
                             key = m_env.group(1).strip()
@@ -950,7 +967,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     pass
                 if not key and hermes_gateway:
                     key = hermes_gateway._key()
-                gw_url = 'http://127.0.0.1:20128/v1/chat/completions'
+                gw_url = OMNI_BASE + '/chat/completions'
 
                 headers = {
                     'Content-Type': 'application/json',
@@ -1050,7 +1067,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         if self.path == '/api/visibility/reset':
             before = (len(visibility.hidden_providers()),
                       len(visibility.hidden_models()))
-            visibility._write(visibility._blank())
+            visibility._write_locked(visibility._blank())
             payload = {'ok': True, 'cleared': {'providers': before[0],
                                                'models': before[1]}}
             self.send_response(200)
@@ -1126,23 +1143,23 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 if 'gemini-2' in s or 'gemini-1.5' in s or '1m' in s:
                     res_context = 1048576
                     res_output = 65536
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif '2m' in s:
                     res_context = 2097152
                     res_output = 65536
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif 'deepseek' in s or 'r1' in s or 'hermes' in s or 'qwen-2.5-72b' in s:
                     res_context = 200000
                     res_output = 16384
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif 'gpt-4o' in s or 'o1' in s or 'o3' in s or 'claude-3-5' in s or 'llama-3.1' in s or 'llama-3.3' in s:
                     res_context = 128000
                     res_output = 8192
-                    source = 'official-specs'
+                    source = 'estimated'
                 elif 'whisper' in s or 'tts' in s or 'embed' in s:
                     res_context = 8192
                     res_output = 4096
-                    source = 'official-specs'
+                    source = 'estimated'
                 else:
                     res_context = 128000
                     res_output = 8192
@@ -1177,6 +1194,41 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         elif self.path == '/api/live-providers':
             data = get_live_providers()
             return self.send_json(data)
+        elif self.path == '/api/synced-models':
+            # Live-synced catalogue: gateway + Hermes config + OmniRoute, merged.
+            # Returned as a LIST so the frontend can consume it exactly like
+            # /api/live-providers without a shape change.
+            import live_sync
+            cache = live_sync.read_cache()
+            meta = cache.pop('_meta', {})
+            rows = [cache[k] for k in sorted(cache) if not k.startswith('_')]
+            for p in rows:
+                p.setdefault('model_count', len(p.get('models') or []))
+                p['total_models'] = p['model_count']
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(json.dumps({'providers': rows, '_meta': meta}).encode('utf-8'))
+            return
+        elif self.path == '/api/sync-status':
+            import live_sync
+            return self.send_json(live_sync.read_cache().get('_meta', {}))
+        elif self.path == '/api/sync-now':
+            import live_sync
+            # sync_once is documented never to raise, but an unguarded call here
+            # meant a failure dropped the connection with no HTTP response at
+            # all (RemoteDisconnected) instead of an error the UI can show.
+            try:
+                _p, sync_result = live_sync.sync_once()
+                return self.send_json(sync_result)
+            except Exception as exc:
+                print(f"[sync-now] {type(exc).__name__}: {exc}", flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                }, code=500)
         elif self.path == '/api/gateway-status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -1199,5 +1251,15 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         pass
 
 if __name__ == '__main__':
+    # Live sync: keep the merged catalogue (Hermes config + OmniRoute) fresh.
+    # Read-only on both sources; a failure here never blocks the HTTP server.
+    try:
+        import live_sync
+        live_sync.sync_once()                      # prime the cache before serving
+        live_sync.start_background()               # then refresh every 30s
+        print('[nexus] live sync started', flush=True)
+    except Exception as e:                        # noqa: BLE001
+        print(f'[nexus] live sync failed to start: {type(e).__name__}: {e}', flush=True)
+
     server = HTTPServer(('127.0.0.1', 5174), TelemetryHandler)
     server.serve_forever()

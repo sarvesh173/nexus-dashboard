@@ -19,14 +19,16 @@ anything, because a cold start looks identical to a dead endpoint.
 
 import json
 import os
+import tempfile
 import time
+from paths import hermes_config_path, hermes_env_path, omniroute_env_path
 
 import requests
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'
 )
-CONFIG_PATH = '/home/kira/.hermes/config.yaml'
+CONFIG_PATH = hermes_config_path()
 
 SYNC_INTERVAL = 900          # 15 min
 PROBE_TIMEOUT = 45           # generous: NVIDIA cold starts exceed 30s often
@@ -62,27 +64,55 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
     return ids
 
 _registry = None
+_registry_mtime = [None]   # mtime the in-memory snapshot came from
 _last_sync = 0
 
 
 def _load():
+    """Read the registry, re-reading when the file changes on disk.
+
+    The writer (run_sync.py) and the reader (server.py) are separate
+    processes, so a module-level cache that is never invalidated meant the
+    server served its first snapshot forever: the file said ALIVE, the module
+    still said RETIRED. Compare mtime and re-read when it moves.
+    """
     global _registry
-    if _registry is None:
-        try:
-            with open(REGISTRY_PATH) as fh:
-                _registry = json.load(fh)
-        except Exception:
-            _registry = {}
-        _registry.setdefault('models', {})
+    try:
+        mtime = os.path.getmtime(REGISTRY_PATH)
+    except OSError:
+        mtime = None
+
+    if _registry is not None and mtime == _registry_mtime[0]:
+        return _registry
+
+    try:
+        with open(REGISTRY_PATH) as fh:
+            _registry = json.load(fh)
+    except Exception:
+        _registry = {}
+    if not isinstance(_registry, dict):
+        _registry = {}
+    _registry.setdefault('models', {})
+    _registry_mtime[0] = mtime
     return _registry
 
 
 def _save():
     reg = _load()
-    tmp = REGISTRY_PATH + '.tmp'
-    with open(tmp, 'w') as fh:
-        json.dump(reg, fh, indent=1, sort_keys=True)
-    os.replace(tmp, REGISTRY_PATH)
+    # mkstemp, not a fixed REGISTRY_PATH + '.tmp': two writers would share one
+    # temp path and one os.replace would silently lose the other's write.
+    fd, tmp = tempfile.mkstemp(prefix='.model_health.', suffix='.tmp',
+                               dir=os.path.dirname(REGISTRY_PATH) or '.')
+    try:
+        with os.fdopen(fd, 'w') as fh:
+            json.dump(reg, fh, indent=1, sort_keys=True)
+        os.replace(tmp, REGISTRY_PATH)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def get_health_map():
@@ -106,7 +136,7 @@ def _api_key():
             return key
     except Exception:
         pass
-    for path in ('/home/kira/.hermes/.env', '/tmp/nvkey'):
+    for path in (hermes_env_path(), '/tmp/nvkey'):
         try:
             with open(path) as fh:
                 for line in fh:
@@ -199,6 +229,17 @@ def sync_models(model_specs, base='https://integrate.api.nvidia.com/v1'):
                     'category': cat, 'route': route,
                     'checked': time.time()})
         reg['models'][mid] = rec
+
+    # NOTE: do NOT prune ids missing from model_specs.
+    # get_hermes_config_providers() already filters RETIRED models OUT of its
+    # output, so every retired id is absent from the spec list by construction.
+    # Pruning against it deleted exactly the RETIRED set (45 of 45 entries in the
+    # live registry) and silently destroyed auto-hide: a pruned id can never be
+    # re-probed, so it could never come back.
+    #
+    # Growth is bounded without pruning. Entries are only ever added from the
+    # live spec list, which is itself bounded by the providers the gateway
+    # serves, and a model is never probed unless its id arrives in that list.
 
     reg['last_sync'] = time.time()
     _save()

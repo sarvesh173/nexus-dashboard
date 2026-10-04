@@ -1,65 +1,182 @@
-# Nexus Agent Telemetry & Model Engine (Nexus-Dashboard)
+# Nexus Agent Telemetry & Model Engine
 
-> **Status:** Staging / Active Development
-> **Target:** High-performance, low-overhead agentic telemetry runtime and multi-provider model routing dashboard.
+> **Status:** Active development.
+> **What it is:** a self-hosted cockpit for live inference, multi-provider model
+> catalogues, cost intelligence, and hardware health.
 
-Nexus Dashboard is an agentic telemetry and observability cockpit engineered to track live inference, multi-provider model catalogs (80+ providers, 800+ live models), cost intelligence, and hardware health metrics in real-time.
-
----
-
-## ⚡ Core Features
-
-- **Dynamic Fluid Model Grid:** Proportional auto-fill grid layout with responsive zero-gap card architecture, native bidirectional resizing, and compact modality tiering.
-- **5-Modality Breakdown Engine:** Instant categorization across `LLM`, `Vision`, `Embedding`, `STT` (Speech-to-Text), and `TTS` (Text-to-Speech) for all connected providers.
-- **Provider & Model Catalog (`/model` & `/model/:providerId`):** Deep inspection interface with live upstream catalog fetch, custom model injection, per-model testing with latency reporting, model-level hide/restore rails, active modality filters, and capability telemetry.
-- **Interactive Playground (`/playground`):** Cupertino-style frosted chat canvas for direct model interaction with live latency badges.
-- **Price & Cost Scanner (`/cost`):** Live model cost scanner tracking input/output token pricing across foundational providers.
-- **Hardware & Telemetry Overview (`/`):** Real-time monitoring of CPU, RAM, active agent sessions, and routing latency.
+Nexus Dashboard polls every provider you have configured, merges the
+catalogues into one cache, and renders it. Add a model anywhere upstream and it
+appears within one sync cycle. Nothing is hand-listed.
 
 ---
 
-## 🛠️ Tech Stack
+## What it does
 
-- **Frontend:** React 19, Tailwind CSS v4, Vite, Lucide Icons, React Router v7.
-- **Backend Telemetry:** Lightweight Python async server streaming live provider catalogs and hardware telemetry.
-- **Design System:** Material Design 3 (M3) tokenized themes with persistent palette switching.
+- **Live catalogue merge.** Polls the agent gateway, the agent config file, and
+  an OpenAI-compatible proxy endpoint, then merges all three into one cache on
+  a 30-second cycle.
+- **Real vendor attribution.** A proxy endpoint fronts many vendors, so its
+  model ids are regrouped by the true owner instead of being filed under the
+  proxy.
+- **Duplicate-free providers.** Provider ids are canonicalised before merging,
+  so the same vendor spelled two ways (`free-ai` / `freeai`) collapses into one
+  row.
+- **Honest counts.** Reports provider-to-model rows *and* distinct model ids,
+  so a total is never inflated by overlap.
+- **Fail-soft.** A dead provider degrades to a warning; the last good cache
+  keeps serving instead of rendering an empty page.
+- **5-modality breakdown.** `LLM`, `Vision`, `Embedding`, `STT`, `TTS`.
+- **Hide and restore.** Hide any model or provider non-destructively, per-model
+  test runner with latency reporting, interactive playground, cost scanner,
+  hardware overview.
 
 ---
 
-## 🚀 Getting Started
+## Tech stack
+
+- **Frontend:** React 19, Vite, Tailwind CSS v4, Lucide, React Router v7.
+- **Backend:** Python 3 stdlib HTTP server (no framework).
+- **Design:** Material Design 3 tokenised themes with palette switching.
+
+---
+
+## Getting started
 
 ### Prerequisites
-- Node.js (v20+)
-- Python 3.10+
 
-### Setup & Run
+- Node.js 20+
+- Python 3.11+ with `PyYAML`
+
+### Run it
+
 ```bash
-# Clone the repository
 git clone git@github.com:sarvesh173/nexus-dashboard.git
 cd nexus-dashboard
 
-# Install frontend dependencies
 npm install
 
-# Start development server
-npm run dev
+# backend on :5174
+python3 server.py
 
-# Build for production
-npm run build
+# frontend on :5173
+npm run build && npm run preview
 ```
+
+The frontend proxies `/api` to `127.0.0.1:5174`. Poll intervals are set to
+match the backend's sync cadence so the two never disagree.
+
+### Tests
+
+```bash
+npm test                                        # all five python suites
+
+python3 tests/test_dashboard_mounts.py    # real-browser mount check (separate)
+```
+
+Run them by path, not via `python3 -m unittest tests.x`.
+
+The mount check is not optional. A passing build does **not** mean a page
+renders: one undefined identifier unmounts the whole React tree and ships a
+black screen that no build step catches.
 
 ---
 
-## 📌 Development Roadmap
+## Architecture
 
-- [x] Zero-gap proportional card grid layout with 2-column live model stream.
-- [x] Full-bleed widescreen canvas with dynamic column balancing.
-- [x] Client-side auto-derivation of modalities across 80+ providers.
-- [x] Per-model test runner with latency reporting and failure auto-hide.
-- [x] Interactive playground with live inference and latency badges.
-- [x] Upstream model catalog fetch and custom model injection.
-- [ ] Real-time WebSocket sync for live inference sessions and token streaming.
+```
+  agent gateway  ─┐
+  agent config   ─┼─→  merge engine  ─→  cache  ─→  HTTP API  ─→  dashboard
+  proxy endpoint ─┘     (dedup,              (30s)      (:5174)    (:5173)
+                         vendor split)
+```
+
+The merge engine is **read-only** on all three sources. Write paths are a
+separate concern and deliberately absent.
+
+### Why the merge is not a simple union
+
+A proxy endpoint in front of ten vendors reports ten vendors' models, and the
+agent gateway usually reports many of the same ones. A naive union
+double-counts. So:
+
+1. Models are regrouped under the real provider prefix in their id.
+2. Provider ids are canonicalised, then merged, with a `sources` list per row.
+3. Both `models` (rows rendered) and `unique_models` (distinct ids) are
+   reported. Quote the second when you state a total.
+
+### API
+
+Each row was verified by calling it against a running backend.
+
+| Method | Path | Returns |
+|---|---|---|
+| `/api/all-providers` | GET | every provider, including hidden ones |
+| `/api/cost-overview` | GET | token pricing rollup |
+| `/api/gateway-status` | GET | gateway reachability and whether data is stale |
+| `/api/health` | GET | liveness |
+| `/api/live-providers` | GET | the gateway catalogue, unmerged |
+| `/api/model/test` | POST | per-model latency probe (body: `model_id`) |
+| `/api/providers` | GET | provider cards with model counts |
+| `/api/stats` | GET | CPU, RAM, sessions, latency |
+| `/api/sync-now` | GET | forces a sync, returns the new status |
+| `/api/sync-status` | GET | last sync time, counts, per-source status |
+| `/api/synced-models` | GET | merged catalogue plus sync metadata |
+| `/api/visibility` | GET | hidden set (GET) / hide one entry (POST) |
+| `/api/visibility/reset` | POST | restore everything |
+
+`/api/visibility` is the only path that accepts both verbs.
+
+---
+
+## Configuration
+
+Every path that identifies this machine is resolved from the environment by
+`paths.py`. No home directory is hardcoded anywhere in the source, so a public
+checkout carries no username and runs unchanged elsewhere.
+
+| Variable | Read by | Default |
+|---|---|---|
+| `HERMES_HOME` | `paths.py` | `~/.hermes` |
+| `HERMES_CONFIG` | `paths.py` | `$HERMES_HOME/config.yaml` |
+| `OMNIROUTE_HOME` | `paths.py` | `~/.omniroute` |
+| `OMNIROUTE_BASE_URL` | `paths.py` | `http://127.0.0.1:20128/v1` |
+| `NEXUS_DIR` | `paths.py`, `run_sync.py` | the checkout |
+| `HERMES_GATEWAY_URL` | `hermes_gateway.py` | the value above |
+
+The refresh cadence and the listen port are module constants, not environment
+variables: `SYNC_INTERVAL = 30` in `live_sync.py`, port `5174` in `server.py`.
+Change them there.
+
+`HERMES_CONFIG` and `NEXUS_DIR` are read at import time; `HERMES_HOME` and
+`OMNIROUTE_HOME` are also read per call, so exporting them after startup works.
+
+Provider credentials are read from the agent's own env file at mode `600`. This
+project never writes or stores a key.
+
+---
+
+## Roadmap
+
+- [x] Zero-gap proportional card grid with live model stream.
+- [x] Client-side modality derivation across every provider.
+- [x] Per-model test runner with latency reporting.
+- [x] Interactive playground.
+- [x] Upstream catalogue fetch and custom model injection.
+- [x] Live three-source merge with 30-second auto-refresh.
+- [x] Non-destructive model and provider hiding.
+- [ ] Real-time WebSocket sync for token streaming.
 - [ ] Autonomous model health and failover metrics.
+- [ ] Write path: switch the live model across CLI agents.
+
+---
+
+## Security
+
+- Never commit `.env` or any key. Credentials are read from the agent's env
+  file at mode `600`.
+- Keep all catalogue sources read-only.
+- Anything surfaced in the API is public by default. If it can leak a key, do
+  not put it behind an endpoint.
 
 ---
 

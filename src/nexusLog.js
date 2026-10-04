@@ -5,6 +5,15 @@
 const NEXUS_MAX_LOGS = 300;
 const SESSION_KEY = 'nexus_dev_logs';
 
+// Mirroring to the devtools console is a development convenience only. The
+// in-app log panel keeps every entry regardless, so this stays off in a
+// production build where it would otherwise print a line every 30s.
+const devModeEnabled = Boolean(
+  typeof import.meta !== 'undefined'
+  && import.meta.env
+  && import.meta.env.DEV
+);
+
 let logs = [];
 const listeners = new Set();
 
@@ -51,10 +60,15 @@ export function nexusLog(type, message, details = null) {
     }
   });
 
-  if (entry.type === 'ERROR') {
-    console.error(`[NEXUS ${entry.type}] ${entry.message}`, details ?? '');
-  } else {
-    console.log(`[NEXUS ${entry.type}] ${entry.message}`, details ?? '');
+  // Mirror to the devtools console only outside production. The in-app log
+  // panel already has every entry, and the catalogue refresh fires every 30s,
+  // so this printed a heartbeat forever in a real build.
+  if (devModeEnabled) {
+    if (entry.type === 'ERROR') {
+      console.error(`[NEXUS ${entry.type}] ${entry.message}`, details ?? '');
+    } else {
+      console.log(`[NEXUS ${entry.type}] ${entry.message}`, details ?? '');
+    }
   }
 }
 

@@ -6,7 +6,7 @@ dist
 *.log
 .nexus-cost-usage.json
 
-# runtime artefacts — never commit these
+# runtime artefacts - never commit these
 __pycache__/
 *.pyc
 __agent__/
@@ -15,3 +15,7 @@ artifacts/
 hidden_store.json
 model_health.json
 .nexus-cost-usage.json
+
+# live-sync cache (regenerated every 30s)
+cache/
+.audit/

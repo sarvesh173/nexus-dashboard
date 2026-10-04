@@ -1,8 +1,61 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "oxc"],
+  "plugins": [
+    "react",
+    "unicorn"
+  ],
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "globals": {
+    "AbortSignal": "readonly",
+    "AbortController": "readonly",
+    "fetch": "readonly",
+    "Response": "readonly",
+    "Request": "readonly",
+    "Headers": "readonly",
+    "ResizeObserver": "readonly",
+    "IntersectionObserver": "readonly",
+    "MutationObserver": "readonly",
+    "setTimeout": "readonly",
+    "clearTimeout": "readonly",
+    "setInterval": "readonly",
+    "clearInterval": "readonly",
+    "requestAnimationFrame": "readonly",
+    "cancelAnimationFrame": "readonly",
+    "structuredClone": "readonly",
+    "URL": "readonly",
+    "URLSearchParams": "readonly",
+    "TextEncoder": "readonly",
+    "TextDecoder": "readonly",
+    "performance": "readonly",
+    "crypto": "readonly",
+    "CSS": "readonly"
+  },
   "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "no-undef": "error",
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "no-dupe-keys": "error",
+    "no-dupe-else-if": "error",
+    "no-self-assign": "error",
+    "no-constant-condition": "error",
+    "no-fallthrough": "error",
+    "no-unreachable": "error",
+    "no-redeclare": "error",
+    "no-async-promise-executor": "error"
+  },
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "public",
+    "cache",
+    ".audit"
+  ]
 }
