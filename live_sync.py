@@ -239,23 +239,64 @@ def fetch_omniroute():
 
 
 # ── merge ──────────────────────────────────────────────────────────────────
+# Same vendor, different spelling across sources.
+_PROVIDER_ID_ALIASES = {
+    "freeai": "free-ai",
+    "llmkiwi": "llm-kiwi",
+    "ollamacloud": "ollama-cloud",
+    "charmhyper": "charm",
+    "kenariai": "kenari",
+    "jina": "jina-ai",
+    "drr": "drd",
+    "zai": "zhipu",
+    "qwc": "qwen-cloud",
+    "ali": "alibaba",
+    "cf": "cloudflare-ai",
+    "agy": "custom:omniroute",
+}
+
+
+def canonical_provider_id(raw):
+    """Collapse provider ids that differ only in punctuation or a known alias.
+
+    The gateway and OmniRoute spell the same vendor differently
+    ("free-ai" vs "freeai", "ollama-cloud" vs "ollamacloud"), which shows the
+    dashboard the same provider twice. Normalising punctuation and applying
+    aliases makes both spellings land on one row.
+    """
+    key = re.sub(r"[^a-z0-9]", "", (raw or "").lower())
+    return _PROVIDER_ID_ALIASES.get(key, key)
+
+
 def merge(*provider_maps):
     """Merge provider maps into one catalogue.
+
+    Providers are keyed by canonical id, so the same vendor spelled two ways
+    across sources collapses into one row instead of appearing twice.
 
     Within a provider, duplicate model ids collapse. Across providers they do
     NOT collapse: the same model id served by two different routes is genuinely
     two catalog entries, and the dashboard's per-provider counts should reflect
-    that. `unique_model_count` is reported separately so the total is honest.
+    that. `unique_models` is reported separately so the total is honest.
     """
     merged = {}
     for pm in provider_maps:
-        for pid, prov in (pm or {}).items():
-            if pid.startswith("_"):
+        for raw_id, prov in (pm or {}).items():
+            if raw_id.startswith("_"):
                 continue
+            pid = canonical_provider_id(raw_id)
             if pid not in merged:
-                merged[pid] = {**prov, "models": list(prov.get("models") or [])}
+                row = {**prov, "models": list(prov.get("models") or [])}
+                row["id"] = pid
+                seen_sources = {prov.get("source")}
+                # keep every source that contributed, so a merged row can say
+                # "gateway + omniroute" instead of silently losing one
+                row["sources"] = sorted(s for s in seen_sources if s)
+                merged[pid] = row
                 continue
             slot = merged[pid]
+            slot["sources"] = sorted(set(slot.get("sources") or []) |
+                                      ({prov.get("source")} if prov.get("source") else set()))
             seen = {m["id"] for m in slot["models"]}
             for m in prov.get("models") or []:
                 if m["id"] not in seen:
@@ -263,6 +304,11 @@ def merge(*provider_maps):
                     seen.add(m["id"])
             if not slot.get("base_url") and prov.get("base_url"):
                 slot["base_url"] = prov["base_url"]
+            # a gateway row is authoritative for the display name
+            if prov.get("source") == "gateway" and slot.get("source") != "gateway":
+                slot["name"] = prov.get("name") or prov.get("display_name") or slot.get("name")
+                slot["display_name"] = prov.get("display_name") or prov.get("name") or slot.get("display_name")
+                slot["source"] = "gateway"
     # attach family stems + counts
     for pid, prov in merged.items():
         if pid.startswith("_"):
