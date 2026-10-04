@@ -6,7 +6,7 @@ dist
 *.log
 .nexus-cost-usage.json
 
-# runtime artefacts — never commit these
+# runtime artefacts - never commit these
 __pycache__/
 *.pyc
 __agent__/
