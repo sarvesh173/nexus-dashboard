@@ -1063,7 +1063,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         if self.path == '/api/visibility/reset':
             before = (len(visibility.hidden_providers()),
                       len(visibility.hidden_models()))
-            visibility._write(visibility._blank())
+            visibility._write_locked(visibility._blank())
             payload = {'ok': True, 'cleared': {'providers': before[0],
                                                'models': before[1]}}
             self.send_response(200)

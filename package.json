@@ -27,8 +27,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "lint": "oxlint --deny no-undef",
+    "preview": "vite preview",
+    "lint:fix": "oxlint --fix",
+    "test": "python3 tests/test_audit_fixes.py && python3 tests/test_live_sync.py && python3 tests/test_server_nvidia.py && python3 tests/test_overview_motion.py && python3 tests/test_nav_animations.py"
   },
   "dependencies": {
     "clsx": "^2.1.1",

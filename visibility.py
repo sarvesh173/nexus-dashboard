@@ -14,6 +14,7 @@ This module keeps a durable HIDDEN set in the dashboard instead:
 """
 import json
 import os
+import tempfile
 import threading
 import time
 
@@ -46,12 +47,32 @@ def _read():
 
 
 def _write(data):
-    tmp = STORE + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        json.dump(data, fh, indent=2, sort_keys=True)
-    os.replace(tmp, STORE)          # atomic: never leave a half-written file
+    """Persist the store. Callers must already hold _lock.
+
+    The temp name is unique per call: two writers sharing one STORE + '.tmp'
+    could clobber each other, with one os.replace() winning and the other
+    losing its write entirely.
+    """
+    fd, tmp = tempfile.mkstemp(prefix='.hidden_store.', suffix='.tmp',
+                               dir=os.path.dirname(STORE) or '.')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as fh:
+            json.dump(data, fh, indent=2, sort_keys=True)
+        os.replace(tmp, STORE)          # atomic: never leave a half-written file
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     _cache['data'] = data
     _cache['at'] = time.time()
+
+
+def _write_locked(data):
+    """_write under the module lock, for callers outside set_hidden/prune."""
+    with _lock:
+        _write(data)
 
 
 def hidden_providers():

@@ -200,6 +200,17 @@ def sync_models(model_specs, base='https://integrate.api.nvidia.com/v1'):
                     'checked': time.time()})
         reg['models'][mid] = rec
 
+    # Prune ids that are no longer in the spec list. Without this the registry
+    # only ever grew: an entry for a model that left the catalogue was re-read on
+    # every request forever, and a RETIRED entry could never be un-retired
+    # because its id never came back through this loop. Dropping an id resets
+    # its history, which is correct - it is a genuinely unknown model again.
+    live_ids = {mid for mid, _ in model_specs}
+    if reg.get('models'):
+        stale = [m for m in reg['models'] if m not in live_ids]
+        for m in stale:
+            reg['models'].pop(m, None)
+
     reg['last_sync'] = time.time()
     _save()
     return reg
