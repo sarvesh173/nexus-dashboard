@@ -131,8 +131,81 @@ def omniroute_endpoint():
     return {"base_url": "http://localhost:20128/v1", "api_key": key}
 
 
+# OmniRoute is a proxy: it fronts many real providers behind one endpoint.
+# Its model ids still carry the real provider prefix, so we can regroup them
+# under their true owner instead of lumping all 697 under one "omniroute" row
+# that double-counts against the gateway.
+#
+# Some ids carry routing MODIFIERS before the vendor:
+#   no-think/openrouter/anthropic/claude-sonnet-5.5
+#   kc/openrouter/free
+#   auto/best-chat
+# Those are stripped; what remains is the real provider.
+_MODIFIER_PREFIXES = {"no-think", "auto", "kc", "thinking", "reasoning", "search"}
+
+# `auto/best-chat`, `auto/pro-coding` etc. are OmniRoute router categories, not
+# vendors — after the modifier the next token is a router keyword, so the whole
+# id has no real owner and stays bucketed under "omniroute".
+_ROUTER_KEYWORDS = {
+    "best", "pro", "cheap", "fast", "faster", "free", "coding", "chat",
+    "vision", "reasoning", "multimodal", "ultra-fast", "smart", "offline",
+    "thrifty", "chaos", "demo", "space", "subscription", "default", "auto",
+}
+
+
+def _is_router_category(token):
+    """auto/best-coding, auto/coding:fast -> a router category, not a vendor.
+
+    OmniRoute tags variants with colons ("coding:fast", "pro:cheap"), and a
+    category is hyphen/colon-joined. Every segment must be a router keyword.
+    """
+    parts = [p for p in re.split(r"[-_:]", token) if p]
+    return bool(parts) and all(p in _ROUTER_KEYWORDS for p in parts)
+
+# Canonical vendor name for prefixes that differ from the provider id.
+_VENDOR_ALIASES = {
+    "qwc": "qwen-cloud", "qwen": "qwen-cloud", "tongyi": "qwen-cloud",
+    "ali": "alibaba", "bytedance": "volcengine", "doubao": "volcengine",
+    "cf": "cloudflare-ai", "cloudflare": "cloudflare-ai",
+    "agy": "custom:omniroute", "agy2": "custom:omniroute",
+    "charm-hyper": "charm", "drd": "drr", "free-ai": "freeai",
+    "jina": "jina-ai", "kenari": "kenari-ai", "adm": "adminech",
+    "qwq": "qwen-cloud", "hf": "huggingface", "hf-inference": "huggingface",
+    "ollama": "ollamacloud", "oai": "openai", "o": "openai",
+    "zai": "zhipu", "z-ai": "zhipu", "glm": "zhipu",
+    "moonshotai": "moonshot", "kimi": "moonshot",
+    "us": "openai", "anthropic": "anthropic", "claude": "anthropic",
+}
+
+
+def omniroute_vendor(model_id):
+    """Real provider behind an OmniRoute model id, or None for router rows.
+
+    Strips leading routing modifiers, then maps the first remaining token
+    through _VENDOR_ALIASES. Returns None when nothing usable remains, which
+    keeps those rows under the "omniroute" bucket.
+    """
+    parts = [p for p in (model_id or "").split("/") if p]
+    if not parts:
+        return None
+    idx = 0
+    while idx < len(parts) - 1 and parts[idx].lower() in _MODIFIER_PREFIXES:
+        idx += 1
+    token = parts[idx].lower()
+    # a remaining modifier, or a router category token, means no real owner
+    if token in _MODIFIER_PREFIXES or _is_router_category(token):
+        return None
+    return _VENDOR_ALIASES.get(token, token)
+
+
 def fetch_omniroute():
-    """Poll OmniRoute's OpenAI-compatible /models. Read-only, fail-soft."""
+    """Poll OmniRoute's OpenAI-compatible /models and regroup by real vendor.
+
+    OmniRoute is a proxy, so grouping its catalogue under one provider would
+    (a) hide who actually serves each model and (b) double-count every model
+    the gateway already reports. Models are bucketed by their id prefix
+    instead; anything that is a router keyword goes to "omniroute" itself.
+    """
     ep = omniroute_endpoint()
     if not ep:
         return {}, "omniroute: no API key found"
@@ -147,19 +220,33 @@ def fetch_omniroute():
         return {}, f"omniroute unreachable: {type(exc).__name__}"
 
     rows = data.get("data", data if isinstance(data, list) else [])
-    return {"omniroute": {
-        "id": "omniroute",
-        "name": "OmniRoute",
+    buckets = {}
+    for m in rows:
+        mid = m.get("id")
+        if not mid:
+            continue
+        vendor = omniroute_vendor(mid) or "omniroute"
+        buckets.setdefault(vendor, []).append({"id": mid, "name": m.get("id")})
+
+    return {vid: {
+        "id": vid,
+        "name": vid,
         "source": "omniroute",
+        "via_omniroute": True,
         "base_url": ep["base_url"],
-        "models": [{"id": m["id"], "name": m.get("id")} for m in rows if m.get("id")],
-    }}, None
+        "models": models,
+    } for vid, models in buckets.items()}, None
 
 
 # ── merge ──────────────────────────────────────────────────────────────────
 def merge(*provider_maps):
-    """Merge provider maps. Later sources never overwrite an earlier one's models;
-    they only add providers that are genuinely new."""
+    """Merge provider maps into one catalogue.
+
+    Within a provider, duplicate model ids collapse. Across providers they do
+    NOT collapse: the same model id served by two different routes is genuinely
+    two catalog entries, and the dashboard's per-provider counts should reflect
+    that. `unique_model_count` is reported separately so the total is honest.
+    """
     merged = {}
     for pm in provider_maps:
         for pid, prov in (pm or {}).items():
@@ -202,11 +289,17 @@ def read_cache(path=CACHE_PATH):
 def write_cache(data, path=CACHE_PATH, status=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     real = {k: v for k, v in data.items() if not k.startswith("_")}
+    entries = sum(len(p.get("models") or []) for p in real.values())
+    unique = len({m["id"] for p in real.values() for m in (p.get("models") or [])})
     payload = {
         "_meta": {
             "synced_at": time.time(),
             "providers": len(real),
-            "models": sum(len(p.get("models") or []) for p in real.values()),
+            # catalog_entries counts every provider->model row the UI renders.
+            "models": entries,
+            # unique_model_count is the honest "how many distinct models exist".
+            "unique_models": unique,
+            "duplicate_rows": entries - unique,
             "status": status or {},
         }
     }
