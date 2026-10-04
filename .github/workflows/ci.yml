@@ -64,6 +64,24 @@ jobs:
           python3 tests/test_live_sync.py
           python3 tests/test_server_nvidia.py
 
+      # Two servers, not one. vite preview serves the built frontend, but the
+      # frontend fetches /api from the Python backend on :5174. The overview
+      # checks assert that the cost cells resolve, which cannot happen while
+      # that endpoint is dead. Start it and wait for it before the browser
+      # tests. It needs no credentials: with none present every source degrades
+      # to a warning and the endpoints still answer.
+      - name: Start the backend
+        run: |
+          python3 server.py &
+          BACKEND_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:5174/api/health >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:5174/api/health >/dev/null \
+            || { echo "backend never came up"; kill $BACKEND_PID; exit 1; }
+          echo "backend up on :5174, pid $BACKEND_PID"
+
       - run: pip install playwright && python -m playwright install --with-deps chromium
 
       # The nav test drives a real browser against a running dashboard, so CI
