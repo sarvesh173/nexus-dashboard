@@ -1178,10 +1178,23 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             data = get_live_providers()
             return self.send_json(data)
         elif self.path == '/api/synced-models':
-            # Live-synced catalogue: Hermes config + OmniRoute merged by live_sync.py
+            # Live-synced catalogue: gateway + Hermes config + OmniRoute, merged.
+            # Returned as a LIST so the frontend can consume it exactly like
+            # /api/live-providers without a shape change.
             import live_sync
-            data = live_sync.read_cache()
-            return self.send_json(data)
+            cache = live_sync.read_cache()
+            meta = cache.pop('_meta', {})
+            rows = [cache[k] for k in sorted(cache) if not k.startswith('_')]
+            for p in rows:
+                p.setdefault('model_count', len(p.get('models') or []))
+                p['total_models'] = p['model_count']
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(json.dumps({'providers': rows, '_meta': meta}).encode('utf-8'))
+            return
         elif self.path == '/api/sync-status':
             import live_sync
             return self.send_json(live_sync.read_cache().get('_meta', {}))

@@ -938,7 +938,6 @@ function getModelTelemetry(modelId, modelName = '') {
 
 
 const EMPTY_MODELS = Object.freeze([]);
-const TOP_MODELS_LIMIT = 5;
 // Upper bound for "two taps on the same card" — generous enough for a slow
 // double-tap on touch, tight enough that two deliberate clicks in a row on
 // different cards never register as a double-tap on one card.
@@ -1660,18 +1659,17 @@ const navMicroAnimationStyles = `  .nav-overview-icon,
 `;
 
 function getProviderModalityStats(provider) {
-  const stats = Object.fromEntries(PROVIDER_MODALITIES.map(({ id }) => [id, { count: 0, models: [] }]));
+  const stats = Object.fromEntries(PROVIDER_MODALITIES.map(({ id }) => [id, { count: 0 }]));
   const models = provider.models || EMPTY_MODELS;
 
-  // Count and preview the same live catalog. Backend aggregates can be stale
-  // after hiding models. Keep only five references per modality, in catalog order.
+  // Count the live catalog per modality. Backend aggregates can be stale after
+  // hiding models, so the count comes from the model array itself.
   if (Array.isArray(provider.models)) {
     for (const model of models) {
       const category = model.category || (model.capabilities?.vision ? 'vision' : (model.capabilities?.audio ? 'tts' : 'text'));
       const stat = stats[MODALITY_ALIASES[category]];
       if (!stat) continue;
       stat.count += 1;
-      if (stat.models.length < TOP_MODELS_LIMIT) stat.models.push(model);
     }
   } else {
     const categories = Object.entries(provider.categories || {});
@@ -1698,7 +1696,7 @@ const ProviderModalityStats = React.memo(function ProviderModalityStats({ provid
           label={description}
           boxLabel={label}
           providerName={provider.display_name || provider.name || provider.id}
-          topModels={stats[id].models}
+          showProviderName={Boolean(providerName)}
           colorClass={`text-xs font-bold font-mono ${color} block leading-none`}
         />
       ))}
@@ -1709,7 +1707,7 @@ const ProviderModalityStats = React.memo(function ProviderModalityStats({ provid
 // The stat owns the whole modality box, including its label and padding.
 const InteractiveStatValue = React.memo(function InteractiveStatValue({
   rawValue, displayValue, label = '', colorClass = '', align = 'right',
-  boxLabel = '', providerName = '', topModels = null,
+  boxLabel = '', providerName = '', showProviderName = false,
 }) {
   // A null geometry also means closed: no separate hover state or idle overlay DOM.
   const [coords, setCoords] = useState(null);
@@ -1786,7 +1784,7 @@ const InteractiveStatValue = React.memo(function InteractiveStatValue({
           <div
             id={tooltipId}
             role="tooltip"
-            className={`absolute pointer-events-none px-3.5 py-2 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)] z-[999] ${topModels ? 'w-60 max-w-[calc(100vw-24px)]' : ''}`}
+            className={`absolute pointer-events-none px-3.5 py-2 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)] z-[999] ${showProviderName ? 'w-52 max-w-[calc(100vw-24px)]' : ''}`}
             style={{
               left: coords.diagX,
               top: coords.diagY,
@@ -1804,25 +1802,12 @@ const InteractiveStatValue = React.memo(function InteractiveStatValue({
                 </span>
               )}
             </div>
-            {topModels && (
+            {showProviderName && (
               <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] font-mono">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span className="text-[10px] font-bold whitespace-nowrap">Top Models</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold whitespace-nowrap">Provider</span>
                   <span className="text-[9px] text-[var(--md-sys-color-on-surface-variant)] truncate">{providerName}</span>
                 </div>
-                {topModels.length > 0 ? (
-                  <ul className="space-y-1">
-                    {topModels.map((model, index) => (
-                      <li key={model.id || index} className="text-[10px] leading-snug break-words">
-                        {model.name || model.id}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
-                    {numVal > 0 ? 'Model details unavailable' : 'No models available'}
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -2001,8 +1986,6 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
   const badgeRef = useRef(null);
 
   const rawModels = provider.models || EMPTY_MODELS;
-  const topModels = React.useMemo(() => rawModels.slice(0, TOP_MODELS_LIMIT), [rawModels]);
-
   const displayCount = rawModels.length || totalCount;
 
   return (
@@ -2027,44 +2010,29 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
         </span>
       </button>
 
-      {/* Mount the catalog's top-five preview only while the badge is hovered. */}
+      {/* The curated top-5 preview that used to live here was removed: it listed
+          arbitrary catalog positions rather than models a reader would pick, so
+          it read as filler. The live count above and the provider grid are real. */}
       {isHovered && (
         <div
-          className="absolute right-0 top-full w-60 pt-1.5 z-50 pointer-events-auto"
+          className="absolute right-0 top-full w-52 pt-1.5 z-50 pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Padding bridges the gap so the pointer can reach See more without closing. */}
-          <div className="p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-left font-mono">
-            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-1.5">
+          <div className="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-left font-mono">
+            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-2">
               <span className="text-[9.5px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] tracking-wider">
-                Top Models
+                Live models
               </span>
               <span className="text-[9px] text-[var(--md-sys-color-primary)] font-medium">
                 {displayCount} total
               </span>
             </div>
 
-            {/* At most five models, preserving the provider's catalog order. */}
-            <div className="space-y-1 mb-2">
-              {topModels.length > 0 ? (
-                topModels.map((m, i) => (
-                  <div
-                    key={m.id || i}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[var(--md-sys-color-surface-container)] text-[10px] text-[var(--md-sys-color-on-surface)] truncate hover:bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)]/50"
+            {/* Model list removed here (was: Top-5 preview). */}
+            <div className="mb-2" />
 
-                  >
-                    <span className="w-1 h-1 rounded-full bg-[var(--md-sys-color-primary)] shrink-0" />
-                    <span className="truncate">{m.name || m.id}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] py-1 px-1">
-                  Standard provider models
-                </div>
-              )}
-            </div>
-
-            {/* See more → Button (Themed) */}
+                        {/* Open full list → Button (Themed) */}
             <button
               type="button"
               onClick={(e) => {
@@ -2073,7 +2041,7 @@ function InteractiveActiveModelsBadge({ provider, totalCount, onSelect }) {
               }}
               className="w-full py-1.5 px-2.5 rounded-xl bg-[var(--md-sys-color-primary)] hover:opacity-90 active:scale-95 text-[var(--md-sys-color-on-primary)] text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
             >
-              <span>See more</span>
+              <span>Open full list</span>
               <span>→</span>
             </button>
           </div>
@@ -4810,17 +4778,20 @@ export default function App() {
   };
 
   const fetchProviders = async () => {
-    // Live source of truth: the Hermes OpenAI-compatible gateway.
+    // Live source of truth: the 30s live-sync merge of the Hermes gateway,
+    // ~/.hermes/config.yaml and OmniRoute. If a model is added or removed
+    // anywhere upstream it appears here within one sync cycle.
     // If a model is removed/hidden upstream it disappears here automatically.
     const [liveRes, nvidiaRes] = await Promise.all([
-      fetch('/api/live-providers').catch(() => null),
+      fetch('/api/synced-models').catch(() => null),
       fetch('/api/providers').catch(() => null),
     ]);
 
     let live = [];
     let failed = false;
     if (liveRes && liveRes.ok) {
-      live = await liveRes.json();
+      const parsed = await liveRes.json();
+      live = Array.isArray(parsed) ? parsed : (parsed.providers || []);
       setCatalogError(null);
     } else {
       failed = true;
@@ -4886,7 +4857,9 @@ export default function App() {
     // was never perceived: the 1500ms tween finished long before the next sample.
     // /api/stats is local and non-blocking (psutil interval=None), answering in 1-50ms.
     const interval = setInterval(fetchStats, 2000);
-    const provInterval = setInterval(fetchProviders, 90000);
+    // 30s matches the backend's live-sync cadence exactly, so a model added
+    // upstream shows up on the very next tick instead of lagging up to 90s.
+    const provInterval = setInterval(fetchProviders, 30000);
     const costInterval = setInterval(fetchCostOverview, 30000);
     return () => {
       clearInterval(interval);

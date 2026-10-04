@@ -57,6 +57,39 @@ def _read_env_file(path: str) -> dict:
     return out
 
 
+# ── source 0: Hermes gateway catalogue ─────────────────────────────────────
+def fetch_gateway():
+    """Reuse server.get_live_providers() — the dashboard's original source of
+    truth. Never raises; a gateway failure just contributes nothing."""
+    try:
+        import server
+        rows = server.get_live_providers()
+    except Exception as exc:                    # noqa: BLE001
+        return {}, f"gateway unavailable: {type(exc).__name__}"
+    out = {}
+    for p in rows or []:
+        pid = p.get("id")
+        if not pid:
+            continue
+        models = []
+        for m in p.get("models") or []:
+            mid = m.get("id") if isinstance(m, dict) else m
+            if mid:
+                models.append({"id": mid, "name": mid})
+        out[pid] = {
+            "id": pid,
+            "name": p.get("display_name") or p.get("name") or pid,
+            "display_name": p.get("display_name") or p.get("name") or pid,
+            "kind": p.get("kind"),
+            "enabled": p.get("enabled", True),
+            "base_url": p.get("base_url"),
+            "logo": p.get("logo"),
+            "source": "gateway",
+            "models": models,
+        }
+    return out, None
+
+
 # ── source 1: Hermes config ────────────────────────────────────────────────
 def fetch_hermes_config():
     """Read providers + models straight from ~/.hermes/config.yaml. Read-only."""
@@ -187,18 +220,36 @@ def write_cache(data, path=CACHE_PATH, status=None):
 
 # ── the sync loop ──────────────────────────────────────────────────────────
 def sync_once(path=CACHE_PATH):
-    """One full sync. Never raises. Returns (providers, status)."""
+    """One full sync. Never raises. Returns (providers, status).
+
+    Three sources merged:
+      1. Hermes gateway catalogue (/api/live-providers equivalent) — configured
+         providers AND whatever the gateway is actually serving right now.
+      2. Hermes config.yaml — providers enabled in config.
+      3. OmniRoute /v1/models — the shared cloud endpoint.
+
+    Source 1 is what the dashboard has always shown (81 providers); sources 2-3
+    add anything the gateway does not expose. Nothing is lost.
+    """
+    gateway, gw_err = fetch_gateway()
     hermes, herr_err = fetch_hermes_config()
     omni, omni_err = fetch_omniroute()
 
     status = {}
+    if gw_err:
+        status["gateway"] = gw_err
     if herr_err:
         status["hermes"] = herr_err
     if omni_err:
         status["omniroute"] = omni_err
-    status["ok"] = bool(hermes or omni) and not (herr_err or omni_err)
 
-    merged = merge(hermes, omni)
+    merged = merge(gateway, hermes, omni)
+    status["ok"] = bool(merged) and not (gw_err or herr_err or omni_err)
+    status["sources"] = {
+        "gateway": len(gateway),
+        "hermes": len(hermes),
+        "omniroute": len(omni),
+    }
 
     # total failure -> keep serving the last good cache rather than going blank
     if not merged:
