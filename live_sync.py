@@ -261,11 +261,20 @@ def canonical_provider_id(raw):
 
     The gateway and OmniRoute spell the same vendor differently
     ("free-ai" vs "freeai", "ollama-cloud" vs "ollamacloud"), which shows the
-    dashboard the same provider twice. Normalising punctuation and applying
-    aliases makes both spellings land on one row.
+    dashboard the same provider twice.
+
+    Order matters: resolve the alias FIRST, then re-normalise. Aliasing after
+    normalisation is what previously split one vendor into two rows. `qwc`
+    aliased to "qwen-cloud" while the gateway's own "qwen-cloud" id normalised
+    to "qwencloud" and matched no alias, so both spellings survived as
+    separate providers. Normalising again after the alias makes every spelling
+    of a vendor land on one key.
     """
     key = re.sub(r"[^a-z0-9]", "", (raw or "").lower())
-    return _PROVIDER_ID_ALIASES.get(key, key)
+    key = _PROVIDER_ID_ALIASES.get(key, key)
+    # The alias target may itself be hyphenated; collapse it to the same bare
+    # form so `qwc` and `qwen-cloud` cannot diverge.
+    return re.sub(r"[^a-z0-9]", "", key)
 
 
 def merge(*provider_maps):
