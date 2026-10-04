@@ -44,7 +44,16 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
+
+      # The backend modules import yaml, requests and psutil at module scope.
+      # Without this they raise ImportError and every suite below fails on a
+      # clean runner even though it passes locally, where those packages are
+      # already present. pip has to run BEFORE the suites, not with playwright.
+      - name: Install python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml requests psutil
 
       # The backend suites are offline: HTTP is stubbed and no key is needed.
       # They cover the cache-write race, the malformed-proxy guard, canonical
