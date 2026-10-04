@@ -640,8 +640,11 @@ def get_hermes_config_providers():
                         }
                     }
                 ]
+                # Dedup against what models_list already holds. This used to reference an
+                # undefined name, raising NameError and taking the whole NVIDIA
+                # provider down with it.
                 for vm in visual_genai_models:
-                    if vm['id'] not in existing_ids:
+                    if not any(m['id'] == vm['id'] for m in models_list):
                         models_list.append(vm)
 
                 for sm in speech_models:
