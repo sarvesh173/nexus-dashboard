@@ -44,13 +44,25 @@ class TestFetchOmniRouteNeverRaises(unittest.TestCase):
     """
 
     def _run(self, payload):
+        """Call fetch_omniroute against a stubbed HTTP layer and a stubbed key.
+
+        Both have to be stubbed. fetch_omniroute returns early with
+        "no API key found" when omniroute_endpoint() finds nothing, so on a
+        machine or runner without that key every assertion below would compare
+        against an empty dict and fail. The suite has to depend on neither the
+        developer's credentials nor the network.
+        """
         import urllib.request
-        orig = urllib.request.urlopen
+        orig_urlopen = urllib.request.urlopen
+        orig_endpoint = live_sync.omniroute_endpoint
         urllib.request.urlopen = _stub_urlopen(payload)
+        live_sync.omniroute_endpoint = lambda: {
+            "base_url": "http://stub.invalid/v1", "api_key": "stub"}
         try:
             return live_sync.fetch_omniroute()
         finally:
-            urllib.request.urlopen = orig
+            urllib.request.urlopen = orig_urlopen
+            live_sync.omniroute_endpoint = orig_endpoint
 
     def test_top_level_list_does_not_raise(self):
         buckets, err = self._run([])
