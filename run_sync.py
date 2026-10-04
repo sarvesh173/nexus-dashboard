@@ -14,6 +14,8 @@ import os
 import sys
 import time
 
+from paths import REPO_DIR
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import model_health  # noqa: E402
 
@@ -29,20 +31,20 @@ def fetch_specs():
     if not key:
         raise SystemExit('no NVIDIA key found in Hermes config')
 
-    with open('/home/kira/.hermes/config.yaml') as fh:
+    with open(hermes_config_path()) as fh:
         cfg = yaml.safe_load(fh) or {}
     nv = (cfg.get('providers') or {}).get('nvidia') or {}
     base = nv.get('base_url') or BASE
 
     # Reuse the backend's own categorisation so sync and dashboard agree
-    sys.path.insert(0, '/home/kira/nexus-dashboard')
-    os.environ['PYTHONPATH'] = '/home/kira/nexus-dashboard'
+    sys.path.insert(0, REPO_DIR)
+    os.environ['PYTHONPATH'] = REPO_DIR
 
     specs = []
     try:
         import importlib.util
         spec = importlib.util.spec_from_file_location(
-            'srv', '/home/kira/nexus-dashboard/server.py')
+            'srv', os.path.join(REPO_DIR, 'server.py'))
         # server.py starts an HTTP server only under __main__, so import is safe
         srv = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(srv)

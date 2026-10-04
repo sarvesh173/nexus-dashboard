@@ -123,15 +123,22 @@ double-counts. So:
 
 ## Configuration
 
-Everything personal comes from the environment. No path is hardcoded.
+Every path that identifies this machine is resolved from the environment by
+`paths.py`. No home directory is hardcoded anywhere in the source, so a public
+checkout carries no username and runs unchanged elsewhere.
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `NEXUS_SYNC_INTERVAL` | seconds between syncs | `30` |
-| `NEXUS_BACKEND_PORT` | backend listen port | `5174` |
+| `HERMES_HOME` | agent config and credentials | `~/.hermes` |
+| `HERMES_CONFIG` | the agent config to read | `$HERMES_HOME/config.yaml` |
+| `OMNIROUTE_HOME` | proxy credentials | `~/.omniroute` |
+| `NEXUS_DIR` | this project's own directory | the checkout |
 
-Provider credentials live in the agent's own env file at mode `600`. This
-project never stores a key.
+`HERMES_CONFIG` and `NEXUS_DIR` are read at import time; `HERMES_HOME` and
+`OMNIROUTE_HOME` are also read per call, so exporting them after startup works.
+
+Provider credentials are read from the agent's own env file at mode `600`. This
+project never writes or stores a key.
 
 ---
 

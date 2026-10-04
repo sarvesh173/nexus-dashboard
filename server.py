@@ -7,6 +7,7 @@ import sys
 import time
 import yaml
 import requests
+from paths import hermes_config_path, omniroute_env_path, OMNI_BASE
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -252,7 +253,7 @@ def get_hermes_config_providers():
     if _cached_providers is not None and (now - _last_provider_time) < PROVIDER_CACHE_TTL:
         return _cached_providers
 
-    config_path = '/home/kira/.hermes/config.yaml'
+    config_path = hermes_config_path()
     try:
         with open(config_path, 'r') as f:
             cfg = yaml.safe_load(f)
@@ -742,7 +743,7 @@ def _logo_for(pid):
 def get_all_config_providers():
     """Every provider in the Hermes config (routers included, marked as such)."""
     try:
-        with open('/home/kira/.hermes/config.yaml', 'r') as f:
+        with open(hermes_config_path(), 'r') as f:
             cfg = yaml.safe_load(f) or {}
     except Exception:
         cfg = {}
@@ -915,7 +916,7 @@ def config_provider_map():
     if _cfg_cache['map'] is not None and _t.time() - _cfg_cache['at'] < 60:
         return _cfg_cache['map']
     try:
-        with open('/home/kira/.hermes/config.yaml', 'r') as f:
+        with open(hermes_config_path(), 'r') as f:
             cfg = yaml.safe_load(f) or {}
         pm = cfg.get('providers', {}) or {}
     except Exception:
@@ -951,11 +952,12 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 if not model_id:
                     return self.send_json({'ok': False, 'error': 'Missing model ID', 'latency_ms': 0}, 400)
 
-                # Read master OMNIROUTE_API_KEY directly from /home/kira/.omniroute/.env or fallback to hermes_gateway
+                # Read the proxy's master key from its own env file, falling
+                # back to whatever the gateway helper already resolved.
                 key = ''
                 try:
                     import re
-                    with open('/home/kira/.omniroute/.env', 'r', encoding='utf-8') as ef:
+                    with open(omniroute_env_path(), 'r', encoding='utf-8') as ef:
                         m_env = re.search(r'OMNIROUTE_API_KEY\s*=\s*["\']?([^"\'\r\n]+)', ef.read())
                         if m_env:
                             key = m_env.group(1).strip()
@@ -963,7 +965,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     pass
                 if not key and hermes_gateway:
                     key = hermes_gateway._key()
-                gw_url = 'http://127.0.0.1:20128/v1/chat/completions'
+                gw_url = OMNI_BASE + '/chat/completions'
 
                 headers = {
                     'Content-Type': 'application/json',

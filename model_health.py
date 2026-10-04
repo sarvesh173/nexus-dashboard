@@ -20,13 +20,14 @@ anything, because a cold start looks identical to a dead endpoint.
 import json
 import os
 import time
+from paths import hermes_config_path, hermes_env_path, omniroute_env_path
 
 import requests
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'
 )
-CONFIG_PATH = '/home/kira/.hermes/config.yaml'
+CONFIG_PATH = hermes_config_path()
 
 SYNC_INTERVAL = 900          # 15 min
 PROBE_TIMEOUT = 45           # generous: NVIDIA cold starts exceed 30s often
@@ -106,7 +107,7 @@ def _api_key():
             return key
     except Exception:
         pass
-    for path in ('/home/kira/.hermes/.env', '/tmp/nvkey'):
+    for path in (hermes_env_path(), '/tmp/nvkey'):
         try:
             with open(path) as fh:
                 for line in fh:

@@ -4,7 +4,7 @@
 Watches two sources of truth and merges them so the dashboard never drifts:
 
   1. Hermes config  ~/.hermes/config.yaml   -> providers + their models
-  2. OmniRoute      http://localhost:20128/v1/models (OpenAI-compatible)
+  2. OmniRoute      the local OpenAI-compatible proxy (base from env)
 
 Design rules:
   - READ-ONLY on both sources. This module never writes to config.yaml.
@@ -21,6 +21,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from paths import hermes_config_path, omniroute_env_path, OMNI_BASE
 
 # ── paths ──────────────────────────────────────────────────────────────────
 # live_sync.py sits at the repo root, so one dirname() lands in the repo itself.
@@ -130,7 +131,7 @@ def omniroute_endpoint():
     key = env.get("OMNIROUTE_API_KEY", "")
     if not key:
         return {}
-    return {"base_url": "http://localhost:20128/v1", "api_key": key}
+    return {"base_url": OMNI_BASE, "api_key": key}
 
 
 # OmniRoute is a proxy: it fronts many real providers behind one endpoint.
