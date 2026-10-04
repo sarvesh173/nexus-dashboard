@@ -1,6 +1,106 @@
 import React from 'react';
 import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, Settings, Terminal } from 'lucide-react';
 
+const NAV_HOVER_STAGE_COUNT = 36;
+const NAV_ICON_STYLE_COUNT = 10;
+const NAV_GLYPHS = {
+  overview: { Glyph: LayoutDashboard, stem: 'overview' },
+  models: { Glyph: Boxes, stem: 'model' },
+  agents: { Glyph: Bot, stem: 'agent' },
+  playground: { Glyph: Terminal, stem: 'playground' },
+  cost: { Glyph: DollarSign, stem: 'cost' },
+  settings: { Glyph: Settings, stem: 'settings' },
+};
+
+// Real vector silhouettes, not ten filters applied to the same outline. Only
+// the selected surface is mounted; the familiar route glyph stays recognizable.
+function NavIconSurface({ iconStyle }) {
+  let surface;
+  switch (iconStyle) {
+    case 1: // Minimal Outline Line-Art: the unadorned 1.5px glyph.
+      return null;
+    case 2: // Duo-Tone Ambient.
+      surface = <path className="nav-skin-ambient" d="M8 3h12a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5Z" />;
+      break;
+    case 3: // Filled Squircle Micro-Badge: recessed well + embossed rim.
+      surface = <>
+        <path className="nav-skin-well" d="M14 2C4 2 2 4 2 14s2 12 12 12 12-2 12-12S24 2 14 2Z" />
+        <path className="nav-skin-highlight" d="M5 13C5 6 6 5 14 5s9 1 9 8" />
+        <path className="nav-skin-facet" d="M5 17c0 5 3 6 9 6s9-1 9-6" />
+      </>;
+      break;
+    case 4: // 3D Isometric Wireframe: explicitly projected vector facets.
+      surface = <>
+        <path className="nav-skin-ambient" d="m14 1 12 7-12 7L2 8Z" />
+        <path className="nav-skin-facet" d="m2 8 12 7v12L2 20Zm24 0v12l-12 7V15Z" />
+        <path d="M14 1v12M2 8l12 7 12-7M14 15v12" />
+      </>;
+      break;
+    case 5: // Neon-Flux Ray Trace: a moving specular ray around the perimeter.
+      surface = <>
+        <path className="nav-skin-facet" d="M8 3h12l5 5v12l-5 5H8l-5-5V8Z" />
+        <path className="nav-skin-ray" pathLength="100" d="M14 3h6l5 5v12l-5 5H8l-5-5V8l5-5Z" />
+      </>;
+      break;
+    case 6: // Dotted Matrix Mesh: small points keep the glyph legible.
+      surface = <g className="nav-skin-matrix">
+        {[3, 8.5, 14, 19.5, 25].flatMap((x) =>
+          [3, 8.5, 14, 19.5, 25].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="0.7" />))}
+      </g>;
+      break;
+    case 7: // Concentric Micro-Ring Badge: two independently drawn borders.
+      surface = <>
+        <circle cx="14" cy="14" r="12" />
+        <circle className="nav-skin-facet" cx="14" cy="14" r="9.5" />
+        <path className="nav-skin-highlight" d="M5.5 5.5A12 12 0 0 1 14 2" />
+      </>;
+      break;
+    case 8: // Geometric Chiseled: chamfered corners and contrasting bevels.
+      surface = <>
+        <path className="nav-skin-well" d="M7 2h14l5 5v14l-5 5H7l-5-5V7Z" />
+        <path className="nav-skin-highlight" d="m3 8 5-5h12M7 7h14" />
+        <path className="nav-skin-facet" d="m21 3-3 4m7 13-5 5H8l3-4h10V7l4 4" />
+      </>;
+      break;
+    case 9: // Fluid Liquid Droplet: asymmetric, continuously curved outline.
+      surface = <>
+        <path className="nav-skin-well" d="M14 2c5 0 5 5 9 7 3 2 3 5 2 8-1 6-5 9-11 9C7 26 2 21 2 15 2 8 6 2 14 2Z" />
+        <path className="nav-skin-highlight" d="M6 12c0-4 3-7 7-7" />
+        <path className="nav-skin-facet" d="M15 23c4 0 7-3 7-7" />
+      </>;
+      break;
+    case 10: // Tactile Capsule Emblem: inset pill, floating above a lower rim.
+      surface = <>
+        <rect className="nav-skin-well" x="1" y="5" width="26" height="18" rx="9" />
+        <path className="nav-skin-highlight" d="M5 12a6 6 0 0 1 6-4h7" />
+        <path className="nav-skin-facet" d="M5 19c2 3 4 4 9 4s8-1 10-4" />
+      </>;
+      break;
+    default:
+      return null;
+  }
+  return <svg className="nav-icon-surface" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{surface}</svg>;
+}
+
+function NavigationIcon({ tab, iconStyle, currency }) {
+  const { Glyph, stem } = NAV_GLYPHS[tab];
+  return <span className={`nav-${stem}-icon nav-motion-icon`} aria-hidden="true">
+    <span className={`nav-${stem}-ring nav-motion-ring`}><span className="nav-motion-echo" /></span>
+    {tab === 'overview' && [0, 1, 2, 3].map((cell) => <span key={cell} data-cell={cell} className="nav-overview-cell" />)}
+    {tab === 'agents' && <>
+      <span className="nav-agent-pulse" />
+      <span className="nav-agent-spark nav-agent-spark-a" />
+      <span className="nav-agent-spark nav-agent-spark-b" />
+    </>}
+    <NavIconSurface iconStyle={iconStyle} />
+    {tab === 'cost' && currency.id !== 'USD' ? (
+      <svg className="nav-icon-glyph nav-currency-glyph" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <text x="12" y="12" dy=".36em" textAnchor="middle">{currency.symbol}</text>
+      </svg>
+    ) : <Glyph className="nav-icon-glyph" size={14} strokeWidth={1.5} aria-hidden="true" focusable="false" />}
+  </span>;
+}
+
 export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-model-icon,
   .nav-agent-icon,
@@ -74,7 +174,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.7),
+      rgb(255 255 255 / 0.65),
       transparent
     );
     transform: translateX(-10px) rotate(25deg);
@@ -160,7 +260,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     content: '';
     position: absolute;
     inset: -4px;
-    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 85%, white);
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 85%, var(--md-sys-color-surface));
     border-radius: 999px;
     opacity: 0;
     transform: scale(0.52);
@@ -186,7 +286,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     position: absolute;
     inset: 1px;
     z-index: 1;
-    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 88%, white);
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 88%, var(--md-sys-color-surface));
     border-radius: 999px;
     opacity: 0;
     transform: scale(0.68);
@@ -199,7 +299,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     width: 3px;
     height: 3px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--nav-agent-glow) 82%, white);
+    background: color-mix(in srgb, var(--nav-agent-glow) 82%, var(--md-sys-color-surface));
     box-shadow: 0 0 5px 1px var(--nav-agent-glow);
     opacity: 0;
     pointer-events: none;
@@ -209,7 +309,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     content: '';
     position: absolute;
     inset: -2px;
-    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 78%, white);
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 78%, var(--md-sys-color-surface));
     transform: rotate(45deg);
   }
 
@@ -280,16 +380,16 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     z-index: 1;
     width: 4px;
     height: 4px;
-    border: 1px solid currentColor;
+    border: 1px solid var(--md-sys-color-primary);
     border-radius: 1px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 200ms ease;
   }
-  .nav-overview-cell:nth-child(1) { top: 2px; left: 2px; }
-  .nav-overview-cell:nth-child(2) { top: 2px; right: 2px; }
-  .nav-overview-cell:nth-child(3) { bottom: 2px; left: 2px; }
-  .nav-overview-cell:nth-child(4) { bottom: 2px; right: 2px; }
+  .nav-overview-cell[data-cell="0"] { top: 2px; left: 2px; }
+  .nav-overview-cell[data-cell="1"] { top: 2px; right: 2px; }
+  .nav-overview-cell[data-cell="2"] { bottom: 2px; left: 2px; }
+  .nav-overview-cell[data-cell="3"] { bottom: 2px; right: 2px; }
   .nav-overview-icon,
   .nav-cost-icon,
   .nav-settings-icon {
@@ -367,7 +467,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     position: absolute;
     inset: -3px;
     z-index: 0;
-    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 82%, white);
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 82%, var(--md-sys-color-surface));
     border-radius: 7px;
     opacity: 0;
     pointer-events: none;
@@ -379,7 +479,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   }
 
   .nav-agent-ring {
-    border-color: color-mix(in srgb, var(--nav-agent-glow) 82%, white);
+    border-color: color-mix(in srgb, var(--nav-agent-glow) 82%, var(--md-sys-color-surface));
   }
 
   .nav-overview-button:hover .nav-overview-ring,
@@ -411,9 +511,9 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-overview-button:focus-visible .nav-overview-cell {
     animation: nav-overview-grid-pulse 820ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
   }
-  .nav-overview-cell:nth-child(2) { animation-delay: 70ms !important; }
-  .nav-overview-cell:nth-child(3) { animation-delay: 140ms !important; }
-  .nav-overview-cell:nth-child(4) { animation-delay: 210ms !important; }
+  .nav-overview-cell[data-cell="1"] { animation-delay: 70ms !important; }
+  .nav-overview-cell[data-cell="2"] { animation-delay: 140ms !important; }
+  .nav-overview-cell[data-cell="3"] { animation-delay: 210ms !important; }
   @keyframes nav-overview-grid-pulse {
     0% { opacity: 0.3; transform: translate(0, 0) scale(0.7); }
     45% { opacity: 0.95; transform: translate(1px, -1px) scale(1.35); }
@@ -455,199 +555,42 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
   }
 
-  /* =========================================================================
-     5-STAGE LUXURY THEME-COHESIVE PHYSICAL INTERACTION SUITE
-     100% theme-aligned. ZERO foreign colors. Pure M3/Apple glassmorphism.
-     ========================================================================= */
+  /* Stage 0: verified tactical chamfer. Keep these six distinct 3D poses;
+     subsequent stages use the same tab-specific axes in the motion engine. */
 
   /* -------------------------------------------------------------------------
      VARIANT 0: THE PLAYGROUND 3D CHAMFER & SPECULAR SHEEN (The Original)
      Subtle 3D perspective tilt + frosted well pop + specular glare sweep + ripple
      ------------------------------------------------------------------------- */
-  .nav-overview-button[data-variant="0"]:hover .nav-overview-icon {
+  .nav-overview-button[data-variant="0"]:hover .nav-overview-icon,
+  .nav-overview-button[data-variant="0"]:focus-visible .nav-overview-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(-12deg) rotateY(-14deg) translate3d(0, -1px, 3px) scale(1.1);
   }
-  .nav-model-button[data-variant="0"]:hover .nav-model-icon {
+  .nav-model-button[data-variant="0"]:hover .nav-model-icon,
+  .nav-model-button[data-variant="0"]:focus-visible .nav-model-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(18deg) rotateY(-22deg) translate3d(0, -1px, 3px) scale(1.12);
   }
-  .nav-agent-button[data-variant="0"]:hover .nav-agent-icon {
+  .nav-agent-button[data-variant="0"]:hover .nav-agent-icon,
+  .nav-agent-button[data-variant="0"]:focus-visible .nav-agent-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 66%, transparent));
     transform: perspective(520px) rotateX(-14deg) rotateY(12deg) translate3d(0, -1px, 3px) scale(1.1);
   }
-  .nav-playground-button[data-variant="0"]:hover .nav-playground-icon {
+  .nav-playground-button[data-variant="0"]:hover .nav-playground-icon,
+  .nav-playground-button[data-variant="0"]:focus-visible .nav-playground-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(-14deg) rotateY(16deg) translate3d(0, -1px, 3px) scale(1.1);
   }
-  .nav-cost-button[data-variant="0"]:hover .nav-cost-icon {
+  .nav-cost-button[data-variant="0"]:hover .nav-cost-icon,
+  .nav-cost-button[data-variant="0"]:focus-visible .nav-cost-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(-12deg) rotateY(18deg) rotate(-16deg) translate3d(0, -1px, 3px) scale(1.13);
   }
-  .nav-settings-button[data-variant="0"]:hover .nav-settings-icon {
+  .nav-settings-button[data-variant="0"]:hover .nav-settings-icon,
+  .nav-settings-button[data-variant="0"]:focus-visible .nav-settings-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
     transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(90deg) translate3d(0, -1px, 3px) scale(1.12);
-  }
-
-  /* -------------------------------------------------------------------------
-     VARIANT 1: MAGNETIC LEVITATION & DUAL CONCENTRIC HARMONIC WAVE
-     Weightless floating elevation + ambient theme shadow + harmonic dual wave
-     ------------------------------------------------------------------------- */
-  @keyframes harmonic-dual-wave {
-    0%   { opacity: 0;   transform: scale(0.65); }
-    30%  { opacity: 0.9; }
-    100% { opacity: 0;   transform: scale(1.65); }
-  }
-  @keyframes magnetic-float-elevation {
-    0%   { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 transparent); }
-    50%  { transform: translateY(-3px) scale(1.14); filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent)); }
-    100% { transform: translateY(-2px) scale(1.1); filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent)); }
-  }
-  .nav-overview-button[data-variant="1"]:hover .nav-overview-icon,
-  .nav-model-button[data-variant="1"]:hover .nav-model-icon,
-  .nav-agent-button[data-variant="1"]:hover .nav-agent-icon,
-  .nav-playground-button[data-variant="1"]:hover .nav-playground-icon,
-  .nav-cost-button[data-variant="1"]:hover .nav-cost-icon,
-  .nav-settings-button[data-variant="1"]:hover .nav-settings-icon {
-    animation: magnetic-float-elevation 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .nav-tab[data-variant="1"]:hover [class*="-ring"] {
-    animation: harmonic-dual-wave 1.3s cubic-bezier(0.16, 1, 0.3, 1) infinite !important;
-    border-color: color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
-  }
-
-  /* -------------------------------------------------------------------------
-     VARIANT 2: MECHANICAL SHUTTER SNAP & DIAGONAL EDGE RAY
-     Micro-recess snap-forward + sharp specular blade sweep + crisp squircle ring
-     ------------------------------------------------------------------------- */
-  @keyframes shutter-snap-rebound {
-    0%   { transform: perspective(520px) translateZ(0) scale(1); }
-    22%  { transform: perspective(520px) translateZ(-4px) scale(0.94); }
-    65%  { transform: perspective(520px) translateZ(4px) scale(1.15); }
-    100% { transform: perspective(520px) translateZ(2px) scale(1.1); }
-  }
-  @keyframes shutter-edge-sweep {
-    0%   { opacity: 0; transform: translateX(-14px) rotate(35deg); }
-    30%  { opacity: 1; }
-    100% { opacity: 0; transform: translateX(18px) rotate(35deg); }
-  }
-  .nav-overview-button[data-variant="2"]:hover .nav-overview-icon,
-  .nav-model-button[data-variant="2"]:hover .nav-model-icon,
-  .nav-agent-button[data-variant="2"]:hover .nav-agent-icon,
-  .nav-playground-button[data-variant="2"]:hover .nav-playground-icon,
-  .nav-cost-button[data-variant="2"]:hover .nav-cost-icon,
-  .nav-settings-button[data-variant="2"]:hover .nav-settings-icon {
-    animation: shutter-snap-rebound 520ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
-    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 60%, transparent));
-  }
-  .nav-tab[data-variant="2"]:hover [class*="-icon"]::after {
-    animation: shutter-edge-sweep 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  /* -------------------------------------------------------------------------
-     VARIANT 3: AMBIENT BREATHING HALO & SOFT RADIAL BLOOM
-     Organic living oscillation + soft primary radial diffusion + floating aura
-     ------------------------------------------------------------------------- */
-  @keyframes ambient-breathing-halo {
-    0%   { transform: scale(1) rotate(0deg); }
-    35%  { transform: scale(1.08) rotate(-3deg); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent)); }
-    70%  { transform: scale(1.12) rotate(3deg); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 80%, transparent)); }
-    100% { transform: scale(1.1) rotate(0deg); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent)); }
-  }
-  @keyframes ambient-halo-pulse {
-    0%   { opacity: 0; transform: scale(0.7); }
-    40%  { opacity: 0.85; }
-    100% { opacity: 0; transform: scale(1.5); }
-  }
-  .nav-overview-button[data-variant="3"]:hover .nav-overview-icon,
-  .nav-model-button[data-variant="3"]:hover .nav-model-icon,
-  .nav-agent-button[data-variant="3"]:hover .nav-agent-icon,
-  .nav-playground-button[data-variant="3"]:hover .nav-playground-icon,
-  .nav-cost-button[data-variant="3"]:hover .nav-cost-icon,
-  .nav-settings-button[data-variant="3"]:hover .nav-settings-icon {
-    animation: ambient-breathing-halo 700ms ease-in-out both;
-  }
-  .nav-tab[data-variant="3"]:hover [class*="-ring"] {
-    animation: ambient-halo-pulse 1.4s ease-out infinite !important;
-    border-color: color-mix(in srgb, var(--md-sys-color-primary) 75%, white);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 40%, transparent);
-  }
-
-  /* -------------------------------------------------------------------------
-     VARIANT 4: LIQUID MORPH SPRING & EXPANDING SURFACE RIPPLE
-     Fluid droplet inertia + center-outward specular bloom + liquid water ring
-     ------------------------------------------------------------------------- */
-  @keyframes liquid-droplet-spring {
-    0%   { transform: scale(1); }
-    30%  { transform: scale(1.22, 0.82) translateY(1px); }
-    60%  { transform: scale(0.88, 1.18) translateY(-2px); }
-    82%  { transform: scale(1.12, 0.95); }
-    100% { transform: scale(1.1) translateY(0); }
-  }
-  @keyframes liquid-surface-ripple {
-    0%   { opacity: 0; transform: scale(0.6); border-width: 2px; }
-    25%  { opacity: 0.95; }
-    100% { opacity: 0; transform: scale(1.75); border-width: 1px; }
-  }
-  .nav-overview-button[data-variant="4"]:hover .nav-overview-icon,
-  .nav-model-button[data-variant="4"]:hover .nav-model-icon,
-  .nav-agent-button[data-variant="4"]:hover .nav-agent-icon,
-  .nav-playground-button[data-variant="4"]:hover .nav-playground-icon,
-  .nav-cost-button[data-variant="4"]:hover .nav-cost-icon,
-  .nav-settings-button[data-variant="4"]:hover .nav-settings-icon {
-    animation: liquid-droplet-spring 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent));
-  }
-  .nav-tab[data-variant="4"]:hover [class*="-ring"] {
-    animation: liquid-surface-ripple 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) infinite !important;
-    border-color: color-mix(in srgb, var(--md-sys-color-primary) 85%, white);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .nav-tab,
-    .nav-overview-icon,
-    .nav-overview-cell,
-    .nav-model-icon,
-    .nav-model-icon::before,
-    .nav-agent-icon,
-    .nav-cost-icon,
-    .nav-cost-icon::before,
-    .nav-settings-icon {
-      transition: none !important;
-      animation: none !important;
-    }
-    .nav-tab:active { transform: none; }
-
-    .nav-overview-button:hover .nav-overview-icon,
-    .nav-overview-button:focus-visible .nav-overview-icon,
-    .nav-overview-button.nav-overview-active .nav-overview-icon,
-    .nav-cost-button:hover .nav-cost-icon,
-    .nav-cost-button:focus-visible .nav-cost-icon,
-    .nav-cost-button.nav-cost-active .nav-cost-icon,
-    .nav-settings-button:hover .nav-settings-icon,
-    .nav-settings-button:focus-visible .nav-settings-icon,
-    .nav-settings-button.nav-settings-active .nav-settings-icon,
-    .nav-model-button:hover .nav-model-icon,
-    .nav-model-button:focus-visible .nav-model-icon,
-    .nav-model-button.nav-model-active .nav-model-icon,
-    .nav-agent-button:hover .nav-agent-icon,
-    .nav-agent-button:focus-visible .nav-agent-icon,
-    .nav-agent-button.nav-agent-active .nav-agent-icon {
-      transform: none;
-      filter: none;
-    }
-
-    .nav-model-icon::after,
-    .nav-cost-icon::after,
-    .nav-agent-icon::before,
-    .nav-agent-icon::after,
-    .nav-agent-pulse,
-    .nav-agent-spark {
-      animation: none !important;
-      opacity: 0;
-    }
   }
 
 
@@ -768,7 +711,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     border-radius: 2px;
     pointer-events: none;
     opacity: 0;
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.62), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
     transform: translateX(-10px) rotate(25deg);
   }
 
@@ -778,7 +721,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     position: absolute;
     inset: -3px;
     z-index: 0;
-    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 82%, white);
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 82%, var(--md-sys-color-surface));
     border-radius: 7px;
     opacity: 0;
     pointer-events: none;
@@ -894,7 +837,803 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     animation: applePillGlow 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
   }
 
+  /* 36-stage motion engine. Only hover/focus runs animations, never the active
+     route alone. Independent sibling wave layers avoid multiplying transforms
+     or fading delayed echoes with their parent. All light follows live tokens. */
+  .nav-tab {
+    --nav-body-motion: none;
+    --nav-duration: 720ms;
+    --nav-curve: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --nav-repeat: 1;
+    --nav-well-motion: nav-well-pop;
+    --nav-well-repeat: 1;
+    --nav-well-blur: 0px;
+    --nav-well-fill: linear-gradient(160deg,
+      color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent),
+      color-mix(in srgb, var(--md-sys-color-surface) 38%, transparent) 62%);
+    --nav-well-light: inset 0 1px 2px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+    --nav-light: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    --nav-glare-motion: nav-chamfer-glare;
+    --nav-glare-fill: linear-gradient(115deg, transparent 40%, rgb(255 255 255 / 0.65) 50%, transparent 60%);
+    --nav-wave-motion: nav-pg-ring;
+    --nav-wave-duration: 1500ms;
+    --nav-wave-repeat: 1;
+    --nav-wave-light: 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+    --nav-echo-display: none;
+    --nav-third-display: none;
+    --nav-attitude: perspective(520px) rotateX(var(--nav-tilt-x)) rotateY(var(--nav-tilt-y)) rotate(var(--nav-roll));
+  }
 
+  /* Bespoke silhouettes, axes, rebound direction and echo cadence per tab. */
+  .nav-overview-button {
+    --nav-tilt-x: -12deg; --nav-tilt-y: -14deg; --nav-roll: 0deg;
+    --nav-swing: -4deg; --nav-radius: 5px; --nav-orbit-start: 0deg; --nav-echo-delay: 240ms;
+  }
+  .nav-model-button {
+    --nav-tilt-x: 18deg; --nav-tilt-y: -22deg; --nav-roll: 0deg;
+    --nav-swing: 6deg; --nav-radius: 3px; --nav-orbit-start: 60deg; --nav-echo-delay: 280ms;
+  }
+  .nav-agent-button {
+    --nav-tilt-x: -14deg; --nav-tilt-y: 12deg; --nav-roll: 0deg;
+    --nav-swing: -3deg; --nav-radius: 50%; --nav-orbit-start: 120deg; --nav-echo-delay: 320ms;
+  }
+  .nav-playground-button {
+    --nav-tilt-x: -14deg; --nav-tilt-y: 16deg; --nav-roll: 0deg;
+    --nav-swing: 4deg; --nav-radius: 4px; --nav-orbit-start: 180deg; --nav-echo-delay: 200ms;
+  }
+  .nav-cost-button {
+    --nav-tilt-x: -12deg; --nav-tilt-y: 18deg; --nav-roll: -16deg;
+    --nav-swing: -8deg; --nav-radius: 50%; --nav-orbit-start: 240deg; --nav-echo-delay: 300ms;
+  }
+  .nav-settings-button {
+    --nav-tilt-x: 16deg; --nav-tilt-y: -18deg; --nav-roll: 90deg;
+    --nav-swing: 15deg; --nav-radius: 38%; --nav-orbit-start: 300deg; --nav-echo-delay: 260ms;
+  }
+
+  .nav-tab[data-variant] .nav-motion-icon::before,
+  .nav-tab[data-variant] .nav-motion-icon::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    width: auto;
+    height: auto;
+    border-radius: var(--nav-radius);
+    pointer-events: none;
+    opacity: 0;
+    animation: none;
+    transition: none;
+  }
+  .nav-tab[data-variant] .nav-motion-icon::before {
+    z-index: 0;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+    background: var(--nav-well-fill);
+    box-shadow: var(--nav-well-light);
+    filter: blur(var(--nav-well-blur));
+    backdrop-filter: blur(3px);
+    transform: scale(0.72);
+  }
+  .nav-tab[data-variant] .nav-motion-icon::after {
+    z-index: 3;
+    border: 0;
+    background: var(--nav-glare-fill);
+    filter: none;
+    transform: translateX(-14px);
+  }
+  .nav-cost-icon > span:not(.nav-motion-ring) { position: relative; z-index: 2; }
+
+  .nav-tab[data-variant] .nav-motion-ring {
+    position: absolute;
+    inset: -3px;
+    z-index: 1;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    opacity: 1;
+    transform: none;
+    animation: none;
+    pointer-events: none;
+  }
+  .nav-motion-ring::before,
+  .nav-motion-ring::after,
+  .nav-motion-echo {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 78%, transparent);
+    border-radius: var(--nav-radius);
+    box-shadow: var(--nav-wave-light);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .nav-agent-icon .nav-motion-ring::before,
+  .nav-agent-icon .nav-motion-ring::after,
+  .nav-agent-icon .nav-motion-echo { border-color: var(--nav-agent-glow); }
+  .nav-motion-ring::after { display: var(--nav-echo-display); }
+  .nav-motion-echo { display: var(--nav-third-display); }
+
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon {
+    filter: var(--nav-light);
+  }
+  .nav-tab[data-variant]:not([data-variant="0"]):is(:hover, :focus-visible) .nav-motion-icon {
+    animation: var(--nav-body-motion) var(--nav-duration) var(--nav-curve) var(--nav-repeat) both;
+  }
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon::before {
+    animation: var(--nav-well-motion) var(--nav-duration) var(--nav-curve) var(--nav-well-repeat) both;
+  }
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon::after {
+    animation: var(--nav-glare-motion) var(--nav-duration) var(--nav-curve) both;
+  }
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::before,
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::after,
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-echo {
+    animation: var(--nav-wave-motion) var(--nav-wave-duration) var(--nav-curve) var(--nav-wave-repeat) both;
+  }
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::after {
+    animation-delay: var(--nav-echo-delay);
+  }
+  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-echo {
+    animation-delay: calc(var(--nav-echo-delay) * 2);
+  }
+  /* Legacy illustration accents belong only to the verified baseline. */
+  .nav-tab[data-variant]:not([data-variant="0"]) :is(.nav-overview-cell, .nav-agent-pulse, .nav-agent-spark) {
+    animation: none;
+    opacity: 0;
+  }
+
+  /* Stage 1 — Magnetic Floating Levitation: suspended body, two soft waves. */
+  .nav-tab[data-variant="1"] {
+    --nav-body-motion: nav-magnetic-lift; --nav-duration: 760ms;
+    --nav-curve: cubic-bezier(0.16, 1, 0.3, 1);
+    --nav-light: drop-shadow(0 5px 7px color-mix(in srgb, var(--md-sys-color-primary) 38%, transparent));
+    --nav-well-motion: nav-well-float; --nav-glare-motion: nav-soft-glare;
+    --nav-wave-motion: nav-harmonic-wave; --nav-wave-duration: 1380ms;
+    --nav-echo-display: block;
+  }
+  /* Stage 2 — Mechanical Shutter Snap: exactly 90ms at the recessed stop. */
+  .nav-tab[data-variant="2"] {
+    --nav-body-motion: nav-shutter-snap; --nav-duration: 600ms;
+    --nav-curve: cubic-bezier(0.76, 0, 0.24, 1);
+    --nav-light: drop-shadow(2px 1px 2px color-mix(in srgb, var(--md-sys-color-primary) 72%, transparent));
+    --nav-well-motion: nav-well-recess; --nav-glare-motion: nav-blade-glare;
+    --nav-glare-fill: linear-gradient(110deg, transparent 47%, rgb(255 255 255 / 0.65) 50%, transparent 53%);
+    --nav-wave-motion: nav-shutter-wave; --nav-wave-duration: 680ms;
+  }
+  /* Stage 3 — Ambient Breathing Halo: living scale and elliptical halo orbit. */
+  .nav-tab[data-variant="3"] {
+    --nav-body-motion: nav-ambient-breathe; --nav-duration: 2400ms; --nav-repeat: infinite;
+    --nav-curve: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    --nav-light: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 48%, transparent));
+    --nav-well-motion: nav-well-breathe; --nav-well-repeat: infinite; --nav-well-blur: 3px;
+    --nav-well-fill: radial-gradient(circle, color-mix(in srgb, var(--md-sys-color-primary) 48%, transparent), transparent 72%);
+    --nav-glare-motion: nav-soft-glare;
+    --nav-wave-motion: nav-halo-orbit; --nav-wave-duration: 2400ms; --nav-wave-repeat: infinite;
+  }
+  /* Stage 4 — Liquid Surface Droplet: squash, stretch, then a thinning wave. */
+  .nav-tab[data-variant="4"] {
+    --nav-body-motion: nav-liquid-drop; --nav-duration: 680ms;
+    --nav-curve: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --nav-light: drop-shadow(0 2px 6px color-mix(in srgb, var(--md-sys-color-primary) 58%, transparent));
+    --nav-well-motion: nav-well-liquid;
+    --nav-well-fill: radial-gradient(ellipse at 35% 20%, color-mix(in srgb, var(--md-sys-color-primary) 44%, transparent), transparent 75%);
+    --nav-glare-motion: nav-droplet-glare;
+    --nav-wave-motion: nav-liquid-wave; --nav-wave-duration: 1250ms;
+  }
+  /* Stage 5 — Kinetic Gyro Gimbal: isometric axis swing and a beacon rim. */
+  .nav-tab[data-variant="5"] {
+    --nav-body-motion: nav-gyro-gimbal; --nav-duration: 1100ms;
+    --nav-curve: cubic-bezier(0.65, 0.05, 0.36, 1);
+    --nav-light: drop-shadow(-3px 3px 4px color-mix(in srgb, var(--md-sys-color-primary) 62%, transparent));
+    --nav-well-motion: nav-well-breathe; --nav-glare-motion: nav-corner-glare;
+    --nav-wave-motion: nav-gyro-beacon; --nav-wave-duration: 1600ms;
+  }
+  /* Stage 6 — Dual-Phase Elastic Pop: two rebounds and a squircle bloom. */
+  .nav-tab[data-variant="6"] {
+    --nav-body-motion: nav-elastic-pop; --nav-duration: 820ms;
+    --nav-curve: cubic-bezier(0.22, 1.5, 0.42, 1);
+    --nav-light: drop-shadow(0 1px 5px color-mix(in srgb, var(--md-sys-color-primary) 74%, transparent));
+    --nav-well-motion: nav-well-liquid; --nav-glare-motion: nav-slit-glare;
+    --nav-wave-motion: nav-squircle-bloom; --nav-wave-duration: 920ms;
+  }
+  /* Stage 7 — Specular Sweep Beam: a center slit opens across the face. */
+  .nav-tab[data-variant="7"] {
+    --nav-body-motion: nav-beam-open; --nav-duration: 780ms;
+    --nav-curve: cubic-bezier(0.19, 1, 0.4, 1);
+    --nav-light: drop-shadow(0 0 2px color-mix(in srgb, var(--md-sys-color-primary) 82%, transparent));
+    --nav-well-light: inset 0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 38%, transparent);
+    --nav-glare-motion: nav-slit-glare;
+    --nav-glare-fill: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+    --nav-wave-motion: nav-beam-wave; --nav-wave-duration: 880ms;
+  }
+  /* Stage 8 — Deep Parallax Recess: sunken glass, luminous raised border. */
+  .nav-tab[data-variant="8"] {
+    --nav-body-motion: nav-parallax-recess; --nav-duration: 860ms;
+    --nav-curve: cubic-bezier(0.7, 0, 0.2, 1);
+    --nav-light: drop-shadow(0 0 3px color-mix(in srgb, var(--md-sys-color-primary) 42%, transparent));
+    --nav-well-motion: nav-well-recess;
+    --nav-well-fill: linear-gradient(145deg, var(--md-sys-color-surface), color-mix(in srgb, var(--md-sys-color-primary) 16%, var(--md-sys-color-surface)));
+    --nav-well-light: inset 2px 3px 5px color-mix(in srgb, var(--md-sys-color-primary) 32%, transparent);
+    --nav-glare-motion: nav-edge-glare;
+    --nav-wave-motion: nav-recess-border; --nav-wave-duration: 1100ms;
+    --nav-wave-light: 0 0 7px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent);
+  }
+  .nav-tab[data-variant="8"][aria-current="page"] {
+    /* Keep the active tab's dark glyph legible inside the recessed glass. */
+    --nav-well-fill: linear-gradient(145deg,
+      color-mix(in srgb, var(--md-sys-color-primary) 82%, var(--md-sys-color-surface)),
+      color-mix(in srgb, var(--md-sys-color-primary) 60%, var(--md-sys-color-surface)));
+  }
+  /* Stage 9 — Planetary Orbital Trace: a real dot follows a circular track. */
+  .nav-tab[data-variant="9"] {
+    --nav-body-motion: nav-planetary-rock; --nav-duration: 1800ms; --nav-repeat: infinite;
+    --nav-curve: cubic-bezier(0.32, 0.32, 0.68, 0.68);
+    --nav-light: drop-shadow(1px -1px 4px color-mix(in srgb, var(--md-sys-color-primary) 54%, transparent));
+    --nav-well-motion: nav-well-float; --nav-glare-motion: nav-edge-glare;
+    --nav-wave-motion: nav-orbit-track; --nav-wave-duration: 1800ms; --nav-wave-repeat: infinite;
+    --nav-echo-display: block;
+  }
+  /* Stage 10 — Harmonic Quad-Pulse: four distinct beats, then a quiet rest. */
+  .nav-tab[data-variant="10"] {
+    --nav-body-motion: nav-quad-pulse; --nav-duration: 1680ms; --nav-repeat: infinite;
+    --nav-curve: cubic-bezier(0.4, 0, 0.6, 1);
+    --nav-light: drop-shadow(0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 68%, transparent));
+    --nav-well-motion: nav-well-breathe; --nav-well-repeat: infinite;
+    --nav-well-light: 0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+    --nav-glare-motion: nav-soft-glare;
+    --nav-wave-motion: nav-quad-wave; --nav-wave-duration: 1680ms; --nav-wave-repeat: infinite;
+  }
+  /* Stage 11 — Isometric Corner Glint: 45-degree light and shifted shadow. */
+  .nav-tab[data-variant="11"] {
+    --nav-body-motion: nav-corner-tip; --nav-duration: 660ms;
+    --nav-curve: cubic-bezier(0.23, 1, 0.32, 1);
+    --nav-light: drop-shadow(4px 4px 3px color-mix(in srgb, var(--md-sys-color-primary) 48%, transparent));
+    --nav-well-fill: linear-gradient(135deg, color-mix(in srgb, var(--md-sys-color-primary) 42%, transparent), transparent 55%);
+    --nav-glare-motion: nav-corner-glare;
+    --nav-wave-motion: nav-corner-wave; --nav-wave-duration: 980ms;
+  }
+  /* Stage 12 — Micro-Bounce Accordion: fast double bounce, vertical damping. */
+  .nav-tab[data-variant="12"] {
+    --nav-body-motion: nav-accordion-bounce; --nav-duration: 440ms;
+    --nav-curve: cubic-bezier(0.12, 0.9, 0.3, 1.18);
+    --nav-light: drop-shadow(0 3px 2px color-mix(in srgb, var(--md-sys-color-primary) 56%, transparent));
+    --nav-well-motion: nav-well-liquid; --nav-glare-motion: nav-blade-glare;
+    --nav-wave-motion: nav-accordion-wave; --nav-wave-duration: 640ms;
+  }
+  /* Stage 13 — Radiant Corona Bloom: diffuse light dissolves into the surface. */
+  .nav-tab[data-variant="13"] {
+    --nav-body-motion: nav-corona-open; --nav-duration: 1400ms;
+    --nav-curve: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --nav-light: drop-shadow(0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 76%, transparent));
+    --nav-well-motion: nav-well-corona; --nav-well-blur: 4px;
+    --nav-well-fill: radial-gradient(circle, color-mix(in srgb, var(--md-sys-color-primary) 72%, transparent), transparent 70%);
+    --nav-glare-motion: nav-soft-glare;
+    --nav-wave-motion: nav-corona-wave; --nav-wave-duration: 1400ms;
+    --nav-wave-light: 0 0 10px 3px color-mix(in srgb, var(--md-sys-color-primary) 48%, transparent);
+  }
+  /* Stage 14 — Precision Dial Clockwork: stepped teeth, eased light release. */
+  .nav-tab[data-variant="14"] {
+    --nav-body-motion: nav-clockwork-dial; --nav-duration: 960ms;
+    --nav-curve: cubic-bezier(0.6, 0, 0.4, 1);
+    --nav-light: drop-shadow(1px 1px 1px color-mix(in srgb, var(--md-sys-color-primary) 78%, transparent));
+    --nav-well-fill: repeating-conic-gradient(from var(--nav-orbit-start), color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent) 0deg 6deg, transparent 6deg 30deg);
+    --nav-glare-motion: nav-edge-glare;
+    --nav-wave-motion: nav-dial-wave; --nav-wave-duration: 1200ms;
+  }
+  /* Stage 15 — Fluid Ripple Chamber: three independently delayed wavefronts. */
+  .nav-tab[data-variant="15"] {
+    --nav-body-motion: nav-chamber-float; --nav-duration: 1900ms;
+    --nav-curve: cubic-bezier(0.37, 0, 0.63, 1);
+    --nav-light: drop-shadow(0 1px 8px color-mix(in srgb, var(--md-sys-color-primary) 46%, transparent));
+    --nav-well-motion: nav-well-liquid; --nav-glare-motion: nav-droplet-glare;
+    --nav-wave-motion: nav-chamber-wave; --nav-wave-duration: 1300ms;
+    --nav-echo-display: block; --nav-third-display: block;
+  }
+  /* Stage 16 — Tactile Spring Cushion: compress softly, then rise to rest. */
+  .nav-tab[data-variant="16"] {
+    --nav-body-motion: nav-cushion-rise; --nav-duration: 980ms;
+    --nav-curve: cubic-bezier(0.28, 1.32, 0.48, 1);
+    --nav-light: drop-shadow(0 4px 6px color-mix(in srgb, var(--md-sys-color-primary) 34%, transparent));
+    --nav-well-motion: nav-well-liquid; --nav-well-blur: 1px;
+    --nav-well-light: inset 0 -3px 6px color-mix(in srgb, var(--md-sys-color-primary) 36%, transparent);
+    --nav-glare-motion: nav-soft-glare;
+    --nav-wave-motion: nav-cushion-wave; --nav-wave-duration: 1180ms;
+  }
+  /* Stage 17 — Linear Laser Scan: a thin horizontal ray travels top to bottom. */
+  .nav-tab[data-variant="17"] {
+    --nav-body-motion: nav-scan-track; --nav-duration: 1050ms;
+    --nav-curve: cubic-bezier(0.33, 0, 0.67, 1);
+    --nav-light: drop-shadow(0 2px 3px color-mix(in srgb, var(--md-sys-color-primary) 64%, transparent));
+    --nav-well-fill: linear-gradient(180deg, color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent), transparent);
+    --nav-glare-motion: nav-scan-glare;
+    --nav-glare-fill: linear-gradient(180deg, transparent 45%, rgb(255 255 255 / 0.65) 50%, transparent 55%);
+    --nav-wave-motion: nav-scan-wave; --nav-wave-duration: 1050ms;
+  }
+  /* Stage 18 — Centrifugal Perimeter Surge: spinning rim and particle echoes. */
+  .nav-tab[data-variant="18"] {
+    --nav-body-motion: nav-centrifugal-spin; --nav-duration: 900ms;
+    --nav-curve: cubic-bezier(0.55, 0.08, 0.18, 1);
+    --nav-light: drop-shadow(-2px 0 6px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent));
+    --nav-well-motion: nav-well-corona; --nav-glare-motion: nav-corner-glare;
+    --nav-wave-motion: nav-surge-wave; --nav-wave-duration: 1150ms;
+    --nav-echo-display: block;
+  }
+  /* Stage 19 — Supernova Prism Climax: 3D flare, corona and two final ripples. */
+  .nav-tab[data-variant="19"] {
+    --nav-body-motion: nav-supernova-prism; --nav-duration: 1500ms;
+    --nav-curve: cubic-bezier(0.18, 1.25, 0.35, 1);
+    --nav-light: drop-shadow(0 0 12px color-mix(in srgb, var(--md-sys-color-primary) 84%, transparent));
+    --nav-well-motion: nav-well-corona; --nav-well-blur: 2px;
+    --nav-well-fill: conic-gradient(from var(--nav-orbit-start), transparent, color-mix(in srgb, var(--md-sys-color-primary) 68%, transparent), var(--md-sys-color-surface), color-mix(in srgb, var(--md-sys-color-primary) 48%, transparent), transparent);
+    --nav-glare-motion: nav-prism-glare;
+    --nav-wave-motion: nav-supernova-wave; --nav-wave-duration: 1500ms;
+    --nav-wave-light: 0 0 9px 2px color-mix(in srgb, var(--md-sys-color-primary) 62%, transparent);
+    --nav-echo-display: block;
+  }
+
+  .nav-tab[data-variant="9"] .nav-motion-ring::before {
+    border-radius: 50%;
+    border-style: dashed;
+  }
+  .nav-tab[data-variant="9"] .nav-motion-ring::after {
+    inset: -1px auto auto calc(50% - 1.5px);
+    width: 3px; height: 3px;
+    border: 0; border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    box-shadow: 0 0 5px var(--md-sys-color-primary);
+    transform-origin: 50% 12px;
+  }
+  .nav-tab[data-variant="9"]:is(:hover, :focus-visible) .nav-motion-ring::after {
+    animation-name: nav-orbit-dot;
+    animation-delay: 0ms;
+  }
+  .nav-tab[data-variant="14"] .nav-motion-ring::before {
+    border-style: dotted;
+    border-radius: 50%;
+  }
+  .nav-tab[data-variant="18"] .nav-motion-ring::after {
+    border: 0;
+    box-shadow: none;
+    background:
+      radial-gradient(circle at 50% 3%, var(--md-sys-color-primary) 1px, transparent 2px),
+      radial-gradient(circle at 97% 50%, var(--md-sys-color-primary) 1px, transparent 2px),
+      radial-gradient(circle at 50% 97%, var(--md-sys-color-primary) 1px, transparent 2px),
+      radial-gradient(circle at 3% 50%, var(--md-sys-color-primary) 1px, transparent 2px);
+  }
+  .nav-tab[data-variant="18"]:is(:hover, :focus-visible) .nav-motion-ring::after {
+    animation-name: nav-particle-echo;
+    animation-delay: 120ms;
+  }
+
+  /* Physical motion: tab-specific attitude survives every stage. */
+  @keyframes nav-magnetic-lift {
+    0% { transform: var(--nav-attitude) translateY(0) scale(1); }
+    55% { transform: var(--nav-attitude) translateY(-3.2px) scale(1.13); }
+    100% { transform: var(--nav-attitude) translateY(-2.5px) scale(1.1); }
+  }
+  @keyframes nav-shutter-snap {
+    0%, 15% { transform: var(--nav-attitude) translateZ(-4px) scale(0.94); }
+    48% { transform: var(--nav-attitude) translateZ(6px) scale(1.17); }
+    72% { transform: var(--nav-attitude) translateZ(1px) scale(1.03); }
+    100% { transform: var(--nav-attitude) translateZ(3px) scale(1.1); }
+  }
+  @keyframes nav-ambient-breathe {
+    0%, 100% { transform: var(--nav-attitude) scale(1.02) rotate(calc(var(--nav-swing) * -0.3)); }
+    50% { transform: var(--nav-attitude) scale(1.13) rotate(var(--nav-swing)); }
+  }
+  @keyframes nav-liquid-drop {
+    0% { transform: var(--nav-attitude) scale(1); }
+    24% { transform: var(--nav-attitude) translateY(1px) scale(1.24, 0.78); }
+    52% { transform: var(--nav-attitude) translateY(-2px) scale(0.86, 1.22); }
+    78% { transform: var(--nav-attitude) scale(1.13, 0.94); }
+    100% { transform: var(--nav-attitude) scale(1.08); }
+  }
+  @keyframes nav-gyro-gimbal {
+    0% { transform: var(--nav-attitude) rotate3d(1, 1, 0, 0deg); }
+    42% { transform: var(--nav-attitude) rotate3d(1, 1, 0, 45deg) scale(1.12); }
+    72% { transform: var(--nav-attitude) rotate3d(1, -1, 0, -24deg) scale(1.08); }
+    100% { transform: var(--nav-attitude) rotate3d(1, 1, 0, 12deg) scale(1.1); }
+  }
+  @keyframes nav-elastic-pop {
+    0% { transform: var(--nav-attitude) scale(0.82); }
+    32% { transform: var(--nav-attitude) scale(1.27) rotate(var(--nav-swing)); }
+    54% { transform: var(--nav-attitude) scale(0.94); }
+    74% { transform: var(--nav-attitude) scale(1.16) rotate(calc(var(--nav-swing) * -0.4)); }
+    100% { transform: var(--nav-attitude) scale(1.07); }
+  }
+  @keyframes nav-beam-open {
+    0% { transform: var(--nav-attitude) scaleX(0.92); }
+    45% { transform: var(--nav-attitude) scale(1.18, 1.02); }
+    100% { transform: var(--nav-attitude) scale(1.06); }
+  }
+  @keyframes nav-parallax-recess {
+    0% { transform: var(--nav-attitude) translateZ(0); }
+    60% { transform: var(--nav-attitude) translateZ(-16px) scale(0.88); }
+    100% { transform: var(--nav-attitude) translateZ(-10px) scale(0.94); }
+  }
+  @keyframes nav-planetary-rock {
+    0%, 100% { transform: var(--nav-attitude) rotate(calc(var(--nav-swing) * -1)) scale(1.06); }
+    50% { transform: var(--nav-attitude) rotate(var(--nav-swing)) scale(1.1); }
+  }
+  @keyframes nav-quad-pulse {
+    0%, 20%, 38%, 58%, 78%, 100% { transform: var(--nav-attitude) scale(1.02); }
+    12% { transform: var(--nav-attitude) scale(1.13); }
+    30% { transform: var(--nav-attitude) scale(1.09); }
+    50% { transform: var(--nav-attitude) scale(1.15); }
+    68% { transform: var(--nav-attitude) scale(1.07); }
+  }
+  @keyframes nav-corner-tip {
+    0% { transform: var(--nav-attitude); }
+    48% { transform: var(--nav-attitude) translate3d(-1px, -1.5px, 4px) rotateZ(45deg); }
+    100% { transform: var(--nav-attitude) translate3d(-0.5px, -1px, 2px) rotateZ(12deg) scale(1.08); }
+  }
+  @keyframes nav-accordion-bounce {
+    0% { transform: var(--nav-attitude) scaleY(0.82); }
+    22% { transform: var(--nav-attitude) translateY(-3px) scale(0.96, 1.18); }
+    44% { transform: var(--nav-attitude) translateY(1px) scale(1.1, 0.9); }
+    66% { transform: var(--nav-attitude) translateY(-1.6px) scale(1, 1.09); }
+    82% { transform: var(--nav-attitude) translateY(0.4px) scaleY(0.97); }
+    100% { transform: var(--nav-attitude) scale(1.05); }
+  }
+  @keyframes nav-corona-open {
+    0% { transform: var(--nav-attitude) scale(0.98); }
+    38% { transform: var(--nav-attitude) translateZ(4px) scale(1.17); }
+    100% { transform: var(--nav-attitude) translateZ(1px) scale(1.04); }
+  }
+  @keyframes nav-clockwork-dial {
+    0% { transform: var(--nav-attitude) rotate(0deg); animation-timing-function: steps(4, end); }
+    75% { transform: var(--nav-attitude) rotate(60deg) scale(1.08); }
+    100% { transform: var(--nav-attitude) rotate(54deg) scale(1.06); }
+  }
+  @keyframes nav-chamber-float {
+    0%, 100% { transform: var(--nav-attitude) translateY(-0.5px) scale(1.06); }
+    28% { transform: var(--nav-attitude) translateY(-1.5px) scale(1.1, 1.04); }
+    58% { transform: var(--nav-attitude) translateY(0.5px) scale(1.03, 1.09); }
+    82% { transform: var(--nav-attitude) translateY(-0.8px) scale(1.08); }
+  }
+  @keyframes nav-cushion-rise {
+    0% { transform: var(--nav-attitude) translateY(1.5px) scale(1.15, 0.78); }
+    40% { transform: var(--nav-attitude) translateY(-2.8px) scale(0.96, 1.14); }
+    70% { transform: var(--nav-attitude) translateY(-1px) scale(1.09, 1.02); }
+    100% { transform: var(--nav-attitude) translateY(-1.8px) scale(1.07); }
+  }
+  @keyframes nav-scan-track {
+    0% { transform: var(--nav-attitude) translateY(-1px); }
+    48% { transform: var(--nav-attitude) translateY(0.8px) scaleX(1.08); }
+    100% { transform: var(--nav-attitude) translateY(0) scale(1.04); }
+  }
+  @keyframes nav-centrifugal-spin {
+    0% { transform: var(--nav-attitude) rotate(-18deg) scale(0.94); }
+    58% { transform: var(--nav-attitude) rotate(100deg) scale(1.19); }
+    82% { transform: var(--nav-attitude) rotate(78deg) scale(1.04); }
+    100% { transform: var(--nav-attitude) rotate(90deg) scale(1.09); }
+  }
+  @keyframes nav-supernova-prism {
+    0% { transform: var(--nav-attitude) translateZ(-6px) scale(0.84); }
+    34% { transform: perspective(360px) rotateX(calc(var(--nav-tilt-x) * 2)) rotateY(calc(var(--nav-tilt-y) * 2)) rotate(var(--nav-roll)) translateZ(12px) scale(1.24); }
+    64% { transform: var(--nav-attitude) translateZ(3px) scale(1.03) rotate(var(--nav-swing)); }
+    100% { transform: var(--nav-attitude) translateZ(5px) scale(1.12); }
+  }
+
+  /* Glass and light choreography; no colored literal survives a palette swap. */
+  @keyframes nav-well-pop {
+    0% { opacity: 0; transform: scale(0.72); }
+    65% { opacity: 1; transform: scale(1.12); }
+    100% { opacity: 0.8; transform: scale(1.06); }
+  }
+  @keyframes nav-well-float {
+    0% { opacity: 0; transform: translateY(2px) scale(0.8); }
+    100% { opacity: 0.55; transform: translateY(2px) scale(1.16, 0.92); }
+  }
+  @keyframes nav-well-recess {
+    0% { opacity: 0; transform: translateZ(-6px) scale(1.12); }
+    45% { opacity: 1; transform: translateZ(-6px) scale(0.92); }
+    100% { opacity: 0.9; transform: translateZ(-4px) scale(1.04); }
+  }
+  @keyframes nav-well-breathe {
+    0%, 100% { opacity: 0.25; transform: scale(0.9); }
+    50% { opacity: 0.85; transform: scale(1.3); }
+  }
+  @keyframes nav-well-liquid {
+    0% { opacity: 0.1; transform: scale(1.2, 0.7); border-radius: 45%; }
+    45% { opacity: 0.9; transform: scale(0.92, 1.2); border-radius: 30%; }
+    100% { opacity: 0.55; transform: scale(1.08); border-radius: var(--nav-radius); }
+  }
+  @keyframes nav-well-corona {
+    0% { opacity: 0; transform: scale(0.65) rotate(0deg); }
+    38% { opacity: 1; transform: scale(1.45) rotate(var(--nav-swing)); }
+    100% { opacity: 0; transform: scale(2.1) rotate(calc(var(--nav-swing) * 2)); }
+  }
+  @keyframes nav-chamfer-glare {
+    0% { opacity: 0; transform: translateX(-16px); }
+    30% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateX(18px); }
+  }
+  @keyframes nav-soft-glare {
+    0%, 100% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 0.35; transform: scale(1.18); }
+  }
+  @keyframes nav-blade-glare {
+    0%, 15% { opacity: 0; transform: translateX(-13px) skewX(-12deg); }
+    28% { opacity: 1; }
+    65%, 100% { opacity: 0; transform: translateX(16px) skewX(-12deg); }
+  }
+  @keyframes nav-droplet-glare {
+    0% { opacity: 0; transform: translate(-3px, -4px) scale(0.2); border-radius: 50%; }
+    40% { opacity: 0.75; transform: translate(0, -2px) scale(0.75, 0.4); border-radius: 50%; }
+    100% { opacity: 0; transform: translate(2px, 2px) scale(1.4); border-radius: 50%; }
+  }
+  @keyframes nav-slit-glare {
+    0% { opacity: 0; transform: scaleX(0.03); }
+    24% { opacity: 1; transform: scaleX(0.08); }
+    60% { opacity: 0.7; transform: scaleX(1.2); }
+    100% { opacity: 0; transform: scaleX(1.35); }
+  }
+  @keyframes nav-corner-glare {
+    0% { opacity: 0; transform: translate(-8px, -8px) rotate(45deg) scale(0.2); }
+    42% { opacity: 1; transform: translate(-4px, -4px) rotate(45deg) scale(0.65); }
+    100% { opacity: 0; transform: translate(6px, 6px) rotate(45deg) scale(0.2); }
+  }
+  @keyframes nav-edge-glare {
+    0% { opacity: 0; transform: translateY(-8px) scale(1, 0.08); }
+    45% { opacity: 0.65; transform: translateY(-8px) scale(1.2, 0.08); }
+    100% { opacity: 0; transform: translateY(8px) scale(1, 0.08); }
+  }
+  @keyframes nav-scan-glare {
+    0% { opacity: 0; transform: translateY(-10px); }
+    18%, 72% { opacity: 0.95; }
+    100% { opacity: 0; transform: translateY(10px); }
+  }
+  @keyframes nav-prism-glare {
+    0% { opacity: 0; transform: rotate(-45deg) scaleX(0.05); }
+    32% { opacity: 1; transform: rotate(0deg) scaleX(1.25); }
+    62% { opacity: 0.6; transform: rotate(45deg) scaleX(0.12); }
+    100% { opacity: 0; transform: rotate(90deg) scaleX(1.4); }
+  }
+
+  /* Every stage has a separate wave dynamic, not merely a renamed pulse. */
+  @keyframes nav-harmonic-wave {
+    0% { opacity: 0; transform: scale(0.7); border-radius: 50%; }
+    28% { opacity: 0.7; }
+    100% { opacity: 0; transform: scale(1.7); border-radius: 50%; }
+  }
+  @keyframes nav-shutter-wave {
+    0%, 15% { opacity: 0; transform: scale(0.82); }
+    28% { opacity: 1; transform: scale(1.12); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+  @keyframes nav-halo-orbit {
+    0% { opacity: 0.15; transform: rotate(var(--nav-orbit-start)) scale(1, 0.85); border-radius: 50%; }
+    50% { opacity: 0.7; transform: rotate(calc(var(--nav-orbit-start) + 180deg)) scale(1.35, 1.05); }
+    100% { opacity: 0.15; transform: rotate(calc(var(--nav-orbit-start) + 360deg)) scale(1, 0.85); border-radius: 50%; }
+  }
+  @keyframes nav-liquid-wave {
+    0% { opacity: 0; transform: scale(0.6, 0.4); border-width: 2px; border-radius: 45%; }
+    30% { opacity: 0.9; transform: scale(1.05, 0.9); }
+    100% { opacity: 0; transform: scale(1.8, 1.6); border-width: 0.5px; border-radius: 50%; }
+  }
+  @keyframes nav-gyro-beacon {
+    0% { opacity: 0; transform: rotateX(65deg) rotateZ(var(--nav-orbit-start)) scale(0.7); border-radius: 50%; }
+    40% { opacity: 0.9; transform: rotateX(20deg) rotateZ(calc(var(--nav-orbit-start) + 90deg)) scale(1.2); }
+    100% { opacity: 0; transform: rotateX(-55deg) rotateZ(calc(var(--nav-orbit-start) + 180deg)) scale(1.65); border-radius: 50%; }
+  }
+  @keyframes nav-squircle-bloom {
+    0% { opacity: 0; transform: scale(0.7); border-radius: 25%; }
+    35% { opacity: 0.95; transform: scale(1.38); border-radius: 35%; }
+    58% { opacity: 0.55; transform: scale(1.16); border-radius: 25%; }
+    100% { opacity: 0; transform: scale(1.65); border-radius: 38%; }
+  }
+  @keyframes nav-beam-wave {
+    0% { opacity: 0; transform: scale(0.08, 1); }
+    45% { opacity: 0.85; transform: scale(1.15, 1); }
+    100% { opacity: 0; transform: scale(1.7, 1.05); }
+  }
+  @keyframes nav-recess-border {
+    0% { opacity: 0; transform: scale(1.4); }
+    45% { opacity: 1; transform: scale(1.08); }
+    100% { opacity: 0.65; transform: scale(1.12); }
+  }
+  @keyframes nav-orbit-track {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.04); }
+  }
+  @keyframes nav-orbit-dot {
+    0% { opacity: 0.9; transform: rotate(var(--nav-orbit-start)); }
+    100% { opacity: 0.9; transform: rotate(calc(var(--nav-orbit-start) + 360deg)); }
+  }
+  @keyframes nav-quad-wave {
+    0%, 20%, 38%, 58%, 78%, 100% { opacity: 0; transform: scale(0.94); }
+    12% { opacity: 0.8; transform: scale(1.18); }
+    30% { opacity: 0.55; transform: scale(1.1); }
+    50% { opacity: 0.9; transform: scale(1.24); }
+    68% { opacity: 0.4; transform: scale(1.08); }
+  }
+  @keyframes nav-corner-wave {
+    0% { opacity: 0; transform: translate(-3px, -3px) rotate(45deg) scale(0.7); }
+    40% { opacity: 0.85; }
+    100% { opacity: 0; transform: translate(2px, 2px) rotate(45deg) scale(1.5); }
+  }
+  @keyframes nav-accordion-wave {
+    0% { opacity: 0; transform: scale(1.1, 0.5); }
+    24% { opacity: 0.9; transform: scale(1.05, 1.4); }
+    48% { opacity: 0.4; transform: scale(1.2, 0.9); }
+    70% { opacity: 0.7; transform: scale(1.2, 1.25); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+  @keyframes nav-corona-wave {
+    0% { opacity: 0; transform: scale(0.8); filter: blur(0px); border-radius: 50%; }
+    35% { opacity: 0.75; }
+    100% { opacity: 0; transform: scale(1.85); filter: blur(3px); border-radius: 50%; }
+  }
+  @keyframes nav-dial-wave {
+    0% { opacity: 0; transform: rotate(var(--nav-orbit-start)) scale(0.9); }
+    35% { opacity: 0.8; transform: rotate(calc(var(--nav-orbit-start) + 30deg)) scale(1.15); }
+    75% { opacity: 0.6; }
+    100% { opacity: 0; transform: rotate(calc(var(--nav-orbit-start) + 60deg)) scale(1.3); }
+  }
+  @keyframes nav-chamber-wave {
+    0% { opacity: 0; transform: scale(0.5); border-radius: 50%; }
+    20% { opacity: 0.85; }
+    55% { opacity: 0.45; transform: scale(1.2); }
+    100% { opacity: 0; transform: scale(1.8); border-radius: 50%; }
+  }
+  @keyframes nav-cushion-wave {
+    0% { opacity: 0; transform: translateY(2px) scale(1.2, 0.65); border-radius: 40%; }
+    38% { opacity: 0.7; transform: translateY(1px) scale(1.35, 0.95); }
+    100% { opacity: 0; transform: translateY(3px) scale(1.7, 1.1); border-radius: 50%; }
+  }
+  @keyframes nav-scan-wave {
+    0% { opacity: 0; transform: translateY(-5px) scaleY(0.2); }
+    30% { opacity: 0.8; }
+    72% { opacity: 0.5; transform: translateY(3px) scaleY(1.15); }
+    100% { opacity: 0; transform: translateY(6px) scale(1.2, 0.3); }
+  }
+  @keyframes nav-surge-wave {
+    0% { opacity: 0; transform: rotate(0deg) scale(0.65); border-radius: 50%; }
+    32% { opacity: 0.95; }
+    100% { opacity: 0; transform: rotate(180deg) scale(1.8); border-radius: 50%; }
+  }
+  @keyframes nav-particle-echo {
+    0% { opacity: 0; transform: rotate(var(--nav-orbit-start)) scale(0.8); }
+    25% { opacity: 0.95; }
+    100% { opacity: 0; transform: rotate(calc(var(--nav-orbit-start) + 70deg)) scale(2); }
+  }
+  @keyframes nav-supernova-wave {
+    0% { opacity: 0; transform: rotate(var(--nav-swing)) scale(0.45); border-width: 2px; border-radius: var(--nav-radius); }
+    28% { opacity: 1; transform: rotate(0deg) scale(1.15); }
+    100% { opacity: 0; transform: rotate(calc(var(--nav-swing) * -1)) scale(1.9); border-width: 0.5px; border-radius: 50%; }
+  }
+
+  /* Ten material treatments live inside the motion wrapper so SVG projection
+     never overwrites stage 0's tested perspective. Ink/paper invert on selection
+     using only primary/surface; no palette snapshots or SVG paint-server IDs. */
+  .nav-tab {
+    --nav-icon-ink: var(--md-sys-color-primary);
+    --nav-icon-paper: var(--md-sys-color-surface);
+  }
+  .nav-tab[aria-current="page"] {
+    --nav-icon-ink: var(--md-sys-color-surface);
+    --nav-icon-paper: var(--md-sys-color-primary);
+  }
+  .nav-motion-icon > .nav-icon-glyph {
+    position: relative;
+    z-index: 2;
+    flex: none;
+    color: var(--nav-icon-ink);
+    transform-origin: center;
+    stroke-width: 1.5;
+  }
+  .nav-motion-icon > .nav-icon-surface {
+    position: absolute;
+    inset: -5px;
+    width: 26px;
+    height: 26px;
+    z-index: 1;
+    color: var(--nav-icon-ink);
+    pointer-events: none;
+    overflow: visible;
+  }
+  .nav-skin-ambient {
+    fill: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+    stroke: color-mix(in srgb, var(--nav-icon-ink) 45%, transparent);
+  }
+  .nav-skin-well {
+    fill: color-mix(in srgb, var(--nav-icon-paper) 86%, var(--nav-icon-ink));
+    stroke: color-mix(in srgb, var(--nav-icon-ink) 65%, var(--nav-icon-paper));
+  }
+  .nav-skin-highlight { fill: none; stroke: rgb(255 255 255 / 0.65); stroke-width: 0.8; }
+  .nav-skin-facet { stroke: var(--nav-icon-ink); opacity: 0.45; }
+  .nav-currency-glyph text { fill: var(--nav-icon-ink); stroke: none; font-size: 21px; font-weight: 600; }
+
+  /* 1 — Minimal Outline Line-Art. */
+  .nav-tab[data-icon-style="1"] .nav-icon-glyph { fill: none; stroke-width: 1.5; }
+  /* 2 — Duo-Tone Ambient. Closed glyph paths receive a translucent second tone. */
+  .nav-tab[data-icon-style="2"] .nav-icon-glyph {
+    fill: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+    stroke-width: 1.6;
+  }
+  .nav-tab[data-icon-style="2"][aria-current="page"] .nav-icon-glyph {
+    fill: color-mix(in srgb, var(--md-sys-color-surface) 18%, transparent);
+  }
+  /* 3 — Filled Squircle Micro-Badge. */
+  .nav-tab[data-icon-style="3"] .nav-icon-glyph {
+    transform: scale(0.88);
+    stroke-width: 2;
+    fill: color-mix(in srgb, var(--nav-icon-ink) 20%, transparent);
+    filter: drop-shadow(0 0.7px 0 rgb(255 255 255 / 0.65));
+  }
+  /* 4 — 3D Isometric Wireframe. SVG facets, plus a projected glyph face. */
+  .nav-tab[data-icon-style="4"] .nav-icon-glyph {
+    transform: translateY(1px) skewY(-18deg) scale(0.82, 0.9);
+    stroke-width: 1.4;
+  }
+  /* 5 — Neon-Flux Ray Trace. Static at rest; light only travels on interaction. */
+  .nav-tab[data-icon-style="5"] .nav-icon-glyph {
+    stroke-width: 1.7;
+    filter: drop-shadow(0 0 1.5px var(--md-sys-color-primary));
+  }
+  .nav-skin-ray {
+    stroke: rgb(255 255 255 / 0.65);
+    stroke-dasharray: 12 88;
+    stroke-dashoffset: 12;
+    filter: drop-shadow(0 0 2px var(--md-sys-color-primary));
+  }
+  .nav-tab[data-icon-style="5"]:is(:hover, :focus-visible) .nav-skin-ray {
+    animation: nav-flux-ray var(--nav-duration) var(--nav-curve) both;
+  }
+  @keyframes nav-flux-ray {
+    0% { stroke-dashoffset: 112; filter: drop-shadow(-2px 0 1px var(--md-sys-color-primary)); }
+    45% { filter: drop-shadow(2px 1px 3px var(--md-sys-color-primary)); }
+    100% { stroke-dashoffset: 12; filter: drop-shadow(0 -1px 1px var(--md-sys-color-primary)); }
+  }
+  /* 6 — Dotted Matrix Mesh. */
+  .nav-skin-matrix { fill: var(--nav-icon-ink); stroke: none; opacity: 0.4; }
+  .nav-tab[data-icon-style="6"] .nav-icon-glyph { stroke-width: 1.8; }
+  /* 7 — Concentric Micro-Ring Badge. */
+  .nav-tab[data-icon-style="7"] .nav-icon-glyph { transform: scale(0.82); stroke-width: 1.7; }
+  /* 8 — Geometric Chiseled. */
+  .nav-tab[data-icon-style="8"] .nav-icon-glyph {
+    transform: scale(0.85);
+    stroke-width: 2;
+    stroke-linecap: square;
+    stroke-linejoin: bevel;
+  }
+  .nav-tab[data-icon-style="8"] .nav-icon-surface { stroke-linejoin: bevel; }
+  /* 9 — Fluid Liquid Droplet. */
+  .nav-tab[data-icon-style="9"] .nav-icon-glyph {
+    transform: scale(0.88) rotate(-6deg);
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* 10 — Tactile Capsule Emblem. */
+  .nav-tab[data-icon-style="10"] .nav-icon-glyph { transform: scale(0.86); stroke-width: 1.8; }
+  .nav-tab[data-icon-style="10"] .nav-icon-surface {
+    filter: drop-shadow(0 1.5px 1px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent));
+  }
+
+  /* A press remains tactile without letting a held hover animation mask it. */
+  .nav-tab[data-variant]:is(:hover, :focus-visible):active .nav-motion-icon {
+    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  /* Last in the cascade: every stage, pseudo-element, press and focus is still
+     usable without motion. Focus outlines and route indicators remain visible. */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-tab,
+    .nav-tab *,
+    .nav-tab *::before,
+    .nav-tab *::after {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+    .nav-tab .nav-motion-icon::before,
+    .nav-tab .nav-motion-icon::after,
+    .nav-tab .nav-motion-ring,
+    .nav-tab .nav-overview-cell,
+    .nav-tab .nav-agent-pulse,
+    .nav-tab .nav-agent-spark { opacity: 0 !important; }
+  }
 `;
 
 export function RouteNotFound({ pathname, onNavigate }) {
@@ -912,21 +1651,41 @@ export function NavigationFeature(props) {
     isPlaygroundNavActive, activeCurrency, palettePickerOpen, setPalettePickerOpen,
     palettes, theme, changePalette, toast } = props;
 
-  const [hoverVariants, setHoverVariants] = React.useState({
-    overview: 0,
-    models: 0,
-    agents: 0,
-    playground: 0,
-    cost: 0,
-    settings: 0,
-  });
+  const [tabMotions, setTabMotions] = React.useState(() => Object.fromEntries(
+    Object.keys(NAV_GLYPHS).map((key) => [key, { variant: 0, iconStyle: 1 }]),
+  ));
+  const activeInteractions = React.useRef({});
 
-  const cycleVariant = (key) => {
-    setHoverVariants((prev) => ({
-      ...prev,
-      [key]: (prev[key] + 1) % 5,
+  const beginInteraction = (key, source) => {
+    const sources = activeInteractions.current[key] ??= new Set();
+    sources.add(source);
+  };
+  const endInteraction = (key, source) => {
+    const sources = activeInteractions.current[key];
+    // A focus + pointer visit counts once, after BOTH have left. Touch scrolling
+    // and duplicate leave/cancel events must not consume unseen stages.
+    if (!sources?.delete(source) || sources.size) return;
+    setTabMotions((previous) => ({
+      ...previous,
+      [key]: {
+        variant: (previous[key].variant + 1) % NAV_HOVER_STAGE_COUNT,
+        iconStyle: previous[key].iconStyle % NAV_ICON_STYLE_COUNT + 1,
+      },
     }));
   };
+  const motionProps = (key) => ({
+    'data-variant': tabMotions[key].variant,
+    'data-icon-style': tabMotions[key].iconStyle,
+    onPointerEnter: (event) => {
+      if (event.pointerType !== 'touch') beginInteraction(key, 'pointer');
+    },
+    onPointerLeave: () => endInteraction(key, 'pointer'),
+    onPointerCancel: () => endInteraction(key, 'pointer'),
+    onFocus: (event) => {
+      if (event.currentTarget.matches(':focus-visible')) beginInteraction(key, 'focus');
+    },
+    onBlur: () => endInteraction(key, 'focus'),
+  });
 
   return (<>
     <style>{navMicroAnimationStyles}</style>
@@ -934,7 +1693,7 @@ export function NavigationFeature(props) {
       {/* Windows-style Liquid Glass Marquee Drag Rectangle (GPU Accelerated) */}
       <div
         id="nexus-live-marquee-overlay"
-        className="fixed pointer-events-none z-50 rounded-xl border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 backdrop-blur-[1.5px] shadow-[0_0_24px_rgba(124,58,237,0.3)] hidden will-change-transform"
+        className="fixed pointer-events-none z-50 rounded-xl border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 backdrop-blur-[1.5px] shadow-[0_0_24px_color-mix(in_srgb,var(--md-sys-color-primary)_30%,transparent)] hidden will-change-transform"
       />
 
       {/* M3 Active Polling Indicator Bar */}
@@ -957,67 +1716,50 @@ export function NavigationFeature(props) {
         </div>
 
         {/* Center: M3 Segmented Navigation with Metallic UI Fluid Micro-Interactions */}
-        <nav aria-label="Primary navigation" className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1.5 bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-xl p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]/60 shadow-[0_4px_20px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.08)] overflow-x-auto nav-scroll-fade">
+        <nav aria-label="Primary navigation" className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1.5 bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-xl p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]/60 shadow-[0_4px_20px_color-mix(in_srgb,var(--md-sys-color-surface)_85%,transparent),inset_0_1px_0_color-mix(in_srgb,var(--md-sys-color-primary)_8%,transparent)] overflow-x-auto nav-scroll-fade">
           
           <button
             type="button"
             onClick={() => navigate('/')}
-            data-variant={hoverVariants.overview}
-            onMouseLeave={() => cycleVariant('overview')}
+            {...motionProps('overview')}
             aria-current={location.pathname === '/' ? 'page' : undefined}
             className={`nav-tab nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/'
                 ? 'nav-overview-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
             }`}
           >
-            <span className="nav-overview-icon" aria-hidden="true">
-              <span className="nav-overview-ring" />
-              <span className="nav-overview-cell" /><span className="nav-overview-cell" />
-              <span className="nav-overview-cell" /><span className="nav-overview-cell" />
-              <LayoutDashboard size={14} className={location.pathname === '/' ? '' : 'text-[var(--md-sys-color-primary)]'} />
-            </span>
+            <NavigationIcon tab="overview" iconStyle={tabMotions.overview.iconStyle} />
             <span>Overview</span>
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/model')}
-            data-variant={hoverVariants.models}
-            onMouseLeave={() => cycleVariant('models')}
+            {...motionProps('models')}
             aria-current={isModelsNavActive ? 'page' : undefined}
             className={`nav-tab nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isModelsNavActive
                 ? 'nav-model-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
             }`}
           >
-            <span className="nav-model-icon" aria-hidden="true">
-              <span className="nav-model-ring" />
-              <Boxes size={14} className={isModelsNavActive ? '' : 'text-[var(--md-sys-color-primary)]'} />
-            </span>
+            <NavigationIcon tab="models" iconStyle={tabMotions.models.iconStyle} />
             <span>Models</span>
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/agents')}
-            data-variant={hoverVariants.agents}
-            onMouseLeave={() => cycleVariant('agents')}
+            {...motionProps('agents')}
             aria-current={isAgentsNavActive ? 'page' : undefined}
             className={`nav-tab nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isAgentsNavActive
                 ? 'nav-agent-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
             }`}
           >
-            <span className="nav-agent-icon" aria-hidden="true">
-              <span className="nav-agent-ring" />
-              <span className="nav-agent-pulse" />
-              <span className="nav-agent-spark nav-agent-spark-a" />
-              <span className="nav-agent-spark nav-agent-spark-b" />
-              <Bot size={14} className={isAgentsNavActive ? '' : 'text-[var(--md-sys-color-primary)]'} />
-            </span>
+            <NavigationIcon tab="agents" iconStyle={tabMotions.agents.iconStyle} />
             <span>Agents</span>
           </button>
 
@@ -1025,71 +1767,45 @@ export function NavigationFeature(props) {
           <button
             type="button"
             onClick={() => navigate('/playground')}
-            data-variant={hoverVariants.playground}
-            onMouseLeave={() => cycleVariant('playground')}
+            {...motionProps('playground')}
             aria-current={isPlaygroundNavActive ? 'page' : undefined}
             className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               isPlaygroundNavActive
                 ? 'nav-playground-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
             }`}
           >
-            <span className="nav-playground-icon" aria-hidden="true">
-              <span className="nav-playground-ring" />
-              <Terminal
-                size={13}
-                strokeWidth={2.4}
-                className={`relative z-[2] transition-colors ${
-                  isPlaygroundNavActive
-                    ? 'text-[var(--md-sys-color-on-primary)]'
-                    : 'text-[var(--md-sys-color-primary)]'
-                }`}
-              />
-            </span>
+            <NavigationIcon tab="playground" iconStyle={tabMotions.playground.iconStyle} />
             <span>Playground</span>
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/cost')}
-            data-variant={hoverVariants.cost}
-            onMouseLeave={() => cycleVariant('cost')}
+            {...motionProps('cost')}
             aria-current={location.pathname === '/cost' ? 'page' : undefined}
             className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/cost'
                 ? 'nav-cost-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
             }`}
           >
-            <span className="nav-cost-icon" aria-hidden="true">
-              <span className="nav-cost-ring" />
-              {activeCurrency.id === 'USD' ? (
-                <DollarSign size={14} className={location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'} />
-              ) : (
-                <span className={`text-[14px] font-bold leading-none select-none tracking-tight flex items-center justify-center ${location.pathname === '/cost' ? '' : 'text-[var(--md-sys-color-primary)]'}`}>
-                  {activeCurrency.symbol}
-                </span>
-              )}
-            </span>
+            <NavigationIcon tab="cost" iconStyle={tabMotions.cost.iconStyle} currency={activeCurrency} />
             <span>Cost</span>
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            data-variant={hoverVariants.settings}
-            onMouseLeave={() => cycleVariant('settings')}
+            {...motionProps('settings')}
             aria-current={location.pathname === '/settings' ? 'page' : undefined}
             className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
               location.pathname === '/settings'
                 ? 'nav-settings-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-white/[0.04]'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
             }`}
           >
-            <span className="nav-settings-icon" aria-hidden="true">
-              <span className="nav-settings-ring" />
-              <Settings size={14} className={location.pathname === '/settings' ? '' : 'text-[var(--md-sys-color-primary)]'} />
-            </span>
+            <NavigationIcon tab="settings" iconStyle={tabMotions.settings.iconStyle} />
             <span>Settings</span>
           </button>
         </nav>
@@ -1121,7 +1837,7 @@ export function NavigationFeature(props) {
                     }`}
                   >
                     <span>{p.name}</span>
-                    <span className="w-3.5 h-3.5 rounded-full border border-black/30 shrink-0" style={{ backgroundColor: p.color }} />
+                    <span className="w-3.5 h-3.5 rounded-full border border-[var(--md-sys-color-primary)]/30 shrink-0" style={{ backgroundColor: p.color }} />
                   </button>
                 ))}
               </div>
