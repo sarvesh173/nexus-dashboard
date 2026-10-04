@@ -1,0 +1,15 @@
+[Unit]
+Description=Nexus Control Plane Backend
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/nexus-control-plane
+ExecStart=/usr/bin/python3 %h/nexus-control-plane/server.py
+Restart=always
+RestartSec=3
+# The backend only needs the shared key, never the whole env file.
+EnvironmentFile=%h/.config/nexus/env
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,9 @@
+{
+  "endpoint": {
+    "name": "cloud",
+    "base_url": "https://YOUR-ENDPOINT/v1",
+    "api_key": "REPLACE_ME",
+    "api_mode": "openai"
+  },
+  "agents": {}
+}
