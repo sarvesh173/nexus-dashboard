@@ -167,6 +167,8 @@ body {
   background-color: color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
   border-radius: var(--md-sys-shape-corner-full);
   overflow: hidden;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent);
+  transition: box-shadow var(--m3-duration-medium2) var(--m3-easing-emphasized), border-color var(--m3-duration-short4) ease;
 }
 
 .m3-linear-indicator {
@@ -176,12 +178,38 @@ body {
   /* scaleX, never width: animating width forces a layout pass every frame,
      which M3's motion guidance lists as layout thrash. */
   transform: scaleX(var(--ov-progress, 0));
-  background-color: var(--md-sys-color-primary);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--md-sys-color-primary) 85%, transparent),
+    var(--md-sys-color-primary)
+  );
   border-radius: var(--md-sys-shape-corner-full);
-  /* var(--ov-ramp) is published from TELEMETRY_RAMP_MS in App.jsx, so the bar
-     and the number it labels always finish together. */
-  transition: transform var(--ov-ramp) var(--ov-ease-standard);
+  /* Material 3 Expressive Spatial Spring curve from verified tokens */
+  transition: transform var(--ov-ramp) var(--m3-expressive-default-spatial-easing);
   will-change: transform;
+}
+
+/* Material 3 Expressive Active Specular Flow */
+.m3-linear-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.45) 50%,
+    transparent 100%
+  );
+  animation: m3-progress-specular-flow 2.4s var(--m3-easing-standard) infinite;
+  pointer-events: none;
+}
+
+@keyframes m3-progress-specular-flow {
+  0%        { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(260%); }
 }
 
 .m3-linear-stop {
@@ -190,6 +218,30 @@ body {
   border-radius: var(--md-sys-shape-corner-full);
   background-color: var(--md-sys-color-primary);
   flex-shrink: 0;
+  transition: transform var(--m3-expressive-fast-spatial-duration) var(--m3-expressive-fast-spatial-easing),
+              box-shadow var(--m3-duration-medium2) var(--m3-easing-standard),
+              background-color var(--m3-duration-short4) ease;
+}
+
+/* Card hover: M3 elevation + spring feedback */
+.overview-card:hover .m3-linear-track {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent),
+              inset 0 1px 1px rgb(255 255 255 / 0.15);
+}
+
+.overview-card:hover .m3-linear-stop {
+  transform: scale(1.3);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-linear-indicator::after {
+    display: none !important;
+    animation: none !important;
+  }
+  .m3-linear-stop {
+    transform: none !important;
+  }
 }
 
 /* Top bar slow indeterminate line */
@@ -308,6 +360,43 @@ body {
   --ov-state-hover: 8%;
   --ov-state-focus: 10%;
   --ov-state-pressed: 10%;
+
+  /* Material 3 Motion Design System Verified Tokens (m3-motion skill) */
+  --m3-duration-short1: 50ms;
+  --m3-duration-short2: 100ms;
+  --m3-duration-short3: 150ms;
+  --m3-duration-short4: 200ms;
+  --m3-duration-medium1: 250ms;
+  --m3-duration-medium2: 300ms;
+  --m3-duration-medium3: 350ms;
+  --m3-duration-medium4: 400ms;
+  --m3-duration-long1: 450ms;
+  --m3-duration-long2: 500ms;
+  --m3-duration-long3: 550ms;
+  --m3-duration-long4: 600ms;
+  --m3-duration-extra-long1: 700ms;
+  --m3-duration-extra-long2: 800ms;
+  --m3-duration-extra-long3: 900ms;
+  --m3-duration-extra-long4: 1000ms;
+
+  --m3-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --m3-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --m3-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --m3-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --m3-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --m3-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+
+  --m3-expressive-fast-spatial-duration: 350ms;
+  --m3-expressive-fast-spatial-easing: cubic-bezier(0.42, 1.67, 0.21, 0.9);
+  --m3-expressive-default-spatial-duration: 500ms;
+  --m3-expressive-default-spatial-easing: cubic-bezier(0.38, 1.21, 0.22, 1);
+  --m3-expressive-slow-spatial-duration: 650ms;
+  --m3-expressive-slow-spatial-easing: cubic-bezier(0.39, 1.29, 0.35, 0.98);
+
+  --m3-standard-fast-effects-duration: 150ms;
+  --m3-standard-fast-effects-easing: cubic-bezier(0.31, 0.94, 0.34, 1);
+  --m3-standard-default-effects-duration: 200ms;
+  --m3-standard-default-effects-easing: cubic-bezier(0.34, 0.8, 0.34, 1);
 }
 
 .overview-card {
