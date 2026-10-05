@@ -955,18 +955,18 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     filter: var(--nav-light);
   }
   .nav-tab[data-variant]:not([data-variant="0"]):is(:hover, :focus-visible) .nav-motion-icon {
-    animation: var(--nav-body-motion) var(--nav-duration) var(--nav-curve) var(--nav-repeat) both;
+    animation: var(--nav-body-motion) var(--nav-duration) var(--nav-curve) infinite alternate;
   }
   .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon::before {
-    animation: var(--nav-well-motion) var(--nav-duration) var(--nav-curve) var(--nav-well-repeat) both;
+    animation: var(--nav-well-motion) var(--nav-duration) var(--nav-curve) infinite alternate;
   }
   .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon::after {
-    animation: var(--nav-glare-motion) var(--nav-duration) var(--nav-curve) both;
+    animation: var(--nav-glare-motion) calc(var(--nav-duration) * 1.5) var(--nav-curve) infinite;
   }
   .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::before,
   .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::after,
   .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-echo {
-    animation: var(--nav-wave-motion) var(--nav-wave-duration) var(--nav-curve) var(--nav-wave-repeat) both;
+    animation: var(--nav-wave-motion) var(--nav-wave-duration) var(--nav-curve) infinite;
   }
   .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::after {
     animation-delay: var(--nav-echo-delay);
@@ -1520,6 +1520,10 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     color: var(--nav-icon-ink);
     transform-origin: center;
     stroke-width: 1.5;
+    transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+                stroke-width 280ms ease,
+                fill 280ms ease,
+                filter 280ms ease;
   }
   .nav-motion-icon > .nav-icon-surface {
     position: absolute;
@@ -1530,6 +1534,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     color: var(--nav-icon-ink);
     pointer-events: none;
     overflow: visible;
+    transition: opacity 320ms ease, transform 380ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .nav-skin-ambient {
     fill: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
@@ -1655,10 +1660,16 @@ export function NavigationFeature(props) {
     Object.keys(NAV_GLYPHS).map((key) => [key, { variant: 0, iconStyle: 1 }]),
   ));
   const activeInteractions = React.useRef({});
+  const resetTimers = React.useRef({});
 
   const beginInteraction = (key, source) => {
     const sources = activeInteractions.current[key] ??= new Set();
     sources.add(source);
+    // Active interaction: cancel any pending 3-second reset timer so hover continues smoothly
+    if (resetTimers.current[key]) {
+      clearTimeout(resetTimers.current[key]);
+      delete resetTimers.current[key];
+    }
   };
   const endInteraction = (key, source) => {
     const sources = activeInteractions.current[key];
@@ -1669,10 +1680,31 @@ export function NavigationFeature(props) {
       ...previous,
       [key]: {
         variant: (previous[key].variant + 1) % NAV_HOVER_STAGE_COUNT,
-        iconStyle: previous[key].iconStyle % NAV_ICON_STYLE_COUNT + 1,
+        iconStyle: (previous[key].iconStyle % NAV_ICON_STYLE_COUNT) + 1,
       },
     }));
+
+    // Start 3-second reset timer: after 3 seconds of hover exit, smoothly reset SVG icon back to normal (style 1, variant 0)
+    if (resetTimers.current[key]) {
+      clearTimeout(resetTimers.current[key]);
+    }
+    resetTimers.current[key] = setTimeout(() => {
+      setTabMotions((previous) => ({
+        ...previous,
+        [key]: {
+          variant: 0,
+          iconStyle: 1,
+        },
+      }));
+      delete resetTimers.current[key];
+    }, 3000);
   };
+
+  React.useEffect(() => {
+    return () => {
+      Object.values(resetTimers.current).forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
   const motionProps = (key) => ({
     'data-variant': tabMotions[key].variant,
     'data-icon-style': tabMotions[key].iconStyle,
