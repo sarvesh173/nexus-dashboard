@@ -1268,3 +1268,146 @@ button:hover > svg.lucide-trash-2 {
   transform: translateY(-1.5px) scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   NEXUS Tactile Interaction Engine
+
+   A delegated pointer/focus/click session adds [data-tactile-active] for 2.6s.
+   Every interaction therefore has a visible press → spring → hold → return
+   sequence, instead of a hover loop that flickers while the pointer moves over
+   child content. The icon choreography is intentionally SVG-first: transforms,
+   opacity and filter stay on the compositor and the final keyframe is the
+   untouched baseline state.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+button[data-tactile-active]:not(:disabled),
+[data-modality-pill][data-tactile-active] {
+  animation: tactile-control-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+  will-change: transform, box-shadow;
+}
+
+button[data-tactile-active] > svg,
+button[data-tactile-active] .tactile-icon,
+[data-modality-pill][data-tactile-active] .tactile-icon {
+  animation: tactile-icon-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+  transform-origin: center;
+  will-change: transform, filter;
+}
+
+button[data-motion-cycle="edit"][data-tactile-active] svg,
+[data-motion-cycle="edit"][data-tactile-active] .tactile-icon {
+  animation: tactile-edit-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+}
+button[data-motion-cycle="fetch"][data-tactile-active] svg,
+[data-motion-cycle="fetch"][data-tactile-active] .tactile-icon {
+  animation: tactile-fetch-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+}
+button[data-motion-cycle="add"][data-tactile-active] svg,
+[data-motion-cycle="add"][data-tactile-active] .tactile-icon {
+  animation: tactile-add-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+}
+button[data-motion-cycle="test"][data-tactile-active] svg,
+[data-motion-cycle="test"][data-tactile-active] .tactile-icon {
+  animation: tactile-test-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+}
+button[data-motion-cycle="hide"][data-tactile-active] svg,
+[data-motion-cycle="hide"][data-tactile-active] .tactile-icon {
+  animation: tactile-hide-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+}
+button[data-motion-cycle="delete"][data-tactile-active] svg,
+[data-motion-cycle="delete"][data-tactile-active] .tactile-icon {
+  animation: tactile-delete-cycle 2600ms var(--m3-expressive-default-spatial-easing) both;
+}
+[data-modality-pill][data-tactile-active] {
+  animation-name: tactile-modality-cycle;
+}
+[data-modality-pill][data-tactile-active] .tactile-icon {
+  animation-name: tactile-modality-icon-cycle;
+}
+
+/* Fetch/test status lights make a successful interaction observable even when
+   the button label is compact. */
+[data-motion-cycle="fetch"] .tactile-status-dot,
+[data-motion-cycle="test"] .tactile-status-dot {
+  transition: transform 180ms var(--m3-expressive-default-spatial-easing),
+              box-shadow 180ms ease;
+}
+[data-motion-cycle="fetch"][data-tactile-active] .tactile-status-dot,
+[data-motion-cycle="test"][data-tactile-active] .tactile-status-dot {
+  transform: scale(1.35);
+  box-shadow: 0 0 8px currentColor;
+}
+
+@keyframes tactile-control-cycle {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: inherit; }
+  12% { transform: translateY(1px) scale(0.965); }
+  30% { transform: translateY(-1.5px) scale(1.018); }
+  52%, 76% { transform: translateY(-0.5px) scale(1.006); }
+}
+@keyframes tactile-icon-cycle {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: none; }
+  14% { transform: scale(0.88) rotate(-3deg); }
+  32% { transform: scale(1.14) rotate(3deg); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 58%, transparent)); }
+  54%, 76% { transform: scale(1.04) rotate(0deg); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--md-sys-color-primary) 42%, transparent)); }
+}
+@keyframes tactile-edit-cycle {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  15% { transform: rotate(-13deg) translateY(-1px); }
+  33% { transform: rotate(9deg) translateY(0) scale(1.12); }
+  52%, 76% { transform: rotate(-4deg) translateY(-0.5px) scale(1.04); }
+}
+@keyframes tactile-fetch-cycle {
+  0%, 100% { transform: translateY(0) scale(1); }
+  16% { transform: translateY(2px) scale(0.92); }
+  34% { transform: translateY(-3.5px) scale(1.13); }
+  56% { transform: translateY(1px) scale(1.03); }
+  72% { transform: translateY(-1px) scale(1.06); }
+}
+@keyframes tactile-add-cycle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  18% { transform: rotate(-10deg) scale(0.86); }
+  42% { transform: rotate(90deg) scale(1.2); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 68%, transparent)); }
+  66%, 78% { transform: rotate(90deg) scale(1.05); }
+}
+@keyframes tactile-test-cycle {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(0.84); }
+  38% { transform: scale(1.22); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--md-sys-color-primary) 68%, transparent)); }
+  58% { transform: scale(0.98); }
+  76% { transform: scale(1.08); }
+}
+@keyframes tactile-hide-cycle {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(0.78); }
+  42% { transform: scale(1.06); }
+  64%, 78% { transform: scale(0.92); }
+}
+@keyframes tactile-delete-cycle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  16% { transform: rotate(-9deg) scale(0.92); }
+  32% { transform: rotate(9deg) scale(1.08); }
+  50% { transform: rotate(-5deg) scale(1.02); }
+  68%, 78% { transform: rotate(0deg) scale(0.96); }
+}
+@keyframes tactile-modality-cycle {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: none; }
+  18% { transform: translateY(1px) scale(0.97); }
+  38% { transform: translateY(-3px) scale(1.07); box-shadow: 0 5px 14px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent); }
+  58%, 78% { transform: translateY(-1px) scale(1.03); box-shadow: 0 3px 10px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent); }
+}
+@keyframes tactile-modality-icon-cycle {
+  0%, 100% { transform: scale(1); }
+  38% { transform: scale(1.16) rotate(-4deg); }
+  58%, 78% { transform: scale(1.04) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[data-tactile-active],
+  button[data-tactile-active] > svg,
+  button[data-tactile-active] .tactile-icon,
+  [data-modality-pill][data-tactile-active],
+  [data-modality-pill][data-tactile-active] .tactile-icon {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
