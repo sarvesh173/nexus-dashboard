@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  Activity, ArrowLeft, AudioLines, Boxes, Brain, CheckCircle2, DownloadCloud, Edit2,
+  Activity, ArrowLeft, AudioLines, Boxes, Brain, CheckCircle2, Copy, DownloadCloud, Edit2,
   Eye, EyeOff, ExternalLink, FileQuestion, ImageIcon, Layers, MessageSquare, Mic,
-  Plus, RefreshCw, Search, Sliders, Sparkles, Trash, Volume2,
+  Plus, Radio, RefreshCw, Search, Sliders, Sparkles, Terminal, Trash, Volume2,
 } from 'lucide-react';
 import { getModelLogo } from '../../modelLogos.js';
 import {
   ProviderModalityStats, InteractiveStatValue, InteractiveModelPill, InteractiveActiveModelsBadge,
   ProviderHeaderAction, getModelTelemetry,
 } from './parts.jsx';
+import { useModelConnection } from '../../hooks/useModelConnection.js';
+import { triggerSyncNow } from '../../api/syncNow.js';
 
 export {
   ModelConfigModal, AddCustomModelModal, FetchModelsModal, ProviderEditModal,
@@ -21,6 +23,56 @@ export function ModelsFeature(props) {
   const setIsFetchModalOpen = onOpenFetchModels;
   const setIsAddModalOpen = onOpenAddModel;
   const fetchProviders = onRefreshProviders;
+
+  // Live Connection Hook & Active Model State
+  const {
+    status: connStatus,
+    latencyMs,
+    activeModel,
+    syncAgeSec,
+    selectActiveModel,
+    refresh: refreshConnection,
+  } = useModelConnection({ enabled: isModelsNavActive });
+
+  const [isSyncingNow, setIsSyncingNow] = useState(false);
+  const [isBatchTesting, setIsBatchTesting] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [copyToast, setCopyToast] = useState('');
+
+  const handleTestSelected = useCallback(async () => {
+    if (!selectedModelIds || selectedModelIds.size === 0) return;
+    setIsBatchTesting(true);
+    const ids = Array.from(selectedModelIds);
+    setBatchProgress({ current: 0, total: ids.length });
+    for (let i = 0; i < ids.length; i++) {
+      const mid = ids[i];
+      setBatchProgress({ current: i + 1, total: ids.length });
+      if (typeof runModelTest === 'function') {
+        const targetModel = filteredModels?.find(m => m.id === mid) || { id: mid, provider: currentProvider?.id };
+        await runModelTest(targetModel);
+      }
+    }
+    setIsBatchTesting(false);
+  }, [selectedModelIds, filteredModels, currentProvider, runModelTest]);
+
+  const handleCopySelected = useCallback((format = 'yaml') => {
+    const ids = Array.from(
+      (selectedModelIds && selectedModelIds.size > 0) ? selectedModelIds : selectedProviderIds || []
+    );
+    if (ids.length === 0) return;
+    let text = '';
+    if (format === 'yaml') {
+      text = ids.map(id => `  - model: "${id}"`).join('\n');
+    } else {
+      text = JSON.stringify(ids, null, 2);
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopyToast(`Copied ${ids.length} item IDs!`);
+    setTimeout(() => setCopyToast(''), 3000);
+  }, [selectedModelIds, selectedProviderIds]);
+
   return (
         <div className={`w-full space-y-6 ${isModelsNavActive ? 'block apple-view-pane' : 'hidden'}`}>
 
@@ -99,9 +151,45 @@ export function ModelsFeature(props) {
                     </p>
                   </div>
 
-                  {/* Search Bar - reachable on the grid too, otherwise
-                      74 provider cards have no way to be filtered. */}
-                  {(
+                  {/* Live Connection Heartbeat & Search Controls */}
+                  <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                    {/* M3 Live Upstream Connection Beacon */}
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] shadow-xs">
+                      <span className={`w-2 h-2 rounded-full transition-all ${
+                        connStatus === 'online'
+                          ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]'
+                          : connStatus === 'degraded'
+                          ? 'bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.9)]'
+                          : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)]'
+                      }`} />
+                      <span className="font-semibold text-[var(--md-sys-color-on-surface)]">
+                        {connStatus === 'online' ? 'Live Gateway' : connStatus === 'degraded' ? 'Degraded Sync' : 'Offline'}
+                      </span>
+                      <span className="opacity-40">|</span>
+                      <span>{latencyMs}ms</span>
+                      <span className="opacity-40">|</span>
+                      <span className="text-[10px] opacity-75">{syncAgeSec < 60 ? `${Math.round(syncAgeSec)}s ago` : `${Math.round(syncAgeSec/60)}m ago`}</span>
+                      <button
+                        type="button"
+                        title="Trigger instant catalogue sync"
+                        onClick={async () => {
+                          setIsSyncingNow(true);
+                          try {
+                            await triggerSyncNow();
+                            await refreshConnection();
+                            if (typeof fetchProviders === 'function') await fetchProviders();
+                          } finally {
+                            setIsSyncingNow(false);
+                          }
+                        }}
+                        className="p-1 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] transition-all active:scale-90 cursor-pointer ml-0.5"
+                      >
+                        <RefreshCw size={11} className={isSyncingNow ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
+
+                    {/* Search Bar - reachable on the grid too, otherwise
+                        74 provider cards have no way to be filtered. */}
                     <div className="relative w-full sm:w-72">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--md-sys-color-on-surface-variant)]" />
                       <input
@@ -114,7 +202,7 @@ export function ModelsFeature(props) {
                         className="w-full pl-9 pr-3 py-1.5 rounded-full text-xs bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:border-[var(--md-sys-color-primary)] transition-all"
                       />
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* VIEW 1: PROVIDERS SELECTION GRID (Shown when selectedProviderId is null) */}
@@ -296,6 +384,39 @@ export function ModelsFeature(props) {
                               <div className="w-2 h-2 bg-[var(--md-sys-color-surface-container-highest)] border-r border-b border-white/20 rotate-45 mx-auto -mt-1" />
                             </div>
                           </div>
+
+                          {/* Batch Test Selected Button */}
+                          {selectedModelIds && selectedModelIds.size > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleTestSelected}
+                              disabled={isBatchTesting}
+                              className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5 border bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20 cursor-pointer shadow-xs"
+                              title="Sequentially probe latency for all selected models"
+                            >
+                              <Activity size={12} className={isBatchTesting ? 'animate-spin' : ''} />
+                              <span>{isBatchTesting ? `Testing ${batchProgress.current}/${batchProgress.total}…` : `Test Selected (${selectedModelIds.size})`}</span>
+                            </button>
+                          )}
+
+                          {/* Copy IDs Button */}
+                          {currentSelectionCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopySelected('yaml')}
+                              className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1 border bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] cursor-pointer shadow-xs"
+                              title="Copy selected item IDs to clipboard as YAML"
+                            >
+                              <Copy size={11} />
+                              <span>Copy IDs</span>
+                            </button>
+                          )}
+
+                          {copyToast && (
+                            <span className="text-[10px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 whitespace-nowrap animate-pulse">
+                              {copyToast}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {/* Apple-style Translucent Segmented Glass Toolbar with Status Filtering */}
@@ -1221,11 +1342,42 @@ export function ModelsFeature(props) {
                                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)] uppercase font-semibold">
                                     {item.category || '—'}
                                   </span>
-                                  {item.configured_in_hermes && (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] font-mono border border-[var(--md-sys-color-primary)]/30 font-semibold">
-                                      Hermes Active
+                                  {/* Interactive Active Model Toggle */}
+                                  {(activeModel === item.id || item.configured_in_hermes) ? (
+                                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-mono font-bold shadow-[0_0_12px_var(--md-sys-color-primary)]/40 flex items-center gap-1 select-none">
+                                      <span>★ Active in Hermes</span>
                                     </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        selectActiveModel(item.id, currentProvider?.id);
+                                      }}
+                                      className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] hover:border-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] font-mono font-medium transition-all active:scale-95 cursor-pointer"
+                                      title="Set this model as active for Hermes and Playground"
+                                    >
+                                      Set Active
+                                    </button>
                                   )}
+
+                                  {/* Quick Playground Handoff Button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      selectActiveModel(item.id, currentProvider?.id);
+                                      window.location.hash = '/playground';
+                                      if (typeof props.onSelectPlaygroundModel === 'function') {
+                                        props.onSelectPlaygroundModel(item.id);
+                                      }
+                                    }}
+                                    className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 hover:border-cyan-500/40 border border-[var(--md-sys-color-outline-variant)] font-mono transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                                    title="Open directly in prompt playground"
+                                  >
+                                    <span>Playground</span>
+                                    <ExternalLink size={10} />
+                                  </button>
                                 </div>
                                 <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">
                                   <span className="break-all">{item.id ?? '—'}</span>

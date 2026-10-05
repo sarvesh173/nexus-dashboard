@@ -1138,22 +1138,27 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                         active_model = active_data.get('model', '')
                 except Exception:
                     pass
-            last_sync = meta.get('last_sync_timestamp', 0)
+            last_sync = meta.get('synced_at', 0)
             now = time.time()
-            sync_age = now - last_sync if last_sync else 9999
+            sync_age = now - last_sync if last_sync else 0
+            status_obj = meta.get('status', {})
+            is_ok = bool(status_obj.get('ok', True))
+            total_models = meta.get('models', 0)
+            
             status = 'online'
-            if sync_age > 120:
-                status = 'degraded'
-            if not meta.get('total_models', 0):
+            if not is_ok or total_models == 0:
                 status = 'offline'
+            elif sync_age > 180:
+                status = 'degraded'
 
             return self.send_json({
                 'status': status,
-                'latency_ms': meta.get('last_sync_duration_ms', 45),
+                'latency_ms': meta.get('last_sync_duration_ms', 42),
                 'active_model': active_model,
                 'sync_age_sec': round(sync_age, 1),
-                'total_models': meta.get('total_models', 0),
-                'sources': meta.get('sources', {})
+                'total_models': total_models,
+                'providers': meta.get('providers', 0),
+                'sources': status_obj.get('sources', {})
             })
 
         elif self.path.startswith('/api/model/context'):

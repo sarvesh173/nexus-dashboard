@@ -22,23 +22,19 @@ export function useModelConnection(options = {}) {
   const { data, error, loadState, hasData, lastUpdatedAt, isPolling, refresh } =
     usePolling(fetchConnectionHealth, { intervalMs, enabled });
 
-  const [activeModel, setActiveModelState] = useState(data?.active_model || '');
-
-  // Synchronize when fresh remote data arrives if user hasn't made an optimistic change
-  useEffect(() => {
-    if (data?.active_model) {
-      setActiveModelState(data.active_model);
-    }
-  }, [data?.active_model]);
+  const [optimisticModel, setOptimisticModel] = useState(null);
+  const activeModel = optimisticModel ?? (data?.active_model || '');
 
   const selectActiveModel = useCallback(async (modelId, providerId = '') => {
-    setActiveModelState(modelId);
+    setOptimisticModel(modelId);
     try {
       await apiSetActiveModel(modelId, providerId);
       await refresh();
+      setOptimisticModel(null);
       return true;
     } catch (err) {
       console.error('[useModelConnection] Failed to set active model:', err);
+      setOptimisticModel(null);
       return false;
     }
   }, [refresh]);
