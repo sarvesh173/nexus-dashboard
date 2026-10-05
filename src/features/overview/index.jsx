@@ -794,23 +794,6 @@ export function OverviewFeature(props) {
                         </div>
                       </div>
                     </div>
-
-                    <div className="mt-3 pt-2">
-                      <div className="m3-linear-progress" aria-hidden={costLoadState !== 'ready'}>
-                        <div className="m3-linear-track">
-                          <div
-                            className="m3-linear-indicator"
-                            style={{
-                              '--ov-progress': costLoadState === 'ready' && costOverview.total_accrued
-                                ? Math.min(Math.max((costOverview.total_accrued / 50), 0.08), 1)
-                                : 0.14,
-                            }}
-                          />
-                        </div>
-                        <div className="m3-linear-stop" />
-                      </div>
-                    </div>
-
                     <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
                       <span>Auto-Scan</span>
                       <span className="text-[var(--md-sys-color-primary)] font-medium">1h-24h cycle</span>
@@ -962,22 +945,6 @@ export function OverviewFeature(props) {
                             Providers
                           </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 pt-2">
-                      <div className="m3-linear-progress">
-                        <div className="m3-linear-track">
-                          <div
-                            className="m3-linear-indicator"
-                            style={{
-                              '--ov-progress': providersList.length > 0
-                                ? Math.min(providersList.reduce((acc, p) => acc + p.total_models, 0) / 1000, 1)
-                                : 0.28,
-                            }}
-                          />
-                        </div>
-                        <div className="m3-linear-stop" />
                       </div>
                     </div>
 
