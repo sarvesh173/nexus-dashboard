@@ -1041,6 +1041,21 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             except Exception as outer_err:
                 return self.send_json({'ok': False, 'error': str(outer_err)}, 500)
 
+        elif self.path == '/api/model/active':
+            try:
+                n = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(n) or b'{}')
+                model_id = body.get('model', '').strip()
+                provider_id = body.get('provider', '').strip()
+                if not model_id:
+                    return self.send_json({'ok': False, 'error': 'Missing model ID'}, 400)
+                active_file = os.path.join(os.path.dirname(__file__), 'active_model_store.json')
+                with open(active_file, 'w', encoding='utf-8') as af:
+                    json.dump({'model': model_id, 'provider': provider_id, 'updated_at': time.time()}, af, indent=2)
+                return self.send_json({'ok': True, 'active_model': model_id, 'provider': provider_id})
+            except Exception as e:
+                return self.send_json({'ok': False, 'error': str(e)}, 500)
+
         elif self.path == '/api/visibility':
             try:
                 n = int(self.headers.get('Content-Length') or 0)
@@ -1110,6 +1125,37 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Length', str(len(body_bytes)))
             self.end_headers()
             self.wfile.write(body_bytes)
+        elif self.path.startswith('/api/model/connection-health'):
+            import live_sync
+            cache = live_sync.read_cache()
+            meta = cache.get('_meta', {})
+            active_model = ''
+            active_file = os.path.join(os.path.dirname(__file__), 'active_model_store.json')
+            if os.path.exists(active_file):
+                try:
+                    with open(active_file, 'r', encoding='utf-8') as af:
+                        active_data = json.load(af)
+                        active_model = active_data.get('model', '')
+                except Exception:
+                    pass
+            last_sync = meta.get('last_sync_timestamp', 0)
+            now = time.time()
+            sync_age = now - last_sync if last_sync else 9999
+            status = 'online'
+            if sync_age > 120:
+                status = 'degraded'
+            if not meta.get('total_models', 0):
+                status = 'offline'
+
+            return self.send_json({
+                'status': status,
+                'latency_ms': meta.get('last_sync_duration_ms', 45),
+                'active_model': active_model,
+                'sync_age_sec': round(sync_age, 1),
+                'total_models': meta.get('total_models', 0),
+                'sources': meta.get('sources', {})
+            })
+
         elif self.path.startswith('/api/model/context'):
             # Dynamic Context Window Resolution via Upstream & OpenRouter / Models.dev
             import urllib.parse
