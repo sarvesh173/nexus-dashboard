@@ -208,7 +208,7 @@ def get_telemetry():
     mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
     per_cpu = psutil.cpu_percent(interval=None, percpu=True)
-    cpu_pct = psutil.cpu_percent(interval=None)
+    cpu_pct = round(sum(per_cpu) / len(per_cpu), 1) if per_cpu else 0.0
     disk = psutil.disk_usage('/')
     
     # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
@@ -928,12 +928,15 @@ def config_provider_map():
 
 
 class TelemetryHandler(BaseHTTPRequestHandler):
-    def send_json(self, data, code=200):
+    def send_json(self, data, code=200, headers=None):
         body = json.dumps(data).encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-Length', str(len(body)))
+        if headers:
+            for k, v in headers.items():
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
@@ -1051,31 +1054,17 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 if kind not in ('providers', 'models') or not ident:
                     raise ValueError('kind and id are required')
                 now_hidden = visibility.set_hidden(kind, str(ident), hide)
-                payload = {'ok': True, 'kind': kind, 'id': ident,
-                           'hidden': now_hidden}
-                code = 200
+                return self.send_json({'ok': True, 'kind': kind, 'id': ident,
+                                       'hidden': now_hidden})
             except Exception as exc:
-                payload = {'ok': False, 'error': str(exc)[:200]}
-                code = 400
-            self.send_response(code)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(payload).encode('utf-8'))
-            return
+                return self.send_json({'ok': False, 'error': str(exc)[:200]}, 400)
 
         if self.path == '/api/visibility/reset':
             before = (len(visibility.hidden_providers()),
                       len(visibility.hidden_models()))
             visibility._write_locked(visibility._blank())
-            payload = {'ok': True, 'cleared': {'providers': before[0],
-                                               'models': before[1]}}
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(payload).encode('utf-8'))
-            return
+            return self.send_json({'ok': True, 'cleared': {'providers': before[0],
+                                                           'models': before[1]}})
 
         self.send_response(404)
         self.send_header('Content-Type', 'application/json')
@@ -1102,14 +1091,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         elif self.path == '/api/cost-overview':
             return self.send_json(get_cost_overview())
         elif self.path == '/api/providers':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            data = get_hermes_config_providers()
-            body_bytes = json.dumps(data).encode('utf-8')
-            self.send_header('Content-Length', str(len(body_bytes)))
-            self.end_headers()
-            self.wfile.write(body_bytes)
+            return self.send_json(get_hermes_config_providers())
         elif self.path.startswith('/api/model/context'):
             # Dynamic Context Window Resolution via Upstream & OpenRouter / Models.dev
             import urllib.parse
@@ -1185,12 +1167,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 'source': source
             })
         elif self.path == '/api/all-providers':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            data = get_all_config_providers()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(get_all_config_providers())
         elif self.path == '/api/live-providers':
             data = get_live_providers()
             return self.send_json(data)
@@ -1205,13 +1182,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             for p in rows:
                 p.setdefault('model_count', len(p.get('models') or []))
                 p['total_models'] = p['model_count']
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Cache-Control', 'no-store')
-            self.end_headers()
-            self.wfile.write(json.dumps({'providers': rows, '_meta': meta}).encode('utf-8'))
-            return
+            return self.send_json({'providers': rows, '_meta': meta},
+                                  headers={'Cache-Control': 'no-store'})
         elif self.path == '/api/sync-status':
             import live_sync
             return self.send_json(live_sync.read_cache().get('_meta', {}))
@@ -1230,19 +1202,9 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'error': f'{type(exc).__name__}: {exc}',
                 }, code=500)
         elif self.path == '/api/gateway-status':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            data = hermes_gateway.status()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(hermes_gateway.status())
         elif self.path == '/api/health':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            data = model_health.summary()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(model_health.summary())
         else:
             self.send_response(404)
             self.end_headers()
