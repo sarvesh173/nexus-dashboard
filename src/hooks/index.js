@@ -31,3 +31,4 @@ export {
 export { useStats, STATS_INTERVAL_MS } from './useStats.js';
 export { useCostOverview } from './useCostOverview.js';
 export { useVisibility } from './useVisibility.js';
+export { useModelConnection, CONNECTION_POLL_INTERVAL_MS } from './useModelConnection.js';

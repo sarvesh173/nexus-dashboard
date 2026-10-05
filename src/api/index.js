@@ -46,3 +46,7 @@ export {
   setHidden,
   resetVisibility,
 } from './visibility.js';
+export {
+  fetchConnectionHealth,
+  setActiveModel,
+} from './modelConnection.js';
