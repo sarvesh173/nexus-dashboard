@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   Activity, ArrowLeft, AudioLines, Boxes, Brain, CheckCircle2, Copy, DownloadCloud, Edit2,
   Eye, EyeOff, ExternalLink, FileQuestion, ImageIcon, Layers, MessageSquare, Mic,
-  Plus, Radio, RefreshCw, Search, Sliders, Sparkles, Terminal, Trash, Volume2,
+  Plus, Radio, RefreshCw, Search, Sliders, Sparkles, Trash, Volume2,
 } from 'lucide-react';
 import { getModelLogo } from '../../modelLogos.js';
 import {
@@ -1214,13 +1214,30 @@ export function ModelsFeature(props) {
                           <span>{isTestingAll ? `Testing ${testAllProgress.current}/${testAllProgress.total}…` : 'Test All'}</span>
                         </button>
 
+                        {/* Model Selection Mode Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={() => setIsSelectActive(prev => !prev)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs border transition-all apple-pressable cursor-pointer shadow-xs ${
+                            isSelectionMode
+                              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] shadow-sm'
+                              : 'bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
+                          }`}
+                        >
+                          <span>{isSelectionMode ? 'Done' : 'Select'}</span>
+                          {isSelectionMode && selectedModelIds && selectedModelIds.size > 0 && (
+                            <span className="w-4 h-4 rounded-full bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] text-[10px] font-bold flex items-center justify-center font-mono">
+                              {selectedModelIds.size}
+                            </span>
+                          )}
+                        </button>
+
                         {/* Hide Section Button */}
                         <button
                           type="button"
                           onClick={() => handleHideAllInView(filteredModels)}
                           disabled={filteredModels.length === 0}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 border border-[var(--md-sys-color-outline-variant)] hover:border-rose-500/30 transition-all apple-pressable cursor-pointer shadow-xs"
-
                         >
                           <EyeOff size={12} />
                           <span>Hide Section</span>
@@ -1232,22 +1249,28 @@ export function ModelsFeature(props) {
                           onClick={() => handleHideAllInView(activeModelsPool)}
                           disabled={activeModelsPool.length === 0}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-rose-500/10 text-rose-400/90 border border-rose-500/20 hover:bg-rose-500/20 transition-all apple-pressable cursor-pointer shadow-xs"
-
                         >
                           <Trash size={12} />
                           <span>Hide All</span>
                         </button>
                       </div>
 
-                      {/* Auto-Hide On Fail Checkbox (OmniRouter Feature) */}
-                      <label className="flex items-center gap-2 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] cursor-pointer select-none">
+                      {/* M3 Themed Auto-Hide On Fail Checkbox */}
+                      <label className="flex items-center gap-2.5 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] cursor-pointer select-none group">
+                        <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center transition-all ${
+                          autoHideOnFail
+                            ? 'bg-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs'
+                            : 'border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container-highest)] group-hover:border-[var(--md-sys-color-primary)]'
+                        }`}>
+                          {autoHideOnFail && <CheckCircle2 size={12} strokeWidth={3} />}
+                        </div>
                         <input
                           type="checkbox"
                           checked={autoHideOnFail}
                           onChange={toggleAutoHideOnFail}
-                          className="w-4 h-4 rounded text-rose-500 focus:ring-0 cursor-pointer"
+                          className="sr-only"
                         />
-                        <span className="hover:text-[var(--md-sys-color-on-surface)] transition-colors">
+                        <span className="group-hover:text-[var(--md-sys-color-on-surface)] transition-colors">
                           Auto-hide model on test failure
                         </span>
                       </label>

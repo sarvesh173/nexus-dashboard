@@ -1,5 +1,6 @@
 import React from 'react';
-import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, Settings, Terminal } from 'lucide-react';
+import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, ScrollText, Settings, Terminal } from 'lucide-react';
+import { NavDrawer } from './NavDrawer.jsx';
 
 const NAV_HOVER_STAGE_COUNT = 36;
 const NAV_ICON_STYLE_COUNT = 10;
@@ -1736,14 +1737,17 @@ export function NavigationFeature(props) {
       {/* Top App Bar — M3 Center-Aligned Top App Bar Spec */}
       <header className="px-3 sm:px-6 md:px-8 py-2.5 sm:py-0 sm:h-16 flex flex-wrap sm:flex-nowrap items-center justify-between sticky top-0 z-30 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]/95 backdrop-blur-md gap-y-2">
         
-        {/* Left: Brand Identity */}
-        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => navigate('/')}>
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center overflow-hidden shadow-xs shrink-0 transition-transform active:scale-95">
-            <img src="/nexus-logo.png" alt="NX" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <span className="font-bold text-xs sm:text-sm tracking-tight block text-[var(--md-sys-color-on-surface)]">NEXUS CORE</span>
-            <span className="hidden sm:block text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-mono">M3 Architecture</span>
+        {/* Left: Brand Identity & NavDrawer Hamburger */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <NavDrawer currentPath={location.pathname} onNavigate={navigate} />
+          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => navigate('/')}>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center overflow-hidden shadow-xs shrink-0 transition-transform active:scale-95">
+              <img src="/nexus-logo.png" alt="NX" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <span className="font-bold text-xs sm:text-sm tracking-tight block text-[var(--md-sys-color-on-surface)]">NEXUS CORE</span>
+              <span className="hidden sm:block text-[10px] text-[var(--md-sys-color-on-surface-variant)] font-mono">M3 Architecture</span>
+            </div>
           </div>
         </div>
 
@@ -1881,7 +1885,38 @@ export function NavigationFeature(props) {
           </div>
         </div>
       </header>
-    {toast && <div role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full text-sm font-medium bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border border-[var(--md-sys-color-outline-variant)] shadow-lg">{toast}</div>}
+    {/* M3 Floating Top-Right Corner HUD Toast Notification */}
+    {toast && (
+      <div
+        role="status"
+        className="fixed top-5 right-5 z-50 max-w-sm px-4 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] shadow-2xl backdrop-blur-xl animate-in slide-in-from-top-4 duration-300 flex items-start gap-3"
+      >
+        <span className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${
+          (typeof toast === 'object' && toast?.type === 'error') ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)]' :
+          (typeof toast === 'object' && toast?.type === 'warn') ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]' :
+          'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]'
+        }`} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold text-xs font-mono truncate">
+              {(typeof toast === 'object' ? toast?.title : toast) || 'Notification'}
+            </span>
+            {typeof toast === 'object' && toast?.status && (
+              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                toast?.type === 'error' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+              }`}>
+                {toast.status}
+              </span>
+            )}
+          </div>
+          {typeof toast === 'object' && toast?.message && (
+            <p className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-0.5 leading-relaxed break-all">
+              {toast.message}
+            </p>
+          )}
+        </div>
+      </div>
+    )}
   </>);
 }
 
@@ -1895,6 +1930,7 @@ export function Breadcrumbs({ location, navigate, selectedProviderId, currentPro
   } else if (path.startsWith('/agents/')) { const aid = path.replace('/agents/', ''); crumbs.push({ label: 'Agents', onClick: () => navigate('/agents') }); if (aid) crumbs.push({ label: aid }); }
   else if (path === '/agents') crumbs.push({ label: 'Agents' });
   else if (path === '/cost') crumbs.push({ label: 'Cost' });
+  else if (path === '/logs') crumbs.push({ label: 'Logs' });
   else if (path === '/settings') crumbs.push({ label: 'Settings' });
   else crumbs.push({ label: 'Not Found', onClick: () => navigate('/') });
   return (<nav className="flex items-center gap-1.5 text-xs font-mono text-[var(--md-sys-color-on-surface-variant)] mb-4 px-0.5 select-none">{crumbs.map((c, i) => (<React.Fragment key={i}>{i > 0 && <span className="opacity-40">/</span>}{c.onClick ? <button onClick={c.onClick} className="hover:text-[var(--md-sys-color-primary)] transition-colors">{c.label}</button> : <span className="text-[var(--md-sys-color-on-surface)] font-semibold">{c.label}</span>}</React.Fragment>))}</nav>);

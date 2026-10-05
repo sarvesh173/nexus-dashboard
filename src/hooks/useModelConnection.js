@@ -5,7 +5,7 @@
  * Provides active model selection handler with optimistic state updates.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { fetchConnectionHealth, setActiveModel as apiSetActiveModel } from '../api/modelConnection.js';
 import { usePolling } from './usePolling.js';
 

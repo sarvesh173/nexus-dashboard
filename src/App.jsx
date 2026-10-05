@@ -18,6 +18,7 @@ import {
   getProviderDisplayName, getProviderLogoUrl, SUGGESTED_MODELS, EMPTY_MODELS,
   PlaygroundFeature, AgentsFeature, SettingsFeature,
 } from './features/index.js';
+import { LogsFeature } from './features/logs/index.jsx';
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
 
 export default function App() {
@@ -104,6 +105,7 @@ export default function App() {
   const [playgroundInput, setPlaygroundInput] = useState('');
   const [playgroundMessages, setPlaygroundMessages] = useState([]);
   const [isPlaygroundSending, setIsPlaygroundSending] = useState(false);
+  const [selectedPlaygroundModel, setSelectedPlaygroundModel] = useState(null);
 
   const handleSendPlaygroundMessage = async (e) => {
     if (e) e.preventDefault();
@@ -116,8 +118,9 @@ export default function App() {
     setIsPlaygroundSending(true);
 
     try {
+      const targetModel = selectedPlaygroundModel || 'auto/best-free';
       const data = await testModel({
-        model_id: 'auto/best-free', // Live gateway tested default
+        model_id: targetModel,
         kind: 'text',
         prompt,
       });
@@ -182,10 +185,27 @@ export default function App() {
         }
       }));
 
+      // Top Corner Notification Trigger (3.5-4s dismissal)
+      if (data.ok) {
+        setToast({
+          type: 'success',
+          status: '200 OK',
+          title: mId.split('/').pop(),
+          message: `${data.latency_ms || 0}ms latency • Verified Online`,
+        });
+      } else {
+        const code = isTimeout ? '408 Timeout' : (data.error && data.error.includes('403') ? '403 Forbidden' : '403 Error');
+        setToast({
+          type: 'error',
+          status: code,
+          title: mId.split('/').pop(),
+          message: data.error || 'Test Probe Failed',
+        });
+      }
+
       // OmniRouter automatic hide on test failure
       if (!data.ok && autoHideOnFail) {
         await setVisibility('models', mId, true);
-        setToast(`Auto-hidden "${mId.split('/').pop()}" due to test failure`);
       }
     } catch (err) {
       setModelTestResults((prev) => ({
@@ -197,6 +217,12 @@ export default function App() {
           error: String(err.message || err)
         }
       }));
+      setToast({
+        type: 'error',
+        status: '500 Error',
+        title: mId.split('/').pop(),
+        message: String(err.message || err),
+      });
       if (autoHideOnFail) {
         await setVisibility('models', mId, true);
       }
@@ -512,6 +538,7 @@ export default function App() {
   const isCostNavActive = location.pathname === '/cost';
   const isPlaygroundNavActive = location.pathname === '/playground';
   const isSettingsNavActive = location.pathname === '/settings';
+  const isLogsNavActive = location.pathname === '/logs';
 
   // The URL is the source of truth. Local state made /modules/<id> deep-links
   // render an empty page and left the address bar on /modules, which broke
@@ -525,7 +552,7 @@ export default function App() {
   // a 404. This is what makes a bad deep link obvious in the live terminal.
   const isKnownRoute =
     isOverviewNavActive || isModelsNavActive || isAgentsNavActive
-    || isPlaygroundNavActive || isCostNavActive || isSettingsNavActive;
+    || isPlaygroundNavActive || isCostNavActive || isSettingsNavActive || isLogsNavActive;
   useEffect(() => {
     nexusLog(
       isKnownRoute ? 'NAVIGATION' : 'ERROR',
@@ -1153,6 +1180,8 @@ export default function App() {
           marqueeContainerRef={marqueeContainerRef}
           toggleLogoBgTheme={toggleLogoBgTheme}
           nexusLog={nexusLog}
+          selectedPlaygroundModel={selectedPlaygroundModel}
+          onSelectPlaygroundModel={setSelectedPlaygroundModel}
         />
         <PlaygroundFeature
           isPlaygroundNavActive={isPlaygroundNavActive}
@@ -1162,6 +1191,8 @@ export default function App() {
           handleSendPlaygroundMessage={handleSendPlaygroundMessage}
           playgroundInput={playgroundInput}
           isPlaygroundSending={isPlaygroundSending}
+          selectedPlaygroundModel={selectedPlaygroundModel}
+          onSelectPlaygroundModel={setSelectedPlaygroundModel}
         />
         <AgentsFeature
           isAgentsNavActive={isAgentsNavActive}
@@ -1169,6 +1200,10 @@ export default function App() {
           navigate={navigate}
           isAgentCliActive={isAgentCliActive}
           activeAgentId={activeAgentId}
+        />
+        <LogsFeature
+          isLogsNavActive={isLogsNavActive}
+          nexusLog={nexusLog}
         />
         <SettingsFeature
           isSettingsNavActive={isSettingsNavActive}

@@ -1186,3 +1186,85 @@ button:hover > .lucide line {
   .lucide:hover rect,
   .lucide:hover line { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   M3 Tactile Micro-Animations Suite (Edit, Fetch, Plus, Test, Hide, Trash, Modalities)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.apple-pressable {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 220ms cubic-bezier(0.2, 0, 0, 1),
+              background-color 150ms ease-out,
+              border-color 150ms ease-out !important;
+}
+.apple-pressable:hover {
+  transform: translateY(-1px);
+}
+.apple-pressable:active {
+  transform: translateY(1px) scale(0.96);
+}
+
+/* Edit Provider: Pen bounce */
+button:hover > svg.lucide-edit-2,
+button:hover > svg.lucide-edit {
+  animation: m3-pen-tilt 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes m3-pen-tilt {
+  0% { transform: none; }
+  50% { transform: rotate(-12deg) translateY(-1px); }
+  100% { transform: rotate(-4deg); }
+}
+
+/* Fetch Models: Cloud pulse */
+button:hover > svg.lucide-download-cloud,
+button:hover > svg.lucide-cloud-download {
+  animation: m3-cloud-float 450ms cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+@keyframes m3-cloud-float {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-2.5px); }
+}
+
+/* Plus/Add Models: Spin pop */
+button:hover > svg.lucide-plus {
+  transform: rotate(90deg) scale(1.1);
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Test Models: Activity pulse */
+button:hover > svg.lucide-activity {
+  animation: m3-activity-beat 600ms ease-in-out infinite;
+}
+@keyframes m3-activity-beat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.22); filter: drop-shadow(0 0 6px var(--md-sys-color-primary)); }
+}
+
+/* Hide Models: Eye morph */
+button:hover > svg.lucide-eye-off {
+  transform: scale(0.92);
+  transition: transform 180ms ease-out;
+}
+
+/* Delete / Trash: Shake */
+button:hover > svg.lucide-trash,
+button:hover > svg.lucide-trash-2 {
+  animation: m3-trash-shake 320ms ease-in-out forwards;
+}
+@keyframes m3-trash-shake {
+  0% { transform: none; }
+  25% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+  75% { transform: rotate(-4deg); }
+  100% { transform: none; }
+}
+
+/* Modality Pills Tactile Hover Pop */
+.modality-chip,
+[data-modality-pill] {
+  transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease-out;
+}
+.modality-chip:hover,
+[data-modality-pill]:hover {
+  transform: translateY(-1.5px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}

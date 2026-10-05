@@ -3,7 +3,7 @@ import { Boxes, ChevronDown, Play, Send, Sparkles } from 'lucide-react';
 
 export function PlaygroundFeature(props) {
   const { isPlaygroundNavActive, navigate, playgroundMessages, setPlaygroundInput,
-    handleSendPlaygroundMessage, playgroundInput, isPlaygroundSending } = props;
+    handleSendPlaygroundMessage, playgroundInput, isPlaygroundSending, selectedPlaygroundModel } = props;
   return (
         <div className={`w-full space-y-4 ${isPlaygroundNavActive ? 'block apple-view-pane' : 'hidden'}`}>
           {/* Playground Top Header Toolbar */}
@@ -20,14 +20,17 @@ export function PlaygroundFeature(props) {
 
             {/* Model Selector & Navigation Controls */}
             <div className="flex items-center gap-2.5 flex-wrap">
-              {/* Top Model Selector Button (Placeholder Mode - No models rendered) */}
+              {/* Active Model Indicator & Switcher */}
               <button
                 type="button"
-                className="group flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]/40 transition-all apple-pressable cursor-pointer shadow-xs"
-
+                onClick={() => navigate('/model')}
+                className="group flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all apple-pressable cursor-pointer shadow-xs"
+                title="Click to browse and change models in catalogue"
               >
                 <Sparkles size={13} className="text-[var(--md-sys-color-primary)]" />
-                <span className="font-semibold">Select Model</span>
+                <span className="font-semibold truncate max-w-[220px]">
+                  {selectedPlaygroundModel || 'auto/best-free'}
+                </span>
                 <ChevronDown size={13} className="text-[var(--md-sys-color-on-surface-variant)] group-hover:text-[var(--md-sys-color-on-surface)] transition-transform" />
               </button>
 

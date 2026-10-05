@@ -759,10 +759,12 @@ def get_all_config_providers():
                                   'freetheai', 'tokenrouter', 'blazeapi', 'crax'))
         models = p.get('models') or {}
         n_models = len(models) if isinstance(models, (dict, list)) else 0
+        real_url = base or _KNOWN_BASE_URLS.get(pid, 'https://api.' + pid + '.com/v1')
         out.append({
             'id': pid,
             'name': p.get('display_name') or pid.title(),
-            'base_url': base or 'official',
+            'base_url': real_url,
+            'website_url': real_url,
             'enabled': p.get('enabled', True),
             'model_count': n_models,
             'discover_models': p.get('discover_models', True),
@@ -779,8 +781,29 @@ def get_all_config_providers():
 # A prefix alone is far too coarse: pointing deepseek at "nvidia" handed the
 # card all 65 NVIDIA Nemotron models under a DeepSeek heading. The second
 # element filters the borrowed models to ones the brand actually serves.
+_KNOWN_BASE_URLS = {
+    'anthropic': 'https://api.anthropic.com/v1',
+    'openai': 'https://api.openai.com/v1',
+    'deepseek': 'https://api.deepseek.com/v1',
+    'google': 'https://generativelanguage.googleapis.com/v1beta',
+    'gemini': 'https://generativelanguage.googleapis.com/v1beta',
+    'groq': 'https://api.groq.com/openai/v1',
+    'openrouter': 'https://openrouter.ai/api/v1',
+    'mistral': 'https://api.mistral.ai/v1',
+    'mistralai': 'https://api.mistral.ai/v1',
+    'nvidia': 'https://integrate.api.nvidia.com/v1',
+    'qwencloud': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    'qwen-cloud': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    'cerebras': 'https://api.cerebras.ai/v1',
+    'together': 'https://api.together.xyz/v1',
+    'cohere': 'https://api.cohere.com/v1',
+    'fireworks': 'https://api.fireworks.ai/inference/v1',
+    'perplexity': 'https://api.perplexity.ai',
+    'xai': 'https://api.x.ai/v1',
+}
+
 _PROVIDER_ALIASES = {
-    'anthropic': (['agy'], 'claude'),
+    # 'anthropic' intentionally excluded: unconfigured, no API key provided
     'deepseek': (['nvidia', 'qwen-cloud', 'deepseek'], 'deepseek'),
     # curated VIEWS over the mixed OpenRouter catalog, not single brands
     'openai-codex': (['openrouter'], ''),
@@ -975,10 +998,11 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 }
 
                 prompt_text = body.get('prompt') or 'hi'
+                max_toks = int(body.get('max_tokens', 512 if len(prompt_text) > 4 else 64))
                 payload = {
                     'model': model_id,
                     'messages': [{'role': 'user', 'content': prompt_text}],
-                    'max_tokens': 64,
+                    'max_tokens': max_toks,
                     'stream': False
                 }
 
