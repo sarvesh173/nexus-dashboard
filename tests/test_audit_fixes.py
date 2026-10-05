@@ -311,6 +311,53 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
                 self.fail(f"run_sync.fetch_specs raised NameError: {exc}")
 
 
+class TestTelemetryCpuCalculation(unittest.TestCase):
+    """BUG: psutil.cpu_percent was called twice sequentially.
+
+    The second call measured usage over a ~0s interval between lines and
+    persistently returned 0.0. Deriving cpu_pct from per_cpu ensures the
+    overall CPU percentage is accurate.
+    """
+
+    def test_get_telemetry_calculates_cpu_percent_from_per_cpu(self):
+        from unittest.mock import patch, MagicMock
+        import server
+
+        mock_per_cpu = [10.0, 20.0, 30.0, 40.0]
+        with patch("psutil.virtual_memory") as mock_mem, \
+             patch("psutil.swap_memory") as mock_swap, \
+             patch("psutil.disk_usage") as mock_disk, \
+             patch("psutil.cpu_percent", return_value=mock_per_cpu) as mock_cpu:
+
+            # Reset telemetry cache
+            server._cached_data = None
+            server._last_poll_time = 0
+
+            data = server.get_telemetry()
+            self.assertEqual(data["cpu_percent"], 25.0)
+            self.assertEqual(data["cpu_cores"], mock_per_cpu)
+
+
+class TestTelemetrySendJson(unittest.TestCase):
+    """Ensure send_json accurately sets Content-Length and JSON body headers."""
+
+    def test_send_json_sets_content_length_and_headers(self):
+        from unittest.mock import MagicMock
+        import server
+
+        handler = MagicMock()
+        handler.wfile = io.BytesIO()
+        headers = {}
+        handler.send_header = lambda k, v: headers.update({k: v})
+
+        server.TelemetryHandler.send_json(handler, {"status": "ok"}, 200)
+
+        body = json.dumps({"status": "ok"}).encode('utf-8')
+        self.assertEqual(headers.get('Content-Length'), str(len(body)))
+        self.assertEqual(headers.get('Content-Type'), 'application/json')
+        self.assertEqual(headers.get('Access-Control-Allow-Origin'), '*')
+
+
 class TestMetaCountsAgreeWithRows(unittest.TestCase):
     """The counts are what every consumer quotes, so they must be self-consistent."""
 
