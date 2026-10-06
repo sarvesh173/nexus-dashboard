@@ -9,6 +9,8 @@
  *   useSyncedModels   30s  (backend live-sync cadence)
  *   useSyncStatus     30s  (reports on that same sync loop)
  *   useStats           2s  (psutil sampling rate; a slower poll reads as frozen)
+ *   useHermesStatus    5s  (gateway heartbeat; gated on the view being open)
+ *   useHermesLogs      5s  (log tail; gated on the view being open)
  *   useCostOverview  once  (loadState distinguishes pending / ready / error)
  *   useVisibility   on load + on write, with rollback on failure
  *
@@ -29,6 +31,12 @@ export {
   SYNC_STATUS_INTERVAL_MS,
 } from './useSyncStatus.js';
 export { useStats, STATS_INTERVAL_MS } from './useStats.js';
+export {
+  useHermesStatus,
+  useHermesLogs,
+  HERMES_STATUS_INTERVAL_MS,
+  HERMES_LOGS_INTERVAL_MS,
+} from './useHermes.js';
 export { useCostOverview } from './useCostOverview.js';
 export { useVisibility } from './useVisibility.js';
 export { useModelConnection, CONNECTION_POLL_INTERVAL_MS } from './useModelConnection.js';

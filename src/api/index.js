@@ -40,6 +40,8 @@ export { fetchProviders } from './providers.js';
 export { fetchAllProviders } from './allProviders.js';
 export { fetchLiveProviders } from './liveProviders.js';
 export { fetchGatewayStatus } from './gatewayStatus.js';
+export { fetchHermesStatus } from './hermesStatus.js';
+export { fetchHermesLogs } from './hermesLogs.js';
 export { fetchHealth } from './health.js';
 export {
   fetchVisibility,

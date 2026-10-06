@@ -7,7 +7,14 @@ import sys
 import time
 import yaml
 import requests
-from paths import hermes_config_path, omniroute_env_path, OMNI_BASE
+from paths import (
+    hermes_config_path,
+    hermes_env_path,
+    hermes_gateway_state_path,
+    hermes_logs_dir,
+    omniroute_env_path,
+    OMNI_BASE,
+)
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -246,6 +253,333 @@ def get_telemetry():
     }
     _last_poll_time = now
     return _cached_data
+
+
+# --------------------------------------------------------------------------
+# Hermes live gateway status + logs
+#
+# Both readers are read-only against files the Hermes gateway process owns.
+# They are written for the stdlib HTTPServer below, which is SINGLE-THREADED:
+# every route is serialised behind whichever handler is running. That makes
+# the cost of these two readers a property of the whole dashboard, not just of
+# this feature, so the two expensive parts are deliberately bounded:
+#
+#   1. config.yaml is 71KB and yaml.safe_load() on it measures ~1.3s here.
+#      Running that per poll would stall /api/stats (2s cadence) and every
+#      other route behind it. So the active-model read is a targeted top-level
+#      `model:` block scan (~5ms) with the full parse kept only as a fallback.
+#   2. gateway.log is ~3.5MB and growing. Reading it whole would move that
+#      megabyte-scale cost onto every poll. Only the tail window is ever read.
+#
+# Results are cached with a short TTL so that a frontend polling faster than
+# the files actually change cannot amplify either cost.
+# --------------------------------------------------------------------------
+
+HERMES_STATE_CACHE_TTL = 4.0    # heartbeat file: rewritten by the gateway anyway
+HERMES_LOG_CACHE_TTL = 2.0      # tail window: cheaper to re-read than to lock
+
+# ~64KB of tail covers several hundred log lines, which is far more than any
+# poll needs, while keeping the read+parse cost in the low tens of ms.
+HERMES_LOG_TAIL_BYTES = 64 * 1024
+HERMES_LOG_DEFAULT_LIMIT = 60
+HERMES_LOG_MAX_LIMIT = 300
+
+# Only these names may be read, and each is resolved inside hermes_logs_dir().
+# An allowlist rather than a join of caller input: `source` arrives from the
+# query string, so an unchecked path would be a traversal into the filesystem.
+HERMES_LOG_SOURCES = ('gateway', 'agent', 'errors')
+
+_hermes_state_cache = {'at': 0.0, 'payload': None}
+_hermes_model_cache = {'at': 0.0, 'payload': None}
+_hermes_log_cache = {'at': 0.0, 'key': None, 'payload': None}
+
+
+def _read_text(path, max_bytes):
+    """Read at most `max_bytes` from the END of a text file.
+
+    A tail read is what makes the log route cheap on a multi-megabyte file, but
+    it also caps the damage from a pathological file: the read cannot be made
+    larger by anything a caller sends.
+    """
+    try:
+        with open(path, 'rb') as fh:
+            fh.seek(0, os.SEEK_END)
+            end = fh.tell()
+            start = max(0, end - max_bytes)
+            fh.seek(start)
+            raw = fh.read()
+    except OSError:
+        return ''
+    if start:
+        # The window almost certainly starts mid-line; dropping the fragment
+        # keeps a truncated timestamp from being reported as a real record.
+        cut = raw.find(b'\n')
+        raw = raw[cut + 1:] if cut != -1 else b''
+    return raw.decode('utf-8', errors='replace')
+
+
+def _hermes_model_block():
+    """The `model:` section of config.yaml as a flat {key: value} map.
+
+    Deliberately NOT yaml.safe_load(): that costs ~1.3s on this file, which on
+    a single-threaded server is long enough to be felt as the whole dashboard
+    stalling. This scans for the one top-level block it needs and is three
+    orders of magnitude cheaper.
+
+    Nested values keep their first line only. That is a real limitation and it
+    is deliberate: every field this dashboard renders (default, provider,
+    reasoning_effort, api_mode) is a scalar, and if the schema ever changes to
+    nest them the fallback below parses the file properly instead.
+    """
+    try:
+        with open(hermes_config_path(), 'r', encoding='utf-8', errors='replace') as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        return {}
+
+    block = {}
+    inside = False
+    for line in lines:
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        if not line[0].isspace():
+            # A new top-level key ends the block. Matched exactly so that
+            # neighbours like `model_catalog:` are not mistaken for `model:`.
+            inside = line.rstrip() == 'model:'
+            continue
+        if inside and ':' in line:
+            key, _, value = line.partition(':')
+            block[key.strip()] = value.strip().strip('"\'')
+    return block
+
+
+def _hermes_active_model():
+    """Currently configured active model for Hermes."""
+    now = time.time()
+    if _hermes_model_cache['payload'] is not None:
+        if now - _hermes_model_cache['at'] < HERMES_STATE_CACHE_TTL * 5:
+            return _hermes_model_cache['payload']
+
+    model = _hermes_model_block()
+    if not model.get('default'):
+        # The scan came back empty. Parse it properly rather than reporting a
+        # model that may well exist; this path is cached like the rest, so the
+        # expensive fallback can only run on the slow path.
+        try:
+            with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
+                cfg = yaml.safe_load(fh) or {}
+            raw = cfg.get('model') or {}
+            model = {k: v for k, v in raw.items() if not isinstance(v, (dict, list))}
+        except Exception as exc:  # noqa: BLE001 - reported, never raised
+            print(f'[hermes] model config read failed: {type(exc).__name__}: {exc}', flush=True)
+            model = {}
+
+    payload = {
+        'id': model.get('default') or '',
+        'provider': model.get('provider') or '',
+        'reasoning_effort': model.get('reasoning_effort') or '',
+        'api_mode': model.get('api_mode') or '',
+        'base_url': model.get('base_url') or '',
+        'supports_vision': str(model.get('supports_vision', '')).lower() == 'true',
+    }
+    _hermes_model_cache['at'] = now
+    _hermes_model_cache['payload'] = payload
+    return payload
+
+
+def _hermes_platforms(raw):
+    """Flatten gateway_state.json's platform map into a sorted, flat list."""
+    out = []
+    for name, info in (raw or {}).items():
+        if not isinstance(info, dict):
+            continue
+        out.append({
+            'name': name,
+            'state': info.get('state') or 'unknown',
+            'error_code': info.get('error_code'),
+            'error_message': info.get('error_message'),
+            'needs_attention': bool(info.get('needs_attention')),
+            'updated_at': info.get('updated_at'),
+        })
+    out.sort(key=lambda p: p['name'])
+    return out
+
+
+def get_hermes_status():
+    """Live Hermes gateway state + active model config.
+
+    Reads two files the gateway owns: the heartbeat (gateway_state.json) and
+    the agent config (config.yaml). Never raises - a missing or corrupt source
+    is reported as data (`available: False` plus the reason), because a
+    gateway that is merely stopped is a normal state the UI has to render, not
+    an HTTP error.
+    """
+    now = time.time()
+    cached = _hermes_state_cache['payload']
+    if cached is not None and now - _hermes_state_cache['at'] < HERMES_STATE_CACHE_TTL:
+        return cached
+
+    state = {}
+    state_error = None
+    try:
+        with open(hermes_gateway_state_path(), 'r', encoding='utf-8') as fh:
+            state = json.load(fh) or {}
+    except FileNotFoundError:
+        state_error = 'gateway_state.json not found - gateway has never started'
+    except Exception as exc:  # noqa: BLE001
+        state_error = f'{type(exc).__name__}: {exc}'
+
+    pid = state.get('pid')
+    alive = False
+    uptime_sec = None
+    process = None
+    if isinstance(pid, int):
+        try:
+            proc = psutil.Process(pid)
+            proc.create_time()          # raises if the pid was recycled
+            alive = proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE
+            if alive:
+                uptime_sec = max(0, int(now - proc.create_time()))
+                with proc.oneshot():
+                    process = {'name': proc.name(), 'status': proc.status()}
+        except psutil.NoSuchProcess:
+            alive = False
+        except psutil.AccessDenied:
+            # The pid exists but is not ours to inspect. Reporting it dead
+            # would be a lie, so it stays alive with an unknown uptime.
+            alive = True
+
+    payload = {
+        'ok': True,
+        'available': bool(state),
+        'state': state.get('gateway_state') or ('running' if alive else 'unknown'),
+        'pid': pid if isinstance(pid, int) else None,
+        'alive': alive,
+        'uptime_sec': uptime_sec,
+        'code_version': state.get('code_version') or '',
+        'code_sha': state.get('code_sha') or '',
+        'active_agents': state.get('active_agents'),
+        'active_work': state.get('active_work'),
+        'session_store': (state.get('session_store') or {}).get('status', ''),
+        'served_profiles': list(state.get('served_profiles') or []),
+        'platforms': _hermes_platforms(state.get('platforms')),
+        'updated_at': state.get('updated_at'),
+        'process': process,
+        'model': _hermes_active_model(),
+        'state_error': state_error,
+        'read_at': now,
+    }
+    _hermes_state_cache['at'] = now
+    _hermes_state_cache['payload'] = payload
+    return payload
+
+
+def get_hermes_logs(limit=HERMES_LOG_DEFAULT_LIMIT, source='gateway'):
+    """Tail of a Hermes log file, parsed into display records.
+
+    Chronological (oldest first) so the frontend can append like a terminal.
+
+    `source` is checked against HERMES_LOG_SOURCES rather than joined onto the
+    logs directory, because it comes straight off the query string.
+    """
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = HERMES_LOG_DEFAULT_LIMIT
+    limit = max(1, min(limit, HERMES_LOG_MAX_LIMIT))
+
+    source = str(source or 'gateway').strip().lower()
+    if source not in HERMES_LOG_SOURCES:
+        source = 'gateway'
+
+    now = time.time()
+    cache_key = (source, limit)
+    cached = _hermes_log_cache['payload']
+    if cached is not None and _hermes_log_cache['key'] == cache_key:
+        if now - _hermes_log_cache['at'] < HERMES_LOG_CACHE_TTL:
+            return cached
+
+    path = os.path.join(hermes_logs_dir(), f'{source}.log')
+    text = _read_text(path, HERMES_LOG_TAIL_BYTES)
+
+    error = None
+    if not text:
+        error = f'{source}.log is empty or unreadable' if os.path.exists(path) \
+            else f'{source}.log not found'
+
+    records = []
+    for line in text.splitlines():
+        parsed = _parse_log_line(line)
+        if parsed:
+            records.append(parsed)
+
+    # The tail window is a byte budget, not a line budget, so trimming to the
+    # newest `limit` records has to happen after parsing rather than before.
+    records = records[-limit:]
+
+    payload = {
+        'ok': True,
+        'source': source,
+        'count': len(records),
+        'logs': records,
+        'error': error,
+        'read_at': now,
+    }
+    _hermes_log_cache['at'] = now
+    _hermes_log_cache['key'] = cache_key
+    _hermes_log_cache['payload'] = payload
+    return payload
+
+
+def _parse_log_line(line):
+    """'2026-10-07 02:44:35,209 INFO gateway.run: response ready'
+       -> {time, level, logger, message}
+
+    Returns None for anything that does not match, so interleaved continuation
+    lines and tracebacks are dropped instead of being shown as garbage records.
+
+    The timestamp is positional: Hermes writes Python logging's default
+    '%Y-%m-%d %H:%M:%S', optionally followed by ',%f' milliseconds and a single
+    space. Both the millisecond comma and the separator space are checked, so a
+    line without milliseconds cannot be mis-sliced by the offset that assumes
+    them.
+    """
+    # Shortest possible line is 19 timestamp chars + ' LEVEL' + ' x: y'.
+    if not line or len(line) < 28:
+        return None
+    # Cheap shape check: digit, '-', digit, '-', digit.
+    if line[4] != '-' or line[7] != '-':
+        return None
+
+    if line[19] == ',' and line[23] == ' ':
+        stamp_len = 23
+    elif line[19] == ' ':
+        stamp_len = 19
+    else:
+        return None
+
+    rest_of_line = line[stamp_len:]
+    # Exactly one separating space, present in both timestamp forms. Skipping it
+    # explicitly is what keeps `partition(' ')` from returning an empty level.
+    if rest_of_line.startswith(' '):
+        rest_of_line = rest_of_line[1:]
+    level, sep, rest = rest_of_line.partition(' ')
+    if not sep:
+        return None
+    level = level.strip().upper()
+    if level == 'WARN':
+        level = 'WARNING'
+    if level not in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
+        return None
+
+    logger, _, message = rest.partition(':')
+    return {
+        'time': line[:stamp_len],
+        'level': level,
+        'logger': logger.strip(),
+        'message': message.strip() or rest.strip(),
+    }
+
 
 def get_hermes_config_providers():
     global _cached_providers, _last_provider_time
@@ -1269,6 +1603,38 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         elif self.path == '/api/live-providers':
             data = get_live_providers()
             return self.send_json(data)
+        elif self.path == '/api/hermes/status':
+            # Live gateway heartbeat + active model config. get_hermes_status()
+            # is total: it reports an unreadable source as data, so this can be
+            # called directly. The try is only a backstop so an unexpected bug
+            # still answers with JSON rather than dropping the connection.
+            try:
+                return self.send_json(get_hermes_status())
+            except Exception as exc:  # noqa: BLE001
+                print(f'[hermes] status failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                    'served_profiles': [],
+                    'platforms': [],
+                }, code=500)
+        elif self.path.startswith('/api/hermes/logs'):
+            # startswith, not ==: self.path carries the query string, so an
+            # exact match 404s on the very first '?limit=' it is meant to read.
+            import urllib.parse
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            limit = qs.get('limit', [HERMES_LOG_DEFAULT_LIMIT])[0]
+            source = qs.get('source', ['gateway'])[0]
+            try:
+                return self.send_json(get_hermes_logs(limit, source))
+            except Exception as exc:  # noqa: BLE001
+                print(f'[hermes] logs failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                    'logs': [],
+                    'count': 0,
+                }, code=500)
         elif self.path == '/api/synced-models':
             # Live-synced catalogue: gateway + Hermes config + OmniRoute, merged.
             # Returned as a LIST so the frontend can consume it exactly like

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Activity, Boxes, Brain, Coins, Play, ScrollText, Sliders, X,
 } from 'lucide-react';
+import { useHermesStatus } from '../../hooks/useHermes.js';
 
 /**
  * NavDrawer - Material 3 Navigation Drawer with Hamburger trigger.
@@ -9,6 +11,7 @@ import {
  * - Hamburger toggle button with M3 tactile spring
  * - Smooth scrollable primary views (Overview, Models, Agents, Playground, Cost, Logs)
  * - Pinned Bottom Settings button (zero scroll bottleneck)
+ * - Live gateway badge on the Logs destination (enabled only while open)
  * - Staggered entrance animations and SVG hover microgeometry
  */
 export function NavDrawer({
@@ -17,6 +20,11 @@ export function NavDrawer({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHamburgerHovered, setIsHamburgerHovered] = useState(false);
+
+  // Backs the LIVE badge on the Logs item. Gated on `isOpen` so a closed
+  // drawer costs no requests at all; when closed the badge simply reads its
+  // last known value, which is what a badge like this should do anyway.
+  const { alive, loadState } = useHermesStatus({ enabled: isOpen });
 
   // Close on Escape key
   useEffect(() => {
@@ -33,13 +41,29 @@ export function NavDrawer({
     { label: 'Agents', path: '/agents', icon: Brain },
     { label: 'Playground', path: '/playground', icon: Play },
     { label: 'Cost', path: '/cost', icon: Coins },
-    { label: 'Logs', path: '/logs', icon: ScrollText },
+    // `live` marks the one destination that has a live feed behind it, so the
+    // badge below is not hardcoded to one label and cannot drift out of sync
+    // with the item it annotates.
+    { label: 'Logs', path: '/logs', icon: ScrollText, live: true },
   ];
 
   const handleSelect = (path) => {
     setIsOpen(false);
     if (typeof onNavigate === 'function') onNavigate(path);
   };
+
+  // Tri-state on purpose: "we have not asked yet" is not the same answer as
+  // "asked, and the gateway is down", and the two look identical if collapsed.
+  const gatewayTone = loadState === 'loading'
+    ? 'text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)]'
+    : alive
+      ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
+      : 'text-rose-400 border-rose-500/40 bg-rose-500/10';
+  const gatewayDot = loadState === 'loading'
+    ? 'bg-[var(--md-sys-color-outline)]'
+    : alive
+      ? 'bg-emerald-400 animate-pulse'
+      : 'bg-rose-400';
 
   return (
     <>
@@ -96,6 +120,18 @@ export function NavDrawer({
         </svg>
       </button>
 
+      {/* Backdrop + panel are portalled to <body>.
+          The trigger above stays in the header's flow, but the drawer itself
+          must NOT: the header sets `backdrop-blur-md`, and a backdrop-filter
+          (like transform/filter/will-change) establishes a containing block
+          for position:fixed descendants. The panel's `bottom-0` was therefore
+          resolving against the 64px-tall sticky header instead of the
+          viewport, collapsing the drawer to a ~63px sliver where the nav list
+          overflowed and the pinned Settings button sat on top of the items.
+          Rendering at the body root restores viewport-relative fixed
+          positioning. All styling is unchanged - only the DOM parent moves. */}
+      {createPortal(
+        <>
       {/* Drawer Backdrop Overlay with Blur Fade */}
       {isOpen && (
         <div
@@ -107,6 +143,7 @@ export function NavDrawer({
 
       {/* Slide-out Drawer Panel with Expressive Spring */}
       <div
+        data-testid="nav-drawer-panel"
         className={`fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[85vw] bg-[var(--md-sys-color-surface-container-low)] border-r border-[var(--md-sys-color-outline-variant)] flex flex-col shadow-2xl transition-transform duration-350 ease-[cubic-bezier(0.38,1.21,0.22,1)] ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -167,6 +204,8 @@ export function NavDrawer({
                 type="button"
                 onClick={() => handleSelect(item.path)}
                 style={{ animationDelay: `${idx * 45}ms` }}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={item.live ? `${item.label}, Hermes gateway live feed` : item.label}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer active:scale-95 group relative overflow-hidden ${
                   isActive
                     ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-semibold shadow-xs'
@@ -178,9 +217,26 @@ export function NavDrawer({
                   className="transition-colors duration-200"
                 />
                 <span className="flex-1 text-left">{item.label}</span>
-                {isActive && (
+                {item.live ? (
+                  // Gateway liveness. On the active row the badge inverts to the
+                  // on-primary colour so it stays legible against the filled
+                  // M3 primary surface.
+                  <span
+                    title={loadState === 'loading'
+                      ? 'Checking Hermes gateway…'
+                      : alive ? 'Hermes gateway is streaming' : 'Hermes gateway is not running'}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
+                      isActive
+                        ? 'border-current text-[var(--md-sys-color-on-primary)]'
+                        : gatewayTone
+                    }`}
+                  >
+                    <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-current' : gatewayDot}`} />
+                    Live
+                  </span>
+                ) : isActive ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_white]" />
-                )}
+                ) : null}
               </button>
             );
           })}
@@ -205,6 +261,9 @@ export function NavDrawer({
           </button>
         </div>
       </div>
+        </>,
+        document.body,
+      )}
     </>
   );
 }

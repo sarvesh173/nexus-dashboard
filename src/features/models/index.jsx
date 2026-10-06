@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Activity, ArrowLeft, AudioLines, Boxes, Brain, CheckCircle2, Copy, DownloadCloud, Edit2,
-  Eye, EyeOff, ExternalLink, FileQuestion, ImageIcon, Layers, MessageSquare, Mic,
-  Plus, RefreshCw, Search, Sliders, Sparkles, Trash, Volume2,
+  Activity, ArrowLeft, Boxes, CheckCircle2, Copy, DownloadCloud, Edit2,
+  EyeOff, ExternalLink, FileQuestion,
+  Plus, RefreshCw, Search, Sliders, Trash,
 } from 'lucide-react';
 import { getModelLogo } from '../../modelLogos.js';
 import {
   ProviderModalityStats, InteractiveStatValue, InteractiveModelPill, InteractiveActiveModelsBadge,
-  ProviderHeaderAction, getModelTelemetry,
+  ProviderHeaderAction, ModalityFilterTabs, getModelTelemetry,
 } from './parts.jsx';
 import { useModelConnection } from '../../hooks/useModelConnection.js';
 import { triggerSyncNow } from '../../api/syncNow.js';
@@ -120,7 +120,7 @@ export function ModelsFeature(props) {
                               nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
                               setEditingProvider(currentProvider);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer group"
+                            className="pa-action pa-edit group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
 
                           >
                             <Edit2 size={13} className="theme-icon-edit" />
@@ -134,10 +134,11 @@ export function ModelsFeature(props) {
                               nexusLog('ACTION', `Opened Fetch Models dialog for ${currentProvider.id}`);
                               setIsFetchModalOpen(true);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
+                            data-syncing={isSyncingNow ? 'true' : 'false'}
+                            className="pa-action pa-fetch flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
 
                           >
-                            <DownloadCloud size={13} className="theme-icon-fetch" />
+                            <DownloadCloud size={13} className="theme-icon-fetch pa-fetch-glyph" />
                             <span>Fetch</span>
                           </button>
 
@@ -148,10 +149,10 @@ export function ModelsFeature(props) {
                               nexusLog('ACTION', `Opened Add Custom Model dialog for ${currentProvider.id}`);
                               setIsAddModalOpen(true);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
+                            className="pa-action pa-add flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
 
                           >
-                            <Plus size={13} className="theme-icon-add" />
+                            <Plus size={13} className="theme-icon-add pa-add-glyph" />
                             <span>Add</span>
                           </button>
                         </div>
@@ -258,16 +259,17 @@ export function ModelsFeature(props) {
                                 setIsSelectActive(true);
                               }
                             }}
-                            className={`px-3 py-1 rounded-full border text-[11px] font-mono font-semibold transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1) flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs ${
+                            data-active={isSelectionMode ? 'true' : 'false'}
+                            className={`pa-action pa-select px-3 py-1 rounded-full border text-[11px] font-mono font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs ${
                               isSelectionMode
                                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30'
-                                : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]'
+                                : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)]'
                             }`}
 
                           >
-                            <svg viewBox="0 0 16 16" className="w-3 h-3 stroke-current stroke-2 fill-none">
-                              <rect x="2" y="2" width="12" height="12" rx="3" />
-                              {isSelectionMode && <polyline points="4.5 8.5 7 11 11.5 5" />}
+                            <svg viewBox="0 0 16 16" className="pa-select-glyph w-3 h-3 stroke-current stroke-2 fill-none">
+                              <rect x="2" y="2" width="12" height="12" rx="3" className="pa-select-box" />
+                              {isSelectionMode && <polyline points="4.5 8.5 7 11 11.5 5" className="pa-select-tick" />}
                             </svg>
                             <span>{isSelectionMode ? 'Done' : 'Select'}</span>
                           </button>
@@ -352,17 +354,18 @@ export function ModelsFeature(props) {
                               e.stopPropagation();
                               handleCancelAll();
                             }}
-                            className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] transition-all flex items-center gap-1.5 active:scale-95 whitespace-nowrap cursor-pointer"
+                            data-state={currentSelectionCount === (visibleProviders.length || 1) && visibleProviders.length > 0 ? 'complete' : 'idle'}
+                            className="pa-action pa-all px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[11px] font-mono font-medium text-[var(--md-sys-color-on-surface)] flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
 
                           >
-                            <span className={`w-3.5 h-3.5 rounded-sm flex items-center justify-center border transition-all ${
+                            <span className={`pa-select-box w-3.5 h-3.5 rounded-sm flex items-center justify-center border ${
                               currentSelectionCount === (visibleProviders.length || 1)
                                 ? 'bg-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] text-white'
                                 : 'border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container-highest)]'
                             }`}>
                               {currentSelectionCount === (visibleProviders.length || 1) && (
                                 <svg viewBox="0 0 16 16" className="w-2.5 h-2.5 stroke-current stroke-2 fill-none">
-                                  <polyline points="3 8 6.5 11.5 13 4" />
+                                  <polyline points="3 8 6.5 11.5 13 4" className="pa-select-tick" />
                                 </svg>
                               )}
                             </span>
@@ -391,12 +394,13 @@ export function ModelsFeature(props) {
                               type="button"
                               onClick={handleHideSelected}
                               disabled={currentSelectionCount === 0}
-                              className={`px-3 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1 border ${
+                              className={`pa-action pa-hide px-3 py-1 rounded-full text-[11px] font-mono font-medium whitespace-nowrap flex items-center gap-1 border ${
                                 currentSelectionCount > 0
                                   ? 'bg-[var(--md-sys-color-error-container)]/80 text-[var(--md-sys-color-error)] hover:bg-[var(--md-sys-color-error)] hover:text-white border-[var(--md-sys-color-error)]/30 cursor-pointer shadow-xs'
                                   : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]/40 border-[var(--md-sys-color-outline-variant)]/40 cursor-not-allowed'
                               }`}
                             >
+                              <span className="pa-hide-glyph" aria-hidden="true">✕</span>
                               <span>Hide</span>
                             </button>
 
@@ -426,10 +430,11 @@ export function ModelsFeature(props) {
                               type="button"
                               onClick={handleTestSelected}
                               disabled={isBatchTesting}
-                              className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5 border bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20 cursor-pointer shadow-xs"
+                              data-state={isBatchTesting ? 'running' : 'idle'}
+                              className="pa-action pa-all px-2.5 py-1 rounded-full text-[11px] font-mono font-medium whitespace-nowrap flex items-center gap-1.5 border bg-cyan-500/10 text-cyan-400 border-cyan-500/30 cursor-pointer shadow-xs"
                               title="Sequentially probe latency for all selected models"
                             >
-                              <Activity size={12} className={isBatchTesting ? 'animate-pulse text-emerald-400' : ''} />
+                              <Activity size={12} className={isBatchTesting ? 'pa-all-glyph text-emerald-400' : ''} />
                               <span>{isBatchTesting ? `Testing ${batchProgress.current}/${batchProgress.total}…` : `Test Selected (${selectedModelIds.size})`}</span>
                             </button>
                           )}
@@ -925,7 +930,7 @@ export function ModelsFeature(props) {
                             nexusLog('NAVIGATION', `Double-clicked provider card "${prov.id}" -> opening models view`);
                             setSelectedProviderId(prov.id);
                           }}
-                          className={`provider-card group p-4 rounded-3xl border transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.99] active:duration-100 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
+                          className={`provider-card pa-provider group p-4 rounded-3xl border transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.99] active:duration-100 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
                               ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-[1.015] z-10'
                               : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:z-[99] focus-within:z-[99]'
@@ -1024,7 +1029,7 @@ export function ModelsFeature(props) {
                                         <div className="flex items-center gap-1.5 min-w-0">
                                           <h3
 
-                                            className={`font-bold ${isUltraCompact ? 'text-xs' : isCompact ? 'text-sm' : 'text-base'} leading-tight text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors truncate min-w-0 flex-1`}
+                                            className={`pa-provider-title font-bold ${isUltraCompact ? 'text-xs' : isCompact ? 'text-sm' : 'text-base'} leading-tight text-[var(--md-sys-color-on-surface)] group-hover:text-[var(--md-sys-color-primary)] transition-colors truncate min-w-0 flex-1`}
                                           >
                                             {cardName}
                                           </h3>
@@ -1212,43 +1217,13 @@ export function ModelsFeature(props) {
                             e.currentTarget.scrollLeft += e.deltaY * 1.5;
                           }
                         }}
-                        className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
+                        className="overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
                       >
-                        {[
-                          { id: 'all', label: 'All Daily', count: categoryCounts.all, icon: Layers },
-                          { id: 'text', label: 'LLM', count: categoryCounts.text, icon: MessageSquare },
-                          { id: 'vision', label: 'Vision', count: categoryCounts.vision, icon: Eye },
-                          { id: 'image-gen', label: 'Image Gen', count: categoryCounts['image-gen'], icon: ImageIcon },
-                          { id: 'tts', label: 'TTS', count: categoryCounts.tts, icon: Volume2 },
-                          { id: 'stt', label: 'STT', count: categoryCounts.stt, icon: Mic },
-                          { id: 'embedding', label: 'Embeddings', count: categoryCounts.embedding, icon: AudioLines },
-                          { id: 'decision', label: 'Reasoning', count: categoryCounts.decision, icon: Brain },
-                          { id: 'specialized', label: 'Lab/Robotics', count: categoryCounts.specialized, icon: Sparkles },
-                        ].map((cat) => {
-                          const Icon = cat.icon;
-                          const isActive = activeCategory === cat.id;
-                          return (
-                            <button
-                              key={cat.id}
-                              onClick={() => setActiveCategory(cat.id)}
-                              className={`flex items-center gap-1.5 px-3 py-2 font-medium border-b-2 whitespace-nowrap transition-colors ${
-                                isActive
-                                  ? 'border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-primary)] font-bold'
-                                  : 'border-transparent text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
-                              }`}
-                            >
-                              <Icon size={13} />
-                              <span>{cat.label}</span>
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                                isActive
-                                  ? 'bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)]'
-                                  : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'
-                              }`}>
-                                {cat.count}
-                              </span>
-                            </button>
-                          );
-                        })}
+                        <ModalityFilterTabs
+                          counts={categoryCounts}
+                          activeCategory={activeCategory}
+                          onSelect={setActiveCategory}
+                        />
                       </div>
 
                       {/* Right Corner: The Paid vs Free Tier Filter Toggle */}
@@ -1285,10 +1260,11 @@ export function ModelsFeature(props) {
                           type="button"
                           disabled={isTestingAll || filteredModels.length === 0}
                           onClick={() => runTestAll(filteredModels)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
+                          data-state={isTestingAll ? 'running' : 'idle'}
+                          className="pa-action pa-all flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 cursor-pointer shadow-xs disabled:opacity-50"
 
                         >
-                          <RefreshCw size={12} className={isTestingAll ? 'animate-spin' : ''} />
+                          <RefreshCw size={12} className={isTestingAll ? 'pa-all-glyph' : ''} />
                           <span>{isTestingAll ? `Testing ${testAllProgress.current}/${testAllProgress.total}…` : 'Test All'}</span>
                         </button>
 
@@ -1296,13 +1272,14 @@ export function ModelsFeature(props) {
                         <button
                           type="button"
                           onClick={() => setIsSelectActive(prev => !prev)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs border transition-all apple-pressable cursor-pointer shadow-xs ${
+                          data-active={isSelectionMode ? 'true' : 'false'}
+                          className={`pa-action pa-select flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs border cursor-pointer shadow-xs ${
                             isSelectionMode
-                              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] shadow-sm'
-                              : 'bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
+                              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)]'
+                              : 'bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)]'
                           }`}
                         >
-                          <span>{isSelectionMode ? 'Done' : 'Select'}</span>
+                          <span className="pa-select-glyph">{isSelectionMode ? 'Done' : 'Select'}</span>
                           {isSelectionMode && selectedModelIds && selectedModelIds.size > 0 && (
                             <span className="w-4 h-4 rounded-full bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-primary)] text-[10px] font-bold flex items-center justify-center font-mono">
                               {selectedModelIds.size}
@@ -1315,9 +1292,9 @@ export function ModelsFeature(props) {
                           type="button"
                           onClick={() => handleHideAllInView(filteredModels)}
                           disabled={filteredModels.length === 0}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 border border-[var(--md-sys-color-outline-variant)] hover:border-rose-500/30 transition-all apple-pressable cursor-pointer shadow-xs"
+                          className="pa-action pa-hide flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] hover:text-rose-400 border border-[var(--md-sys-color-outline-variant)] cursor-pointer shadow-xs disabled:opacity-50"
                         >
-                          <EyeOff size={12} />
+                          <EyeOff size={12} className="pa-hide-glyph" />
                           <span>Hide Section</span>
                         </button>
 
@@ -1326,9 +1303,9 @@ export function ModelsFeature(props) {
                           type="button"
                           onClick={() => handleHideAllInView(activeModelsPool)}
                           disabled={activeModelsPool.length === 0}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-rose-500/10 text-rose-400/90 border border-rose-500/20 hover:bg-rose-500/20 transition-all apple-pressable cursor-pointer shadow-xs"
+                          className="pa-action pa-hide-all flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium text-xs bg-rose-500/10 text-rose-400/90 border border-rose-500/20 cursor-pointer shadow-xs disabled:opacity-50"
                         >
-                          <Trash size={12} />
+                          <Trash size={12} className="pa-hide-all-glyph" />
                           <span>Hide All</span>
                         </button>
                       </div>
@@ -1435,10 +1412,11 @@ export function ModelsFeature(props) {
                                     aria-label={(hidden.models.includes(item.id)
                                       ? 'Restore ' : 'Hide ')
                                       + (item.name ?? item.id)}
-                                    className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] leading-none bg-[var(--md-sys-color-surface-container-highest)]/80 border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:border-[var(--md-sys-color-error)] hover:text-[var(--md-sys-color-error)] transition-colors"
+                                    className="pa-action pa-hide shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] leading-none bg-[var(--md-sys-color-surface-container-highest)]/80 border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-error)]"
                                   >
-                                    {hidden.models.includes(item.id)
-                                      ? '↺' : '✕'}
+                                    <span className="pa-hide-glyph" aria-hidden="true">
+                                      {hidden.models.includes(item.id) ? '↺' : '✕'}
+                                    </span>
                                   </button>
                                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] font-mono border border-[var(--md-sys-color-outline-variant)] uppercase font-semibold">
                                     {item.category || '—'}
@@ -1504,7 +1482,8 @@ export function ModelsFeature(props) {
                                       runModelTest(item);
                                     }}
                                     disabled={isTesting}
-                                    className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all active:scale-95 apple-pressable shadow-xs cursor-pointer border ${
+                                    data-state={isTesting ? 'testing' : isOk ? 'ok' : isTimeout ? 'timeout' : isError ? 'error' : 'idle'}
+                                    className={`pa-action pa-test group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold shadow-xs cursor-pointer border ${
                                       isTesting
                                         ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
                                         : isOk
@@ -1513,10 +1492,10 @@ export function ModelsFeature(props) {
                                         ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                                         : isError
                                         ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                                        : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/30'
+                                        : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 border-[var(--md-sys-color-outline-variant)]'
                                     }`}
                                   >
-                                    <Activity size={12} className={`theme-icon-test ${isTesting ? 'animate-pulse text-emerald-400' : ''}`} />
+                                    <Activity size={12} className={`theme-icon-test ${isTesting ? 'text-emerald-400' : ''}`} />
                                     <span>
                                       {isTesting
                                         ? 'Testing…'
@@ -1541,7 +1520,7 @@ export function ModelsFeature(props) {
                                   e.stopPropagation();
                                   setConfiguringModel(item);
                                 }}
-                                className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-amber-400 border border-[var(--md-sys-color-outline-variant)] hover:border-amber-500/40 hover:bg-amber-500/10 transition-all active:scale-95 shadow-xs cursor-pointer"
+                                className="pa-action pa-context group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-amber-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
 
                               >
                                 <Sliders size={12} className="theme-icon-config" />

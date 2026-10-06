@@ -21,6 +21,21 @@ def hermes_env_path():
     return os.path.join(HERMES_HOME, '.env')
 
 
+def hermes_gateway_state_path():
+    """The gateway's own heartbeat file: pid, state, platforms, profiles.
+
+    Written by the Hermes gateway process, read here read-only. Absent whenever
+    the gateway has never started (or has been stopped cleanly), so every caller
+    has to treat a missing file as a real state, not an error to hide.
+    """
+    return os.path.join(HERMES_HOME, 'gateway_state.json')
+
+
+def hermes_logs_dir():
+    """Directory holding the rotating Hermes log files (gateway.log, ...)."""
+    return os.path.join(HERMES_HOME, 'logs')
+
+
 def omniroute_env_path():
     return os.path.join(OMNIROUTE_HOME, '.env')
 

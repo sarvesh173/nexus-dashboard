@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  Circle, DownloadCloud, Edit2, Plus, RefreshCw, Sliders, Square, Undo2, X,
-  ZoomIn, ZoomOut, ImagePlus,
+  AudioLines, Brain, Circle, DownloadCloud, Edit2, Eye, ImageIcon, ImagePlus, Layers,
+  MessageSquare, Mic, Plus, RefreshCw, Sliders, Sparkles, Square, Undo2, Volume2, X,
+  ZoomIn, ZoomOut,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '../cost/index.jsx';
 
@@ -69,6 +70,127 @@ export const MODALITY_ALIASES = {
   'image-gen': 'vision', image_gen: 'vision', embedding: 'embedding', embeddings: 'embedding',
   stt: 'stt', audio: 'stt', tts: 'tts',
 };
+
+/* Modality filter tabs: single source of truth for label, icon, count key and
+   the accent colour that drives every hover/active glow below. */
+export const MODALITY_FILTER_TABS = Object.freeze([
+  { id: 'all', label: 'All', hint: 'Global view', accent: '#38bdf8', icon: Layers },
+  { id: 'text', label: 'LLM', hint: 'Text generation', accent: '#fbbf24', icon: MessageSquare },
+  { id: 'vision', label: 'Vision', hint: 'Multimodal vision', accent: '#818cf8', icon: Eye },
+  { id: 'image-gen', label: 'Image Gen', hint: 'Diffusion / image generation', accent: '#f472b6', icon: ImageIcon },
+  { id: 'tts', label: 'TTS', hint: 'Text to speech', accent: '#c084fc', icon: Volume2 },
+  { id: 'stt', label: 'STT', hint: 'Speech to text', accent: '#34d399', icon: Mic },
+  { id: 'embedding', label: 'Embed', hint: 'Vector embedding', accent: '#22d3ee', icon: AudioLines },
+  { id: 'decision', label: 'Reasoning', hint: 'Deep thinking', accent: '#60a5fa', icon: Brain },
+  { id: 'specialized', label: 'Else', hint: 'Other modalities', accent: '#fb7185', icon: Sparkles },
+]);
+
+export const MODALITY_ACCENTS = Object.freeze(
+  Object.fromEntries(MODALITY_FILTER_TABS.map(({ id, accent }) => [id, accent]))
+);
+
+/**
+ * Modality filter pills with a gliding active indicator.
+ *
+ * The indicator is absolutely positioned and measured from the live DOM, so the
+ * pill row never reflows while the indicator travels — the only geometry the
+ * browser recomputes is transform/width on an out-of-flow element.
+ */
+export function ModalityFilterTabs({ counts, activeCategory, onSelect, className = '' }) {
+  const containerRef = useRef(null);
+  const tabRefs = useRef(new Map());
+  const pulseCounter = useRef(0);
+  const [indicator, setIndicator] = useState(null);
+  const [pulse, setPulse] = useState({ id: null, token: 0 });
+
+  const activeAccent = MODALITY_ACCENTS[activeCategory] || 'var(--md-sys-color-primary)';
+
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const tab = tabRefs.current.get(activeCategory);
+    if (!tab) return;
+    setIndicator({ x: tab.offsetLeft, w: tab.offsetWidth });
+  }, [activeCategory]);
+
+  useLayoutEffect(() => { measure(); }, [measure]);
+
+  useEffect(() => {
+    measure();
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(container);
+    for (const tab of tabRefs.current.values()) observer.observe(tab);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [measure]);
+
+  const handleSelect = (id) => {
+    pulseCounter.current += 1;
+    setPulse({ id, token: pulseCounter.current });
+    onSelect?.(id);
+  };
+
+  const registerTab = (id) => (node) => {
+    if (node) tabRefs.current.set(id, node);
+    else tabRefs.current.delete(id);
+  };
+
+  return (
+    <div className={`relative flex items-center gap-1 ${className}`}>
+      {indicator && (
+        <span
+          aria-hidden="true"
+          data-modality-indicator="true"
+          className="modality-tab-indicator"
+          style={{
+            width: `${indicator.w}px`,
+            transform: `translate3d(${indicator.x}px, 0, 0)`,
+            '--pill-accent': activeAccent,
+          }}
+        />
+      )}
+
+      {MODALITY_FILTER_TABS.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeCategory === tab.id;
+        const count = counts?.[tab.id] ?? 0;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            title={tab.hint}
+            ref={registerTab(tab.id)}
+            onClick={() => handleSelect(tab.id)}
+            data-modality-pill={tab.id}
+            data-active={isActive ? 'true' : 'false'}
+            className="modality-tab relative z-10 flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 border-transparent whitespace-nowrap cursor-pointer"
+            style={{ '--pill-accent': tab.accent }}
+          >
+            <Icon size={13} className="modality-tab-icon" />
+            <span>{tab.label}</span>
+            <span className="modality-tab-count text-[10px] px-1.5 py-0.2 rounded-full">{count}</span>
+            {isActive && pulse.id === tab.id && (
+              <span
+                key={pulse.token}
+                aria-hidden="true"
+                className="modality-tab-pulse"
+                style={{ '--pill-accent': tab.accent }}
+                onAnimationEnd={() => setPulse((p) => (p.id === tab.id ? { id: null, token: 0 } : p))}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 
 function getProviderModalityStats(provider) {
@@ -677,10 +799,11 @@ export function ModelConfigModal({ model, currentConfig, onSave, onReset, onClos
             type="button"
             onClick={handleAutoDetect}
             disabled={isFetchingAuto}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all apple-pressable cursor-pointer shadow-xs disabled:opacity-50"
+            data-syncing={isFetchingAuto ? 'true' : 'false'}
+            className="pa-action pa-fetch flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 cursor-pointer shadow-xs disabled:opacity-50"
 
           >
-            <RefreshCw size={12} className={isFetchingAuto ? 'animate-spin' : ''} />
+            <RefreshCw size={12} className="pa-fetch-glyph" />
             <span>{isFetchingAuto ? 'Querying API…' : 'Auto Fetch'}</span>
           </button>
         </div>
@@ -1084,7 +1207,9 @@ export function FetchModelsModal({ isOpen, provider, onImport, onClose, suggeste
 
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3 text-cyan-400">
-            <DownloadCloud size={32} className="text-[var(--md-sys-color-primary)] opacity-80" />
+            <div data-syncing="true" className="pa-action pa-fetch p-3 rounded-full">
+              <DownloadCloud size={32} className="pa-fetch-glyph text-[var(--md-sys-color-primary)] opacity-80" />
+            </div>
             <p className="text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">Syncing latest releases from upstream API…</p>
           </div>
         ) : (
@@ -1560,20 +1685,16 @@ export function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onTogg
             onToggleSelect(prov.id, e);
           }}
           aria-label={isSelected ? `Deselect ${prov.name || prov.id}` : `Select ${prov.name || prov.id}`}
-          className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1) cursor-pointer active:scale-90 animate-in fade-in zoom-in-75 backdrop-blur-md ${
+          data-active={isSelected ? 'true' : 'false'}
+          className={`pa-action pa-select pa-check ml-2 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer animate-in fade-in zoom-in-75 backdrop-blur-md ${
             isSelected
-              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_2px_8px_rgba(124,58,237,0.35)] scale-110 ring-2 ring-[var(--md-sys-color-primary)]/50'
-              : 'bg-[var(--md-sys-color-surface-container-highest)]/85 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
+              ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_2px_8px_rgba(124,58,237,0.35)] ring-2 ring-[var(--md-sys-color-primary)]/50'
+              : 'bg-[var(--md-sys-color-surface-container-highest)]/85 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)]'
           }`}
 
         >
-          <svg
-            viewBox="0 0 16 16"
-            className={`w-3 h-3 stroke-current stroke-2 fill-none transition-transform duration-250 ease-[cubic-bezier(0.2,0,0,1)] ${
-              isSelected ? 'scale-100' : 'scale-75 opacity-0 hover:opacity-50'
-            }`}
-          >
-            <polyline points="3.5 8.5 6.5 11.5 12.5 5" />
+          <svg viewBox="0 0 16 16" className="pa-select-glyph w-3 h-3 stroke-current stroke-2 fill-none">
+            <polyline points="3.5 8.5 6.5 11.5 12.5 5" className="pa-select-tick" />
           </svg>
         </button>
       )}
