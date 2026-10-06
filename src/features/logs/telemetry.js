@@ -72,7 +72,7 @@ export function normaliseRouteEntry(raw, index = 0) {
   const outputTokens = Number(firstValue(source.outputTokens, source.output_tokens, source.completion_tokens, 0));
   const model = String(firstValue(source.model, source.model_name, 'unknown-model'));
   const provider = String(firstValue(source.provider, source.route, 'OmniRoute'));
-  const statusSeverity = status >= 500 ? 'CRITICAL' : status >= 400 ? 'ERROR' : latencyMs >= 1500 ? 'WARN' : 'INFO';
+  const statusSeverity = status >= 500 ? 'CRITICAL' : status === 429 ? 'WARN' : status >= 400 ? 'ERROR' : latencyMs >= 1500 ? 'WARN' : 'INFO';
 
   return {
     id: String(firstValue(source.id, source.request_id, `route-${timestamp}-${index}`)),
