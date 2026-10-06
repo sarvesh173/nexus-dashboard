@@ -149,7 +149,6 @@ export const PROVIDER_LOGO_MAP = Object.freeze({
   nothink: '/logos/no-think.svg',
   'no-think': '/logos/no-think.svg',
   oad: '/logos/oad.svg',
-  ollamacloud: '/logos/ollama-cloud.svg',
   omniroute: '/logos/other.svg',
   openadapter: '/logos/openadapter.svg',
   openagentic: '/logos/openagentic.svg',
@@ -166,7 +165,6 @@ export const PROVIDER_LOGO_MAP = Object.freeze({
   tokenrouter: '/logos/token-router.svg',
   'token-router': '/logos/token-router.svg',
   unikey: '/logos/unikey.svg',
-  zhipu: '/logos/zhipu.svg',
 });
 
 const MODEL_RULES = [

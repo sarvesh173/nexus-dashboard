@@ -58,7 +58,7 @@ export function SettingsFeature(props) {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                     {[
                       { id: 'right', name: 'Right Side (Default)', desc: 'Vertical (^) then diagonal (/) branching right' },
-                      { id: 'left', name: 'Left Side', desc: 'Vertical (^) then diagonal (\) branching left' },
+                      { id: 'left', name: 'Left Side', desc: 'Vertical (^) then diagonal (\\\\) branching left' },
                       { id: 'auto', name: 'Automatic Mirror', desc: 'Dynamically adapts to available viewport margin' }
                     ].map(opt => {
                       const isSelected = leaderAlign === opt.id;
