@@ -43,6 +43,8 @@ export { fetchGatewayStatus } from './gatewayStatus.js';
 export { fetchHermesStatus } from './hermesStatus.js';
 export { fetchHermesLogs } from './hermesLogs.js';
 export { fetchHealth } from './health.js';
+export { fetchActiveAgents } from './agentsActive.js';
+export { fetchAgentLogs } from './agentsLogs.js';
 export {
   fetchVisibility,
   setHidden,

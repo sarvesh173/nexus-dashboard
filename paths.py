@@ -40,6 +40,31 @@ def omniroute_env_path():
     return os.path.join(OMNIROUTE_HOME, '.env')
 
 
+def omniroute_storage_path():
+    """The proxy's own SQLite store: per-request model routing and token usage.
+
+    Read-only to this dashboard. A missing file is a normal state (the proxy has
+    never run here), so callers treat absence as data rather than as an error.
+    """
+    return os.path.join(OMNIROUTE_HOME, 'storage.sqlite')
+
+
+def opencode_home():
+    """Where the opencode CLI keeps its session store and rotating log."""
+    return os.environ.get('OPENCODE_HOME') or os.path.join(
+        os.path.expanduser('~'), '.local', 'share', 'opencode')
+
+
+def opencode_db_path():
+    """The CLI's session/message/part store - the live agent execution stream.
+
+    This is the only source of truth for which model an agent is actually
+    running and what it is currently doing. It is opened read-only and never
+    written by this project.
+    """
+    return os.path.join(opencode_home(), 'opencode.db')
+
+
 # The local OpenAI-compatible proxy. Overridable so a checkout carries no
 # machine-specific port either.
 OMNI_BASE = os.environ.get('OMNIROUTE_BASE_URL') or 'http://127.0.0.1:20128/v1'

@@ -302,7 +302,7 @@ export function ModelsFeature(props) {
                                 style={{
                                   transform: isSelectHovered ? 'scale(1)' : 'scale(0)',
                                   transformOrigin: '38px 28px',
-                                  transition: isSelectHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
+                                  transition: isSelectHovered ? 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)' : 'transform 150ms ease-out',
                                 }}
                               />
                             </svg>
@@ -314,7 +314,7 @@ export function ModelsFeature(props) {
                                 opacity: isSelectHovered ? 1 : 0,
                                 transform: isSelectHovered ? 'translateY(0) scale(1)' : 'translateY(-4px) scale(0.96)',
                                 transition: isSelectHovered
-                                  ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+                                  ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1) 40ms'
                                   : 'opacity 180ms ease-out, transform 180ms ease-out',
                               }}
                             >
@@ -330,13 +330,13 @@ export function ModelsFeature(props) {
 
                         {/* 2. Liquid Glass Reveal Capsule (Smooth Apple spring expand) */}
                         <div
-                          className={`flex items-center gap-1.5 transition-all duration-300 origin-left overflow-visible ${
+                            className={`flex items-center gap-1.5 transition-all duration-300 origin-left overflow-visible ${
                             isSelectionMode
                               ? 'max-w-[500px] opacity-100 scale-100'
                               : 'max-w-0 opacity-0 scale-90 pointer-events-none'
                           }`}
                           style={{
-                            transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                            transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)'
                           }}
                         >
                           {/* Select All Pill with Tactile Mini Checkbox & Toggle/Double-Tap Unselect */}

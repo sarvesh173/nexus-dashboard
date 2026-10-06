@@ -48,20 +48,27 @@ export function usePolling(fetcher, options = {}) {
   const [isPolling, setIsPolling] = useState(false);
 
   // Held in a ref so changing the interval or the fetcher identity does not
-  // tear down and restart the polling effect on every render.
+  // tear down and restart the polling effect on every render. Synced in an
+  // effect (not during render) so the ref is never read as a render input.
+  // Declared before the polling effect, so it is always current by the time
+  // that effect invokes run().
   const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
 
-  // Tracks whether a successful response has ever landed, which is what keeps
-  // a transient poll failure from flipping a live dashboard into an error page.
-  const hasDataRef = useRef(initialData !== null && initialData !== undefined);
+  // Whether the hook was seeded with usable data on mount. Captured once, like
+  // the old ref initialiser: later initialData changes do not retroactively
+  // claim we have data.
+  const [seededWithData] = useState(
+    () => initialData !== null && initialData !== undefined,
+  );
 
   const run = useCallback(async () => {
     setIsPolling(true);
     try {
       const result = await fetcherRef.current();
       setData(result);
-      hasDataRef.current = true;
       setLoadState('ready');
       setError(null);
       setLastUpdatedAt(Date.now());
@@ -115,7 +122,11 @@ export function usePolling(fetcher, options = {}) {
     data,
     error,
     loadState,
-    hasData: hasDataRef.current,
+    // "ready" means a response has landed at least once; a failure that happens
+    // before the first success demotes to 'error' and never clears the seed.
+    // Derived, not tracked in a ref, so consumers get a value consistent with
+    // the render they are in.
+    hasData: loadState === 'ready' || seededWithData,
     lastUpdatedAt,
     isPolling,
     refresh: run,
@@ -144,7 +155,9 @@ export function useOnce(fetcher, options = {}) {
   const [loadState, setLoadState] = useState('loading');
 
   const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
 
   const refresh = useCallback(async () => {
     try {

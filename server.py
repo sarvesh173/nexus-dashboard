@@ -35,6 +35,11 @@ try:
 except ImportError:
     visibility = None
 
+try:
+    import agent_stream
+except ImportError:
+    agent_stream = None
+
 _cached_data = None
 _last_poll_time = 0
 CACHE_TTL = 7.0  # 7-second hardware polling delay to reduce CPU overhead
@@ -388,13 +393,35 @@ def _hermes_active_model():
 
 
 def _hermes_platforms(raw):
-    """Flatten gateway_state.json's platform map into a sorted, flat list."""
+    """Flatten gateway_state.json's platform map into a sorted, flat list.
+
+    Total by construction. gateway_state.json is written by a separate process
+    whose schema this server does not control, and a `platforms` value that is a
+    list rather than a mapping used to raise AttributeError here - taking the
+    whole status card down and returning a 500, which contradicts this module's
+    documented contract that a corrupt source is reported as data, not as an
+    HTTP error. Anything that is not a mapping is reported as no platforms
+    rather than being allowed to escape.
+    """
     out = []
-    for name, info in (raw or {}).items():
+    if not isinstance(raw, dict):
+        return out
+    for name, info in raw.items():
         if not isinstance(info, dict):
+            # A platform described by a bare string is still worth surfacing;
+            # one described by a number or null is not.
+            if isinstance(info, str) and info:
+                out.append({
+                    'name': str(name),
+                    'state': info,
+                    'error_code': None,
+                    'error_message': None,
+                    'needs_attention': False,
+                    'updated_at': None,
+                })
             continue
         out.append({
-            'name': name,
+            'name': str(name),
             'state': info.get('state') or 'unknown',
             'error_code': info.get('error_code'),
             'error_message': info.get('error_message'),
@@ -1284,15 +1311,100 @@ def config_provider_map():
     return pm
 
 
+def _json_safe(value, _depth=0):
+    """Coerce an arbitrary payload into something json.dumps can always encode.
+
+    Three separate failure modes are handled here, and all three used to take
+    the whole response down rather than degrade it:
+
+    1. Non-finite floats. ``json.dumps`` happily emits the bare tokens ``NaN``
+       and ``Infinity``, which are NOT valid JSON, so the browser's
+       ``JSON.parse`` rejects the response and the dashboard falls back to
+       rendering a raw-text blob. A hardware reading that produces a NaN (or a
+       float that overflowed to infinity) therefore silently broke the whole
+       payload. They become ``None``/null, which is the honest encoding: the
+       value was not a real measurement.
+    2. Objects json.dumps has no rule for (set, bytes, Decimal, a psutil or
+       datetime instance). These become their string form instead of raising.
+    3. Self-referential structures, which raise "Circular reference detected".
+
+    Depth is bounded so a pathological payload cannot turn normalisation into
+    its own source of unbounded recursion; anything past the cap is stringified
+    rather than walked.
+    """
+    # A non-finite float can only appear at a position json.dumps inspects
+    # directly, and it must be intercepted before the C encoder sees it because
+    # `default=` is never consulted for a float.
+    if isinstance(value, float):
+        return value if value == value and value not in (float('inf'), float('-inf')) else None
+    if value is None or isinstance(value, (bool, int, str)):
+        return value
+    if _depth > 64:
+        return f'<max-depth:{type(value).__name__}>'
+    if isinstance(value, dict):
+        return {
+            (k if isinstance(k, str) else str(k)): _json_safe(v, _depth + 1)
+            for k, v in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item, _depth + 1) for item in value]
+    if isinstance(value, (set, frozenset)):
+        # Sorted so the same input always serialises to the same bytes, which
+        # keeps HTTP caching and log diffing meaningful.
+        try:
+            return sorted(_json_safe(item, _depth + 1) for item in value)
+        except TypeError:
+            return [_json_safe(item, _depth + 1) for item in value]
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode('utf-8', errors='replace')
+    return str(value)
+
+
+def _encode_json(data):
+    """Serialise to bytes, or raise. Kept separate from send_json so the
+    encode step can be retried with an error envelope."""
+    return json.dumps(
+        _json_safe(data),
+        # ensure_ascii stays ON deliberately. A log line read with
+        # errors='replace' can still carry a lone surrogate, and with
+        # ensure_ascii=False the resulting str raises UnicodeEncodeError at
+        # .encode('utf-8') - turning one bad byte in a log file into a dead
+        # response. Escaping keeps the payload pure ASCII, which is always
+        # encodable, and JSON.parse restores the original characters.
+        ensure_ascii=True,
+        allow_nan=False,   # _json_safe has already removed every non-finite float
+    ).encode('utf-8')
+
+
 class TelemetryHandler(BaseHTTPRequestHandler):
     def send_json(self, data, code=200):
-        body = json.dumps(data).encode('utf-8')
-        self.send_response(code)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Content-Length', str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            body = _encode_json(data)
+        except Exception as exc:  # noqa: BLE001 - last line of defence
+            # A response MUST still be sent. Failing to encode is a bug in the
+            # route, but letting it propagate kills the TCP connection with no
+            # status line at all, which the client sees as RemoteDisconnected and
+            # cannot distinguish from the backend being down. That is the exact
+            # failure this server already fixed once for /api/sync-now; send_json
+            # is shared by every route, so the guard belongs here.
+            print(f'[send_json] encode failed: {type(exc).__name__}: {exc}', flush=True)
+            body = _encode_json({
+                'ok': False,
+                'error': f'response encoding failed: {type(exc).__name__}',
+            })
+            code = 500
+        try:
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # The client hung up mid-response (navigation, tab close, an aborted
+            # poll). Nothing to fix and nothing to report; raising here would
+            # only print a socketserver traceback for a normal event.
+            pass
 
     def do_POST(self):
         """Local visibility control. Upstream OmniRoute has no model-level
@@ -1332,7 +1444,14 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 }
 
                 prompt_text = body.get('prompt') or 'hi'
-                max_toks = int(body.get('max_tokens', 512 if len(prompt_text) > 4 else 64))
+                # A non-numeric max_tokens is a client mistake, not a server
+                # fault: int() on it used to raise ValueError and be reported as
+                # a 500, which told the caller the backend was broken.
+                try:
+                    max_toks = int(body.get('max_tokens', 512 if len(prompt_text) > 4 else 64))
+                except (TypeError, ValueError):
+                    max_toks = 512 if len(prompt_text) > 4 else 64
+                max_toks = max(1, min(max_toks, 32_000))
                 payload = {
                     'model': model_id,
                     'messages': [{'role': 'user', 'content': prompt_text}],
@@ -1371,8 +1490,18 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                         err_text = ''
                         try:
                             err_data = res.json()
-                            err_text = err_data.get('error', {}).get('message') or str(err_data)
-                        except:
+                            if isinstance(err_data, dict):
+                                # Some gateways nest the message, some put a bare
+                                # string under 'error'. Both shapes are real.
+                                detail = err_data.get('error')
+                                err_text = (
+                                    detail.get('message', '') if isinstance(detail, dict)
+                                    else detail if isinstance(detail, str)
+                                    else ''
+                                ) or str(err_data)
+                            else:
+                                err_text = str(err_data)
+                        except Exception:  # noqa: BLE001 - non-JSON error body
                             err_text = res.text
                         return self.send_json({
                             'ok': False,
@@ -1430,31 +1559,24 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             except Exception as exc:
                 payload = {'ok': False, 'error': str(exc)[:200]}
                 code = 400
-            self.send_response(code)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(payload).encode('utf-8'))
-            return
+            # Routed through send_json rather than hand-written headers so this
+            # route gets the same Content-Length, encoding guard and NaN/cycle
+            # protection as every other route. It is a local single-user control,
+            # so a malformed kind must stay a 400 - only send_json's encode
+            # fallback can upgrade the status, and only when encoding itself fails.
+            return self.send_json(payload, code)
 
         if self.path == '/api/visibility/reset':
-            before = (len(visibility.hidden_providers()),
-                      len(visibility.hidden_models()))
-            visibility._write_locked(visibility._blank())
-            payload = {'ok': True, 'cleared': {'providers': before[0],
-                                               'models': before[1]}}
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(payload).encode('utf-8'))
-            return
+            try:
+                before = (len(visibility.hidden_providers()),
+                          len(visibility.hidden_models()))
+                visibility._write_locked(visibility._blank())
+            except Exception as exc:  # noqa: BLE001
+                return self.send_json({'ok': False, 'error': str(exc)[:200]}, 500)
+            return self.send_json({'ok': True, 'cleared': {'providers': before[0],
+                                                           'models': before[1]}})
 
-        self.send_response(404)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps({'ok': False,
-                                    'error': 'unknown route'}).encode('utf-8'))
+        return self.send_json({'ok': False, 'error': 'unknown route'}, 404)
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -1475,14 +1597,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         elif self.path == '/api/cost-overview':
             return self.send_json(get_cost_overview())
         elif self.path == '/api/providers':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            data = get_hermes_config_providers()
-            body_bytes = json.dumps(data).encode('utf-8')
-            self.send_header('Content-Length', str(len(body_bytes)))
-            self.end_headers()
-            self.wfile.write(body_bytes)
+            return self.send_json(get_hermes_config_providers())
         elif self.path.startswith('/api/model/connection-health'):
             import live_sync
             cache = live_sync.read_cache()
@@ -1594,12 +1709,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 'source': source
             })
         elif self.path == '/api/all-providers':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            data = get_all_config_providers()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return self.send_json(get_all_config_providers())
         elif self.path == '/api/live-providers':
             data = get_live_providers()
             return self.send_json(data)
@@ -1617,6 +1727,46 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'error': f'{type(exc).__name__}: {exc}',
                     'served_profiles': [],
                     'platforms': [],
+                }, code=500)
+        elif self.path.startswith('/api/agents/active'):
+            # Live agent sessions: which model each one is running, the prompt it
+            # was given, and its execution stream. The reader is total - an
+            # unreadable store is reported in `sources`, never as a 500 - so this
+            # calls straight through. The try is only a backstop for an
+            # unexpected bug, which still answers with JSON rather than dropping
+            # the connection the frontend is polling.
+            try:
+                return self.send_json(agent_stream.read_active_agents())
+            except Exception as exc:  # noqa: BLE001
+                print(f'[agents] active failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                    'count': 0,
+                    'live_count': 0,
+                    'agents': [],
+                }, code=500)
+        elif self.path.startswith('/api/agents/logs'):
+            # startswith, not ==: self.path carries the query string, so an
+            # exact match 404s on the very first '?session=' it is meant to read.
+            import urllib.parse
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            session_id = (qs.get('session', [''])[0] or '').strip()
+            raw_limit = qs.get('limit', [str(agent_stream.CALL_LIMIT)])[0]
+            try:
+                limit = int(raw_limit)
+            except (TypeError, ValueError):
+                limit = agent_stream.CALL_LIMIT
+            try:
+                return self.send_json(
+                    agent_stream.read_agent_logs(session_id or None, limit))
+            except Exception as exc:  # noqa: BLE001
+                print(f'[agents] logs failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                    'count': 0,
+                    'calls': [],
                 }, code=500)
         elif self.path.startswith('/api/hermes/logs'):
             # startswith, not ==: self.path carries the query string, so an
@@ -1646,12 +1796,16 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             for p in rows:
                 p.setdefault('model_count', len(p.get('models') or []))
                 p['total_models'] = p['model_count']
+            # The live catalogue changes under us between polls, so it must never
+            # be served from an intermediary cache.
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Cache-Control', 'no-store')
+            body = _encode_json({'providers': rows, '_meta': meta})
+            self.send_header('Content-Length', str(len(body)))
             self.end_headers()
-            self.wfile.write(json.dumps({'providers': rows, '_meta': meta}).encode('utf-8'))
+            self.wfile.write(body)
             return
         elif self.path == '/api/sync-status':
             import live_sync
@@ -1671,22 +1825,35 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'error': f'{type(exc).__name__}: {exc}',
                 }, code=500)
         elif self.path == '/api/gateway-status':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            data = hermes_gateway.status()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            try:
+                return self.send_json(hermes_gateway.status())
+            except Exception as exc:  # noqa: BLE001
+                # hermes_gateway can be None when the import failed, and status()
+                # is not total. A gateway that cannot describe itself is still an
+                # answerable route, so report it rather than dropping the socket.
+                print(f'[gateway-status] {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json(
+                    {'ok': False, 'error': f'{type(exc).__name__}: {exc}'}, 500)
         elif self.path == '/api/health':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            data = model_health.summary()
-            self.wfile.write(json.dumps(data).encode('utf-8'))
+            try:
+                return self.send_json(model_health.summary())
+            except Exception as exc:  # noqa: BLE001
+                print(f'[health] {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json(
+                    {'ok': False, 'error': f'{type(exc).__name__}: {exc}'}, 500)
+        elif self.path == '/api/stats':
+            # get_telemetry reads psutil, which can raise on a procfs read race
+            # (a process exiting between enumeration and inspection). It is a
+            # 2s-cadence poll, so an unhandled raise here would be the most
+            # visible failure on the dashboard.
+            try:
+                return self.send_json(get_telemetry())
+            except Exception as exc:  # noqa: BLE001
+                print(f'[stats] {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json(
+                    {'ok': False, 'error': f'{type(exc).__name__}: {exc}'}, 500)
         else:
-            self.send_response(404)
-            self.end_headers()
+            return self.send_json({'ok': False, 'error': 'unknown route'}, 404)
 
     def log_message(self, format, *args):
         pass

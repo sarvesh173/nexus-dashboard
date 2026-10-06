@@ -93,21 +93,31 @@ function buildCostWalkthrough(usdAmount, currency, tokens = 1_000_000) {
  * the right or bottom edge.
  */
 export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
-  const [coords, setCoords] = useState(null);
-  // Mount the leader fully retracted, then flip on the next frame so the CSS
-  // transitions actually run instead of rendering straight to their end state.
-  const [drawn, setDrawn] = useState(false);
+  // Position and reveal are ONE piece of state, not two.
+  //
+  // They were separate, which forced a `setDrawn(false)` to run synchronously
+  // inside the effect below every time the panel closed - a cascading extra
+  // render on each hover-out. Opening is the event that decides the panel
+  // starts retracted, so that reset belongs in showTooltip(), where it is a
+  // normal state update from an event handler.
+  const [tooltip, setTooltip] = useState(null);   // {coords, drawn}
   const anchorRef = useRef(null);
   const tooltipId = React.useId();
 
+  const coords = tooltip?.coords ?? null;
+  const drawn = tooltip?.drawn === true;
+
   useEffect(() => {
-    if (!coords) {
-      setDrawn(false);
-      return undefined;
-    }
-    const raf = requestAnimationFrame(() => setDrawn(true));
+    // Nothing to reveal without a position. The update below is scheduled on
+    // the next frame, so this effect never sets state synchronously.
+    if (!coords) return undefined;
+    const raf = requestAnimationFrame(() => {
+      setTooltip((prev) => (prev?.coords === coords ? { coords, drawn: true } : prev));
+    });
     return () => cancelAnimationFrame(raf);
   }, [coords]);
+
+  const dismissTooltip = () => setTooltip(null);
 
   const showTooltip = () => {
     if (coords || !anchorRef.current) return;
@@ -253,21 +263,27 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
     // at its corner.
     const landingX = isBelow || isAbove ? boxX + panelWidth / 2 : boxX;
     const landingY = isBelow || isAbove ? boxY : boxY;
-    setCoords({
-      dotX: dotX,
-      dotY,
-      midX,
-      midY,
-      boxX, boxY, panelWidth,
-      landingX, landingY,
-      isRightAligned: isBelow || isAbove ? false : goRight,
-      isBelow: isBelow || isAbove,
+    // Mount the panel and its leader fully retracted (`drawn: false`), then let
+    // the effect above flip it on the next frame so the CSS transitions run
+    // instead of the panel rendering straight to its end state.
+    setTooltip({
+      drawn: false,
+      coords: {
+        dotX: dotX,
+        dotY,
+        midX,
+        midY,
+        boxX, boxY, panelWidth,
+        landingX, landingY,
+        isRightAligned: isBelow || isAbove ? false : goRight,
+        isBelow: isBelow || isAbove,
+      },
     });
   };
 
   const hideTooltip = (event) => {
     if (event.currentTarget.contains(document.activeElement)) return;
-    setCoords(null);
+    dismissTooltip();
   };
 
   // The anchor IS the trigger: it wraps the figure itself so it has real size
@@ -290,11 +306,11 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
         }}
         onMouseLeave={hideTooltip}
         onFocus={showTooltip}
-        onBlur={() => setCoords(null)}
+        onBlur={dismissTooltip}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             event.stopPropagation();
-            setCoords(null);
+            dismissTooltip();
           }
         }}
         className={`cursor-default select-none rounded-md outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords ? 'relative z-50' : ''}`}

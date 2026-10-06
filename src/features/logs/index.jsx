@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { RefreshCw, ScrollText, Search, Trash2, Cpu, Radio, Activity } from 'lucide-react';
 import { useHermesStatus, useHermesLogs } from '../../hooks/useHermes.js';
+import { getNexusLogs, clearNexusLogs, subscribeNexusLogs, NEXUS_LOG_CATEGORIES } from '../../nexusLog.js';
 
 /**
  * LogsFeature - Real-time system telemetry and gateway activity viewer.
@@ -9,6 +10,14 @@ import { useHermesStatus, useHermesLogs } from '../../hooks/useHermes.js';
  *   1. Nexus' own in-memory event buffer (existing behaviour, unchanged).
  *   2. The live Hermes gateway card + log tail, polled from the backend and
  *      gated on the /logs route being the active view.
+ *
+ * Feed 1 reads the shared buffer module directly rather than through the
+ * `nexusLog` prop. That prop is the `nexusLog()` *function*, which has no
+ * `getRecent` and no `clear` member - calling `nexusLog?.getRecent(100)` fell
+ * through to `[]` on every render, so this terminal showed "no logs" forever
+ * no matter how much telemetry had been recorded, and the Clear button was a
+ * silent no-op. The buffer's real read/clear API is `getNexusLogs()` and
+ * `clearNexusLogs()`.
  */
 
 /** '3d 2h 14m' from a second count. Kept coarse: uptime is read at 5s. */
@@ -237,33 +246,46 @@ function HermesActivityCard({ isActive, onRefresh }) {
   );
 }
 
-export function LogsFeature({ isLogsNavActive, nexusLog }) {
+export function LogsFeature({ isLogsNavActive }) {
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState(() => getNexusLogs());
 
-  const refreshLogs = React.useCallback(() => {
-    const entries = nexusLog?.getRecent ? nexusLog.getRecent(100) : [];
-    setLogs(entries);
-  }, [nexusLog]);
+  // Subscribe to the buffer rather than polling it on an interval. Polling cost
+  // a setInterval that lived as long as the view was mounted and lagged new
+  // events by up to the poll period, on a view whose purpose is streaming them.
+  //
+  // The subscription is unconditional, and that is deliberate. Every feature in
+  // this app stays mounted and is shown/hidden with CSS, so gating the
+  // subscription on `isLogsNavActive` would drop every event recorded while the
+  // user was on another screen - the terminal would then need a synchronous
+  // re-seed inside the effect on activation, which is a cascading render. An
+  // event-driven subscription has no interval to leak and no idle cost, so it
+  // is strictly cheaper than what it replaces even when the view is hidden.
+  useEffect(() => subscribeNexusLogs(setLogs), []);
 
-  // Poll recent events only when view is active and page is visible
-  useEffect(() => {
-    if (!isLogsNavActive) return undefined;
-    const updateLogs = () => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      refreshLogs();
-    };
-    updateLogs();
-    const interval = setInterval(updateLogs, 8000);
-    return () => clearInterval(interval);
-  }, [isLogsNavActive, refreshLogs]);
+  const refreshLogs = useMemo(() => () => setLogs(getNexusLogs()), []);
 
-  const filteredLogs = logs.filter((l) => {
-    if (filter !== 'ALL' && l.level !== filter) return false;
-    if (search && !JSON.stringify(l).toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // The buffer records a CATEGORY in `type` (ACTION | NAVIGATION | SELECT |
+  // SETTINGS | SYSTEM | ERROR). This view used to filter on `entry.level`,
+  // which the buffer never sets, so every category filter matched zero rows and
+  // the badge rendered a hardcoded 'INFO' for all of them. Filtering on the
+  // field that exists is what makes the toolbar do anything at all.
+  const categories = NEXUS_LOG_CATEGORIES.filter((c) => c !== 'ALL');
+
+  const filteredLogs = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return logs.filter((l) => {
+      if (filter !== 'ALL' && l.type !== filter) return false;
+      if (!needle) return true;
+      // Search the human-readable fields only. The old `JSON.stringify(l)`
+      // matched against the whole entry including its id and timestamp, and
+      // would have thrown on a cyclic detail payload - inside a render, which
+      // takes the whole view down rather than just skipping one row.
+      const haystack = `${l.type ?? ''} ${l.message ?? ''} ${l.details ?? ''}`;
+      return haystack.toLowerCase().includes(needle);
+    });
+  }, [logs, filter, search]);
 
   return (
     <div className={`w-full space-y-4 ${isLogsNavActive ? 'block apple-view-pane' : 'hidden'}`}>
@@ -281,20 +303,20 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
 
         {/* Toolbar Controls */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Level Filter */}
+          {/* Category Filter - the categories the buffer actually records */}
           <div className="flex items-center rounded-full p-0.5 bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[11px] font-mono">
-            {['ALL', 'INFO', 'WARN', 'ERROR'].map((lvl) => (
+            {['ALL', ...categories].map((cat) => (
               <button
-                key={lvl}
+                key={cat}
                 type="button"
-                onClick={() => setFilter(lvl)}
+                onClick={() => setFilter(cat)}
                 className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
-                  filter === lvl
+                  filter === cat
                     ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-bold shadow-xs'
                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]'
                 }`}
               >
-                {lvl}
+                {cat}
               </button>
             ))}
           </div>
@@ -321,7 +343,13 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
           </button>
           <button
             type="button"
-            onClick={() => nexusLog?.clear && nexusLog.clear()}
+            onClick={() => {
+              // The real clear API on the buffer module. The previous
+              // `nexusLog?.clear && nexusLog.clear()` guarded on a member the
+              // prop never had, so the button did nothing at all.
+              clearNexusLogs();
+              setLogs(getNexusLogs());
+            }}
             title="Clear logs buffer"
             className="p-1.5 rounded-full text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer"
           >
@@ -341,20 +369,26 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
             <span>No telemetry logs matching criteria</span>
           </div>
         ) : (
-          filteredLogs.map((entry, idx) => (
-            <div key={idx} className="flex items-start gap-2 hover:bg-white/5 py-0.5 px-1 rounded transition-colors">
-              <span className="text-neutral-500 shrink-0">
+filteredLogs.map((entry, idx) => (
+            <div key={entry.id || idx} className="flex items-start gap-2 py-0.5 px-1 rounded transition-colors">
+              <span className="text-neutral-500 shrink-0 font-mono text-[10px]">
                 {entry.time || '--:--:--'}
               </span>
               <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
-                entry.level === 'ERROR' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                entry.level === 'WARN' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                'bg-cyan-500/15 text-cyan-400 border border-cyan-500/25'
+                entry.type === 'ERROR'
+                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  : entry.type === 'SETTINGS'
+                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/25'
+                  : entry.type === 'SELECT'
+                  ? 'bg-purple-500/15 text-purple-400 border border-purple-500/25'
+                  : entry.type === 'NAVIGATION'
+                  ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25'
+                  : 'bg-neutral-500/15 text-neutral-300 border border-neutral-500/25'
               }`}>
-                {entry.level || 'INFO'}
+                {entry.type || 'SYSTEM'}
               </span>
               <span className="text-neutral-200 break-all flex-1">
-                {typeof entry.message === 'string' ? entry.message : JSON.stringify(entry.message || entry)}
+                {typeof entry.message === 'string' ? entry.message : JSON.stringify(entry.message ?? '')}
               </span>
             </div>
           ))

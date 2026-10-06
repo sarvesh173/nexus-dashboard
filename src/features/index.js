@@ -13,5 +13,10 @@ export {
   EMPTY_MODELS,
 } from './models/index.jsx';
 export { PlaygroundFeature } from './playground/index.jsx';
-export { AgentsFeature, AgentSessionView } from './agents/index.jsx';
+export {
+  LiveAgentsFeature,
+  AgentsFeature,
+  AgentSessionView,
+} from './agents/index.jsx';
 export { SettingsFeature } from './settings/index.jsx';
+export { default as KanbanFeature } from './kanban/index.jsx';

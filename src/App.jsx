@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AGENTS_DATA } from './agentsData';
 import { useHorizontalScroll } from './useHorizontalScroll';
@@ -16,7 +16,7 @@ import {
   NavigationFeature, Breadcrumbs, RouteNotFound, OverviewFeature, CostFeature, CURRENCY_OPTIONS,
   ModelsFeature, ModelConfigModal, AddCustomModelModal, FetchModelsModal, ProviderEditModal,
   getProviderDisplayName, getProviderLogoUrl, SUGGESTED_MODELS, EMPTY_MODELS,
-  PlaygroundFeature, AgentsFeature, SettingsFeature,
+  PlaygroundFeature, LiveAgentsFeature, SettingsFeature,
 } from './features/index.js';
 import { LogsFeature } from './features/logs/index.jsx';
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
@@ -259,7 +259,7 @@ export default function App() {
   const saveModelConfig = (modelId, patch) => {
     if (!modelId) return;
     setModelConfigs((prev) => {
-      const next = { ...prev, [modelId]: { ...(prev[modelId] || {}), ...patch } };
+      const next = { ...prev, [modelId]: { ...prev[modelId], ...patch } };
       try {
         writeJsonStore(STORE_KEYS.modelConfigs, next);
       } catch (err) {
@@ -310,7 +310,7 @@ export default function App() {
     setProviderOverrides((prev) => {
       const key = String(id || '').toLowerCase();
       if (!key) return prev;
-      const next = { ...prev, [key]: { ...(prev[key] || {}), ...patch } };
+      const next = { ...prev, [key]: { ...prev[key], ...patch } };
       try {
         writeJsonStore(STORE_KEYS.providerOverrides, next);
       } catch {
@@ -348,7 +348,7 @@ export default function App() {
     const merged = live.map((provider) => {
       if (provider.id !== 'nvidia') return provider;
       const models = (provider.models || []).map((model) => ({
-        ...(rich[model.id] || {}),
+        ...rich[model.id],
         ...model,
         category: (rich[model.id] || {}).category || 'text',
       }));
@@ -535,6 +535,11 @@ export default function App() {
   const isAgentsNavActive = location.pathname === '/agents';
   const isAgentCliActive = location.pathname.startsWith('/agents/');
   const activeAgentId = isAgentCliActive ? location.pathname.replace('/agents/', '') : null;
+  // Clicking a live agent card navigates to /agents/<session-id>. This mirrors
+  // the navigate prop, which only the module's own components can see.
+  const handleSelectAgent = useCallback((agentId) => {
+    if (agentId) navigate(`/agents/${agentId}`);
+  }, [navigate]);
   const isCostNavActive = location.pathname === '/cost';
   const isPlaygroundNavActive = location.pathname === '/playground';
   const isSettingsNavActive = location.pathname === '/settings';
@@ -545,13 +550,19 @@ export default function App() {
   // refresh, back/forward and any shared link.
   const selectedProviderId =
     (location.pathname.match(/^\/(?:model|models|modules)\/([^/]+)/) || [])[1] || null;
-  const setSelectedProviderId = (id) =>
-    navigate(id ? '/model/' + id : '/model');
+  const setSelectedProviderId = useCallback(
+    (id) => navigate(id ? '/model/' + id : '/model'),
+    [navigate],
+  );
 
   // Single audit trail for every route change, including the ones that land on
   // a 404. This is what makes a bad deep link obvious in the live terminal.
+  // The agent detail route (/agents/<session-id>) is a known route: it is where
+  // the Agent Intelligence Console renders, so a deep link to a session must not
+  // also paint the 404 behind it.
   const isKnownRoute =
     isOverviewNavActive || isModelsNavActive || isAgentsNavActive
+    || isAgentCliActive
     || isPlaygroundNavActive || isCostNavActive || isSettingsNavActive || isLogsNavActive;
   useEffect(() => {
     nexusLog(
@@ -600,22 +611,32 @@ export default function App() {
   const [modelTierFilter, setModelTierFilter] = useState('all'); // 'all' | 'paid' | 'free'
   const [searchQuery, setSearchQuery] = useState('');
 
-  const _baseProviders = allProviders.length ? allProviders : providersList;
-  const visibleProviders = React.useMemo(() => {
-    const providers = showRouters ? _baseProviders : _baseProviders.filter((p) => p.kind !== 'router');
+  const nonRouterProviders = useMemo(
+    () => (showRouters ? providersList : providersList.filter((p) => p.kind !== 'router')),
+    [providersList, showRouters],
+  );
+  const visibleProviders = useMemo(() => {
+    const providers = nonRouterProviders;
     if (!searchQuery) return providers;
     const q = searchQuery.toLowerCase();
     // Identity matches first; model-only hits remain useful. Transport/status
     // labels are deliberately excluded so they cannot match unrelated cards.
-    return providers.map((p) => {
+    // Ranked by matching score, never sorted in place: `providers` can be
+    // providersList itself when routers are shown, and sorting it would mutate
+    // the memoized catalogue that every other consumer reads.
+    const ranked = providers.map((p) => {
       const idHit = (p.name || '').toLowerCase().includes(q)
                  || (p.id || '').toLowerCase().includes(q)
                  || (p.display_name || '').toLowerCase().includes(q);
       return { p, rank: idHit ? 0 : 1 };
     }).filter(({ p, rank }) => rank === 0 || (p.models || EMPTY_MODELS).some((m) =>
       (m.name || '').toLowerCase().includes(q) || (m.id || '').toLowerCase().includes(q)
-    )).sort((a, b) => a.rank - b.rank).map(({ p }) => p);
-  }, [_baseProviders, showRouters, searchQuery]);
+    ));
+    return ranked
+      .slice()
+      .sort((a, b) => a.rank - b.rank)
+      .map(({ p }) => p);
+  }, [nonRouterProviders, searchQuery]);
   
   const modalityScrollRef = useHorizontalScroll();
 
@@ -645,7 +666,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, setSelectedProviderId]);
 
   // Target values polled from backend.
   // Starts null on purpose: until the first successful /api/stats response we
@@ -749,13 +770,22 @@ export default function App() {
 
   // Filter models — guard against undefined model arrays (null safety)
   const currentProvider = providersList.find(p => p.id === selectedProviderId) || null;
+  // Fetch modal suggestions. `isFetchLoading` is derived from which provider the
+  // in-flight fetch belongs to rather than stored as its own flag: the request
+  // is in flight exactly while we have no result for the provider we are
+  // currently showing. That keeps the effect free of synchronous setState and
+  // resets itself on every reopen without an extra state write.
   const [fetchSuggestedModels, setFetchSuggestedModels] = useState([]);
-  const [isFetchLoading, setIsFetchLoading] = useState(false);
+  const [fetchedForProviderKey, setFetchedForProviderKey] = useState(null);
+  const fetchProviderKey =
+    isFetchModalOpen && currentProvider ? String(currentProvider.id || '') : null;
+  const isFetchLoading =
+    fetchProviderKey !== null && fetchedForProviderKey !== fetchProviderKey;
+
   useEffect(() => {
-    if (!isFetchModalOpen || !currentProvider) return undefined;
+    if (fetchProviderKey === null || !currentProvider) return undefined;
     let cancelled = false;
-    const providerAlias = String(currentProvider.id || '').toLowerCase();
-    setIsFetchLoading(true);
+    const providerAlias = fetchProviderKey;
     (async () => {
       try {
         let fetched = [];
@@ -777,15 +807,19 @@ export default function App() {
             { id: `${providerAlias}-fast-inference`, name: `${currentProvider.name || providerAlias} Fast Inference`, category: 'text', context_length: 64000, tier: 'free' },
           ];
         }
-        if (!cancelled) setFetchSuggestedModels(fetched);
+        if (!cancelled) {
+          setFetchSuggestedModels(fetched);
+          setFetchedForProviderKey(providerAlias);
+        }
       } catch {
-        if (!cancelled) setFetchSuggestedModels(SUGGESTED_MODELS[providerAlias] || []);
-      } finally {
-        if (!cancelled) setIsFetchLoading(false);
+        if (!cancelled) {
+          setFetchSuggestedModels(SUGGESTED_MODELS[providerAlias] || []);
+          setFetchedForProviderKey(providerAlias);
+        }
       }
     })();
     return () => { cancelled = true; };
-  }, [isFetchModalOpen, currentProvider]);
+  }, [fetchProviderKey, currentProvider]);
   // An unknown slug is only a 404 once the catalog has actually answered.
   // Before that the view shows a loading state - and, crucially, never falls
   // back to a different provider's models.
@@ -1198,12 +1232,14 @@ export default function App() {
           selectedPlaygroundModel={selectedPlaygroundModel}
           onSelectPlaygroundModel={setSelectedPlaygroundModel}
         />
-        <AgentsFeature
+        <LiveAgentsFeature
           isAgentsNavActive={isAgentsNavActive}
           agents={AGENTS_DATA}
           navigate={navigate}
           isAgentCliActive={isAgentCliActive}
-          activeAgentId={activeAgentId}
+          selectedAgentId={activeAgentId}
+          onSelectAgent={handleSelectAgent}
+          onCloseAgent={() => navigate('/agents')}
         />
         <LogsFeature
           isLogsNavActive={isLogsNavActive}

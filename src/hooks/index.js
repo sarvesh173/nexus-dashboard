@@ -11,12 +11,17 @@
  *   useStats           2s  (psutil sampling rate; a slower poll reads as frozen)
  *   useHermesStatus    5s  (gateway heartbeat; gated on the view being open)
  *   useHermesLogs      5s  (log tail; gated on the view being open)
+ *   useActiveAgents    3s  (live CLI sessions; gated on the view being open)
+ *   useAgentLogs       3s  (proxy call ledger for the selected agent)
  *   useCostOverview  once  (loadState distinguishes pending / ready / error)
  *   useVisibility   on load + on write, with rollback on failure
  *
  * Shared invariants, inherited from usePolling/useOnce:
  *   - Never fabricate empty data to stand in for a failure.
  *   - Keep the last good sample on a transient failure; expose `error`.
+ *   - An empty list from a store that is absent is a STATE, not a failure. Where
+ *     that distinction exists the hook exposes it as a separate `sourceError`,
+ *     never folded into `error`.
  *   - `loadState` is 'loading' | 'ready' | 'error'; `hasData` says whether a
  *     successful payload has landed at all.
  */
@@ -37,6 +42,12 @@ export {
   HERMES_STATUS_INTERVAL_MS,
   HERMES_LOGS_INTERVAL_MS,
 } from './useHermes.js';
+export {
+  useActiveAgents,
+  useAgentLogs,
+  AGENTS_ACTIVE_INTERVAL_MS,
+  AGENT_LOGS_INTERVAL_MS,
+} from './useAgentStream.js';
 export { useCostOverview } from './useCostOverview.js';
 export { useVisibility } from './useVisibility.js';
 export { useModelConnection, CONNECTION_POLL_INTERVAL_MS } from './useModelConnection.js';
