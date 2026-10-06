@@ -166,7 +166,7 @@ export const InteractiveStatValue = React.memo(function InteractiveStatValue({
       }}
       className={`relative inline-flex items-center justify-center cursor-default select-none ${coords ? 'z-50' : ''} ${
         boxLabel
-          ? `min-w-0 p-1.5 rounded-xl border text-center flex-col transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords
+          ? `min-w-0 p-1.5 rounded-xl border text-center flex-col transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords
               ? 'bg-[var(--md-sys-color-primary)]/15 border-[var(--md-sys-color-primary)]'
               : 'bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)]'}`
           : ''
@@ -308,7 +308,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
       className="relative select-none cursor-pointer group/pill"
     >
       {/* Pill Capsule (M3 Theme-Aware) */}
-      <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium border transition-colors duration-150 truncate text-center block w-full shadow-2xs ${
+      <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-medium border transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] truncate text-center block w-full shadow-2xs ${
         isHovered
           ? 'bg-[var(--md-sys-color-surface-container-highest)] border-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-surface)] shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
           : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface-variant)] hover:border-[var(--md-sys-color-outline)]'
@@ -1549,7 +1549,7 @@ export function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onTogg
         >
           <svg
             viewBox="0 0 16 16"
-            className={`w-3 h-3 stroke-current stroke-2 fill-none transition-transform duration-150 ${
+            className={`w-3 h-3 stroke-current stroke-2 fill-none transition-transform duration-250 ease-[cubic-bezier(0.2,0,0,1)] ${
               isSelected ? 'scale-100' : 'scale-75 opacity-0 hover:opacity-50'
             }`}
           >

@@ -113,7 +113,7 @@ export function NavDrawer({
         {/* Drawer Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--md-sys-color-outline-variant)]/40 bg-[var(--md-sys-color-surface-container)]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center font-bold font-mono text-sm shadow-xs transition-transform hover:scale-105">
+            <div className="w-8 h-8 rounded-lg bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] flex items-center justify-center font-bold font-mono text-sm shadow-xs transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:scale-105">
               N
             </div>
             <div>
@@ -125,21 +125,38 @@ export function NavDrawer({
               </p>
             </div>
           </div>
+          {/* Close button with subtle tactile spin */}
           <button
             type="button"
             onClick={() => setIsOpen(false)}
             aria-label="Close Navigation Drawer"
-            className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all cursor-pointer active:scale-90"
+            className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 cursor-pointer active:scale-90 group"
           >
-            <X size={18} className="transition-transform hover:rotate-90" />
+            <X size={18} className="transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:rotate-90 group-hover:scale-110" />
           </button>
+        </div>
+
+        {/* Quick System Telemetry / Diagnostic Badge */}
+        <div className="px-3 py-2 border-b border-[var(--md-sys-color-outline-variant)]/30 bg-[var(--md-sys-color-surface-container)]/50">
+          <div className="flex items-center justify-between text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] px-1">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>CORE ONLINE</span>
+            </span>
+            <span className="text-zinc-500">60 FPS • 56MB</span>
+          </div>
         </div>
 
         {/* Scrollable Navigation Views with Kinetic Scroll & Staggered Transitions */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5 scroll-smooth custom-drawer-scrollbar">
-          <p className="px-3 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-[var(--md-sys-color-on-surface-variant)]/70">
-            Workspaces
-          </p>
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <p className="text-[10px] uppercase font-mono font-bold tracking-wider text-[var(--md-sys-color-on-surface-variant)]/70">
+              Workspaces
+            </p>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]">
+              {navItems.length}
+            </span>
+          </div>
           {navItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path));

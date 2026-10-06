@@ -487,7 +487,7 @@ export function ModelsFeature(props) {
                                   }}
                                   onMouseLeave={() => setIsActiveStatusHovered(false)}
                                 >
-                                  <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/15 rounded-full transition-all duration-150">
+                                  <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/15 rounded-full transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)]">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                                     <span>{visibleProviders.filter(p => p.enabled !== false && p.status !== 'down').length} Active</span>
                                   </span>
@@ -577,7 +577,7 @@ export function ModelsFeature(props) {
                                               const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
                                               const tel = getModelTelemetry(topModel.id || '', topModel.name || '', activeCurrency);
                                               return (
-                                                <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-150">
+                                                <div key={idx} className="p-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-1 hover:border-emerald-500/40 transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)]">
                                                   <div className="flex items-center justify-between text-[10px]">
                                                     <span className="font-semibold truncate max-w-[70px] text-[var(--md-sys-color-on-surface)]">
                                                       {p.display_name || p.name || p.id}
@@ -618,7 +618,7 @@ export function ModelsFeature(props) {
                                   }}
                                   onMouseLeave={() => setIsOfflineStatusHovered(false)}
                                 >
-                                  <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/15 rounded-full transition-all duration-150">
+                                  <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/15 rounded-full transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)]">
                                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500/80" />
                                     <span>{visibleProviders.filter(p => p.enabled === false || p.status === 'down').length} Offline</span>
                                   </span>
@@ -715,7 +715,7 @@ export function ModelsFeature(props) {
                                                 const topModel = (p.models && p.models.length > 0) ? p.models[0] : { id: `${p.id}-default`, name: `${p.name || p.id} Standard` };
                                                 const tel = getModelTelemetry(topModel.id || '', topModel.name || '', activeCurrency);
                                                 return (
-                                                  <div key={idx} className="p-1 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-0.5 hover:border-rose-500/30 transition-all duration-150">
+                                                  <div key={idx} className="p-1 rounded-xl bg-[var(--md-sys-color-surface-container-high)]/60 border border-[var(--md-sys-color-outline-variant)]/40 space-y-0.5 hover:border-rose-500/30 transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]">
                                                     <div className="flex items-center justify-between text-[9.5px]">
                                                       <span className="font-semibold truncate max-w-[70px] text-[var(--md-sys-color-on-surface)]">
                                                         {p.display_name || p.name || p.id}
@@ -772,7 +772,7 @@ export function ModelsFeature(props) {
 
                           {/* Simple Auto-Centered Hover Flyout (No complicated targeting) */}
                           <div
-                            className={`absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+8px)] pointer-events-none z-[100] transition-all duration-150 origin-bottom ${
+                            className={`absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+8px)] pointer-events-none z-[100] transition-all duration-250 ease-[cubic-bezier(0,0,0.2,1)] origin-bottom ${
                               isLogoHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
                             }`}
                           >
@@ -787,7 +787,7 @@ export function ModelsFeature(props) {
                         {/* 2. Apple Glass Router Filter Switch */}
                         <button
                           onClick={() => setShowRouters((v) => !v)}
-                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-150 active:scale-95 border ${
+                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 border ${
                             showRouters
                               ? 'bg-[var(--md-sys-color-primary)]/15 text-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)]/30 font-semibold'
                               : 'bg-transparent text-[var(--md-sys-color-on-surface-variant)] border-transparent hover:text-[var(--md-sys-color-on-surface)]'
@@ -800,7 +800,7 @@ export function ModelsFeature(props) {
                         <button
                           onClick={() => setShowHidden((v) => !v)}
                           aria-pressed={showHidden}
-                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-150 active:scale-95 flex items-center gap-1.5 border ${
+                          className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 flex items-center gap-1.5 border ${
                             showHidden
                               ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold'
                               : hiddenCount > 0

@@ -661,7 +661,14 @@ body {
    decelerate curve, so nothing overshoots.
    ===================================================================== */
 
-/* Custom Drawer Scrollbar */
+/* Theme and settings card transition polish */
+.settings-option-card {
+  transition: all 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+.settings-option-card:hover {
+  border-color: var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-surface-container-high);
+}
 .custom-drawer-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

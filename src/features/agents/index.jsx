@@ -5,7 +5,7 @@ export function AgentSessionView({ navigate, agents, activeAgentId }) {
   const agent = agents.find((a) => a.id === activeAgentId) || agents[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-[var(--md-sys-color-background)] flex flex-col w-screen h-screen overflow-hidden select-none animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-[var(--md-sys-color-background)] flex flex-col w-screen h-screen overflow-hidden select-none animate-in fade-in duration-300 ease-[cubic-bezier(0,0,0.2,1)]">
       {/* Top Header Bar */}
       <div className="px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] flex items-center justify-between gap-4">
         {/* Top-Left Corner: Active Agent & Session URL */}

@@ -194,10 +194,10 @@ export function SettingsFeature(props) {
                       <button
                         key={p.id}
                         onClick={() => changePalette(p.id)}
-                        className={`p-3.5 rounded-2xl border text-left transition-all active:scale-95 ${
+                        className={`p-3.5 rounded-2xl border text-left transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer ${
                           theme === p.id
-                            ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-xs'
-                            : 'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-outline)]'
+                            ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-high)] shadow-xs ring-1 ring-[var(--md-sys-color-primary)]/30'
+                            : 'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -233,7 +233,7 @@ export function SettingsFeature(props) {
                       <button
                         type="button"
                         onClick={toggleDevMode}
-                        className={`px-4 py-2 rounded-full text-xs font-semibold font-mono transition-all duration-150 cursor-pointer active:scale-95 border ${
+                        className={`px-4 py-2 rounded-full text-xs font-semibold font-mono transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer active:scale-95 border ${
                           devModeEnabled
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-xs'
                             : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
