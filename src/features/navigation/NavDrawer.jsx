@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Activity, Boxes, Brain, Coins, Menu, Play, ScrollText, Sliders, X,
+  Activity, Boxes, Brain, Coins, Play, ScrollText, Sliders, X,
 } from 'lucide-react';
 
 /**

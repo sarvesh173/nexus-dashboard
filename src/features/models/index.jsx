@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   Activity, ArrowLeft, AudioLines, Boxes, Brain, CheckCircle2, Copy, DownloadCloud, Edit2,
   Eye, EyeOff, ExternalLink, FileQuestion, ImageIcon, Layers, MessageSquare, Mic,
-  Plus, Radio, RefreshCw, Search, Sliders, Sparkles, Trash, Volume2,
+  Plus, RefreshCw, Search, Sliders, Sparkles, Trash, Volume2,
 } from 'lucide-react';
 import { getModelLogo } from '../../modelLogos.js';
 import {

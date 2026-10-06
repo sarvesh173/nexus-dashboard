@@ -8,20 +8,23 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [logs, setLogs] = useState([]);
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
+
+  const refreshLogs = React.useCallback(() => {
+    const entries = nexusLog?.getRecent ? nexusLog.getRecent(100) : [];
+    setLogs(entries);
+  }, [nexusLog]);
 
   // Poll recent events only when view is active and page is visible
   useEffect(() => {
     if (!isLogsNavActive) return undefined;
     const updateLogs = () => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      const entries = nexusLog?.getRecent ? nexusLog.getRecent(100) : [];
-      setLogs(entries);
+      refreshLogs();
     };
     updateLogs();
     const interval = setInterval(updateLogs, 8000);
     return () => clearInterval(interval);
-  }, [isLogsNavActive, nexusLog]);
+  }, [isLogsNavActive, refreshLogs]);
 
   const filteredLogs = logs.filter((l) => {
     if (filter !== 'ALL' && l.level !== filter) return false;
@@ -77,6 +80,14 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
 
           <button
             type="button"
+            onClick={refreshLogs}
+            title="Refresh logs buffer"
+            className="p-1.5 rounded-full text-cyan-400 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all cursor-pointer mr-1"
+          >
+            <RefreshCw size={13} />
+          </button>
+          <button
+            type="button"
             onClick={() => nexusLog?.clear && nexusLog.clear()}
             title="Clear logs buffer"
             className="p-1.5 rounded-full text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer"
@@ -97,7 +108,7 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
           filteredLogs.map((entry, idx) => (
             <div key={idx} className="flex items-start gap-2 hover:bg-white/5 py-0.5 px-1 rounded transition-colors">
               <span className="text-neutral-500 shrink-0">
-                {entry.time || new Date().toISOString().substring(11, 19)}
+                {entry.time || '--:--:--'}
               </span>
               <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
                 entry.level === 'ERROR' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :

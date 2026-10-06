@@ -4,6 +4,11 @@ import { CURRENCY_OPTIONS } from '../cost/index.jsx';
 
 export function SettingsFeature(props) {
   const { isSettingsNavActive, activeCurrency, currencyCode, onCurrencyChange, leaderAlign, onLeaderAlignChange, hiddenCount, hiddenItems, setVisibility, onRestoreAll, onPurgeTrash, palettes, theme, changePalette, devModeEnabled, toggleDevMode, logFilter, setLogFilter, handleClearLogs, handleExportLogs, systemLogs, setToast, nexusLog } = props;
+
+  const filteredLogs = React.useMemo(() => {
+    if (!systemLogs) return [];
+    return systemLogs.filter(l => logFilter === 'ALL' || l.type === logFilter);
+  }, [systemLogs, logFilter]);
   return (
         <div className={`w-full space-y-6 ${isSettingsNavActive ? 'block apple-view-pane' : 'hidden'}`}>
                 {/* Global Currency & Cost Symbol Selector (Top Global GDP & Developing Economies) */}
@@ -286,14 +291,12 @@ export function SettingsFeature(props) {
 
                       {/* Terminal Viewport */}
                       <div className="rounded-2xl bg-[#0d0e12] border border-white/10 p-3.5 font-mono text-[11px] max-h-72 overflow-y-auto space-y-1.5 shadow-inner">
-                        {systemLogs.filter(l => logFilter === 'ALL' || l.type === logFilter).length === 0 ? (
+                        {filteredLogs.length === 0 ? (
                           <div className="text-center py-6 text-zinc-500">
                             No logs captured yet in category [{logFilter}]. Click around or navigate to capture events.
                           </div>
                         ) : (
-                          systemLogs
-                            .filter(l => logFilter === 'ALL' || l.type === logFilter)
-                            .map((log) => (
+                          filteredLogs.map((log) => (
                               <div key={log.id} className="flex items-start gap-2.5 py-0.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
                                 <span className="text-zinc-500 shrink-0 text-[10px]">{log.time}</span>
                                 <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold shrink-0 ${
