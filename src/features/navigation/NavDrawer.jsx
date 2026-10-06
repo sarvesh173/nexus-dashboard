@@ -12,11 +12,10 @@ import {
  * - Staggered entrance animations and SVG hover microgeometry
  */
 export function NavDrawer({
-  currentPath = '/',
+  currentPath,
   onNavigate,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -28,12 +27,12 @@ export function NavDrawer({
   }, [isOpen]);
 
   const navItems = [
-    { label: 'Overview', path: '/', icon: Activity, anim: 'group-hover:scale-110' },
-    { label: 'Models', path: '/model', icon: Boxes, anim: 'group-hover:scale-110 group-hover:-translate-y-0.5' },
-    { label: 'Agents', path: '/agents', icon: Brain, anim: 'group-hover:scale-110' },
-    { label: 'Playground', path: '/playground', icon: Play, anim: 'group-hover:translate-x-0.5 group-hover:scale-105' },
-    { label: 'Cost', path: '/cost', icon: Coins, anim: 'group-hover:scale-110 group-hover:-rotate-6' },
-    { label: 'Logs', path: '/logs', icon: ScrollText, anim: 'group-hover:-translate-y-0.5 group-hover:scale-105' },
+    { label: 'Overview', path: '/', icon: Activity },
+    { label: 'Models', path: '/model', icon: Boxes },
+    { label: 'Agents', path: '/agents', icon: Brain },
+    { label: 'Playground', path: '/playground', icon: Play },
+    { label: 'Cost', path: '/cost', icon: Coins },
+    { label: 'Logs', path: '/logs', icon: ScrollText },
   ];
 
   const handleSelect = (path) => {
@@ -48,18 +47,15 @@ export function NavDrawer({
         type="button"
         aria-label="Open Navigation Drawer"
         onClick={() => setIsOpen(true)}
-        className="group relative p-2 rounded-xl text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs overflow-hidden flex items-center justify-center w-9 h-9"
+        className="relative p-2 rounded-xl text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs overflow-hidden flex items-center justify-center w-9 h-9"
       >
-        <span className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         <svg
           width="18"
           height="18"
           viewBox="0 0 18 18"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-105"
         >
-          {/* Top line with smooth morph on hover */}
           <line
             x1="2.5"
             y1="4.5"
@@ -68,20 +64,16 @@ export function NavDrawer({
             stroke="currentColor"
             strokeWidth="1.75"
             strokeLinecap="round"
-            className="transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:translate-x-[2px]"
           />
-          {/* Middle line - shorter dynamic bar */}
           <line
             x1="2.5"
             y1="9"
-            x2="12.5"
+            x2="15.5"
             y2="9"
             stroke="currentColor"
             strokeWidth="1.75"
             strokeLinecap="round"
-            className="transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:translate-x-[-1px] group-hover:scale-x-125"
           />
-          {/* Bottom line */}
           <line
             x1="2.5"
             y1="13.5"
@@ -90,7 +82,6 @@ export function NavDrawer({
             stroke="currentColor"
             strokeWidth="1.75"
             strokeLinecap="round"
-            className="transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:translate-x-[1px]"
           />
         </svg>
       </button>
@@ -125,14 +116,14 @@ export function NavDrawer({
               </p>
             </div>
           </div>
-          {/* Close button with subtle tactile spin */}
+          {/* Close button with subtle tactile opacity */}
           <button
             type="button"
             onClick={() => setIsOpen(false)}
             aria-label="Close Navigation Drawer"
-            className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 cursor-pointer active:scale-90 group"
+            className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 cursor-pointer active:scale-90"
           >
-            <X size={18} className="transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:rotate-90 group-hover:scale-110" />
+            <X size={18} className="transition-opacity duration-200" />
           </button>
         </div>
 
@@ -165,8 +156,6 @@ export function NavDrawer({
                 key={item.path}
                 type="button"
                 onClick={() => handleSelect(item.path)}
-                onMouseEnter={() => setHoveredItem(item.path)}
-                onMouseLeave={() => setHoveredItem(null)}
                 style={{ animationDelay: `${idx * 45}ms` }}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer active:scale-95 group relative overflow-hidden ${
                   isActive
@@ -176,7 +165,7 @@ export function NavDrawer({
               >
                 <Icon
                   size={16}
-                  className={`transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${item.anim}`}
+                  className="transition-colors duration-200"
                 />
                 <span className="flex-1 text-left">{item.label}</span>
                 {isActive && (
@@ -198,7 +187,7 @@ export function NavDrawer({
                 : 'text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)]'
             }`}
           >
-            <Sliders size={16} className="transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:rotate-90 group-hover:scale-110" />
+            <Sliders size={16} className="transition-colors duration-200" />
             <span>Settings</span>
             <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)]">
               Core

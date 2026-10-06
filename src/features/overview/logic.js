@@ -5,14 +5,6 @@ export function useHoverGraceTimer(cooldownMs = 5000) {
   const [isActive, setIsActive] = useState(false);
   const timerRef = useRef(null);
 
-  const onMouseEnter = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setIsActive(true);
-  }, []);
-
   const onMouseMove = useCallback((e) => {
     if (!e || !e.currentTarget) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -24,8 +16,12 @@ export function useHoverGraceTimer(cooldownMs = 5000) {
         timerRef.current = null;
       }
       setIsActive(true);
+    } else {
+      if (isActive) {
+        setIsActive(false);
+      }
     }
-  }, []);
+  }, [isActive]);
 
   const onMouseLeave = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -39,7 +35,7 @@ export function useHoverGraceTimer(cooldownMs = 5000) {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  return { isActive, onMouseEnter, onMouseMove, onMouseLeave };
+  return { isActive, onMouseMove, onMouseLeave };
 }
 
 /** Animate numeric telemetry changes without fabricating the initial sample. */

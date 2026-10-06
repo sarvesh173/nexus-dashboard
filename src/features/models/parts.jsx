@@ -152,7 +152,15 @@ export const InteractiveStatValue = React.memo(function InteractiveStatValue({
       tabIndex={boxLabel ? 0 : undefined}
       aria-label={boxLabel ? `${providerName}: ${numVal} ${label}` : undefined}
       aria-describedby={coords ? tooltipId : undefined}
-      onMouseEnter={showTooltip}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const relY = (e.clientY - rect.top) / rect.height;
+        if (relY >= 0.20 && relY <= 0.85) {
+          if (!coords) showTooltip();
+        } else {
+          if (coords) setCoords(null);
+        }
+      }}
       onMouseLeave={(event) => {
         if (!event.currentTarget.contains(document.activeElement)) setCoords(null);
       }}
@@ -251,25 +259,27 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
 
   const handleMouseEnter = () => {
     let goRight = true;
-    if (currentAlign === 'left') {
+    if (align === 'left') {
       goRight = false;
-    } else if (currentAlign === 'right') {
+    } else if (align === 'right') {
       goRight = true;
-    } else {
-      if (pillRef.current) {
-        const rect = pillRef.current.getBoundingClientRect();
-        goRight = rect.left < 260;
-      }
+    } else if (pillRef.current) {
+      const rect = pillRef.current.getBoundingClientRect();
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      const spaceRight = vw - rect.right;
+      const spaceLeft = rect.left;
+      // Intelligently choose right if at least 270px room on the right, otherwise left
+      goRight = spaceRight >= 270 || spaceRight >= spaceLeft;
     }
 
     if (pillRef.current) {
       const rect = pillRef.current.getBoundingClientRect();
       const dotX = goRight ? rect.width : 0;
       const dotY = rect.height / 2;
-      const midX = goRight ? dotX + 28 : dotX - 28;
+      const midX = goRight ? dotX + 20 : dotX - 20;
       const midY = dotY;
-      const boxX = goRight ? midX + 24 : midX - 24;
-      const boxY = midY - 26;
+      const boxX = goRight ? midX + 16 : midX - 16;
+      const boxY = midY - 20;
       setCoords({ dotX, dotY, midX, midY, boxX, boxY, isRightAligned: goRight });
     } else {
       setCoords(getPillGeometry(goRight));
@@ -298,7 +308,6 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
   return (
     <div
       ref={pillRef}
-      onMouseEnter={handleMouseMove}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
@@ -323,7 +332,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
           style={{
             opacity: isHovered ? 1 : 0,
-            transition: 'opacity 140ms ease-out',
+            transition: 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
           }}
         >
           {/* Continuous Badi Dandi (Horizontal then Diagonal) */}
@@ -335,7 +344,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
             strokeDasharray="90"
             strokeDashoffset={isHovered ? '0' : '90'}
             style={{
-              transition: isHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              transition: isHovered ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
             }}
           />
           {/* Solid Anchor Dot at the pill edge */}
@@ -347,7 +356,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
             style={{
               transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              transition: isHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
             }}
           />
           {/* Connection Dot linked directly to the Context Box corner */}
@@ -359,7 +368,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
             style={{
               transformOrigin: `${coords.boxX}px ${coords.boxY}px`,
               transform: isHovered ? 'scale(1)' : 'scale(0)',
-              transition: isHovered ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+              transition: isHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 50ms' : 'transform 150ms ease-out',
             }}
           />
         </svg>
@@ -374,7 +383,9 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
               isHovered ? 'scale(1)' : 'scale(0.92)'
             }`,
             opacity: isHovered ? 1 : 0,
-            transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: isHovered
+              ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+              : 'opacity 180ms ease-out, transform 180ms ease-out',
           }}
         >
           <div className="w-64 p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_60px_rgba(0,0,0,0.7)] ring-1 ring-white/10 font-mono text-[10.5px] space-y-2.5 text-[var(--md-sys-color-on-surface)]">
@@ -450,43 +461,52 @@ export function InteractiveActiveModelsBadge({ provider, totalCount, onSelect })
         </span>
       </button>
 
-      {/* The curated top-5 preview that used to live here was removed: it listed
-          arbitrary catalog positions rather than models a reader would pick, so
-          it read as filler. The live count above and the provider grid are real. */}
-      {isHovered && (
-        <div
-          className="absolute right-0 top-full w-52 pt-1.5 z-50 pointer-events-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Padding bridges the gap so the pointer can reach See more without closing. */}
-          <div className="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-left font-mono">
-            <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-2">
-              <span className="text-[9.5px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] tracking-wider">
-                Live models
-              </span>
-              <span className="text-[9px] text-[var(--md-sys-color-primary)] font-medium">
-                {displayCount} total
-              </span>
-            </div>
-
-            {/* Model list removed here (was: Top-5 preview). */}
-            <div className="mb-2" />
-
-                        {/* Open full list → Button (Themed) */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect?.();
-              }}
-              className="w-full py-1.5 px-2.5 rounded-xl bg-[var(--md-sys-color-primary)] hover:opacity-90 active:scale-95 text-[var(--md-sys-color-on-primary)] text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            >
-              <span>Open full list</span>
-              <span>→</span>
-            </button>
+      {/* Live models hover popover with smooth fade/scale enter */}
+      <div
+        className={`absolute right-0 top-full w-52 pt-1.5 z-50 pointer-events-auto transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] ${
+          isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Padding bridges the gap so the pointer can reach See more without closing. */}
+        <div className="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/85 backdrop-blur-2xl border border-white/15 shadow-[0_24px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-left font-mono">
+          <div className="flex items-center justify-between border-b border-[var(--md-sys-color-outline-variant)] pb-1.5 mb-2">
+            <span className="text-[9.5px] uppercase font-bold text-[var(--md-sys-color-on-surface-variant)] tracking-wider">
+              Live models
+            </span>
+            <span className="text-[9px] text-[var(--md-sys-color-primary)] font-medium">
+              {displayCount} total
+            </span>
           </div>
+
+          {/* Clean Models Preview */}
+          {rawModels.length > 0 && (
+            <div className="space-y-1 mb-2">
+              {rawModels.slice(0, 5).map((m, idx) => (
+                <div
+                  key={m.id || idx}
+                  className="text-[9.5px] text-[var(--md-sys-color-on-surface)] truncate px-2 py-1 rounded-lg bg-[var(--md-sys-color-surface-container-high)]/80 border border-white/5 flex items-center justify-between"
+                >
+                  <span className="truncate font-mono">{m.name || m.id}</span>
+                  <span className="text-[8.5px] text-[var(--md-sys-color-primary)] ml-1.5 shrink-0 font-semibold">✓</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.();
+            }}
+            className="w-full py-1.5 px-2.5 rounded-xl bg-[var(--md-sys-color-primary)] hover:opacity-90 active:scale-95 text-[var(--md-sys-color-on-primary)] text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer shadow-xs"
+          >
+            <span>Open full list</span>
+            <span>→</span>
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1473,7 +1493,7 @@ export function ProviderEditModal({ provider, overrides, onSave, onReset, onClos
                 className="hidden"
                 onChange={handleFileChange}
               />
-              <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs overflow-hidden">
                 {logoPreview ? (
                   <img src={logoPreview} alt="Preview" className="w-full h-full object-cover" />
                 ) : (

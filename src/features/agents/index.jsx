@@ -118,7 +118,7 @@ export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliA
             position: relative;
           }
           .agent-card:hover .agent-card-logo-shell {
-            transform: perspective(520px) rotateX(-12deg) rotateY(15deg) translate3d(0, -1px, 4px) scale(1.1);
+            transform: scale(1.08);
             box-shadow: 0 0 14px color-mix(in srgb, var(--md-sys-color-primary) 38%, transparent);
             border-color: var(--md-sys-color-primary);
           }

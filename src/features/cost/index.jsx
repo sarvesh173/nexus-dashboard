@@ -302,15 +302,13 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
         {trigger}
         {coords && (
         <>
-          {/* Badi Dandi: signature leader drawn from the figure to the panel.
-              200ms dash draw + 160ms dot scale + 140ms fade, matching the
-              model-pill tooltip exactly. */}
+          {/* Badi Dandi: signature leader drawn from the figure to the panel. */}
           <svg
             aria-hidden="true"
             className="absolute inset-0 w-full h-full overflow-visible pointer-events-none z-[998]"
             style={{
               opacity: drawn ? 1 : 0,
-              transition: 'opacity 140ms ease-out',
+              transition: 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
             }}
           >
             <path
@@ -321,7 +319,7 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
               strokeDasharray="90"
               strokeDashoffset={drawn ? '0' : '90'}
               style={{
-                transition: drawn ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                transition: drawn ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
               }}
             />
             <circle
@@ -332,7 +330,7 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
               style={{
                 transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
                 transform: drawn ? 'scale(1)' : 'scale(0)',
-                transition: drawn ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                transition: drawn ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
               }}
             />
             <circle
@@ -343,7 +341,7 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
               style={{
                 transformOrigin: `${coords.landingX}px ${coords.landingY}px`,
                 transform: drawn ? 'scale(1)' : 'scale(0)',
-                transition: drawn ? 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                transition: drawn ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 50ms' : 'transform 150ms ease-out',
               }}
             />
           </svg>
@@ -357,7 +355,9 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
             width: coords.panelWidth,
             transform: `${coords.isBelow ? 'translate(0, 0)' : coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} scale(${drawn ? 1 : 0.92})`,
             opacity: drawn ? 1 : 0,
-            transition: 'opacity 150ms ease-out, transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: drawn
+              ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+              : 'opacity 180ms ease-out, transform 180ms ease-out',
           }}
         >
           <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[var(--md-sys-color-outline-variant)]">

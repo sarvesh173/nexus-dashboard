@@ -278,7 +278,7 @@ export function ModelsFeature(props) {
                               className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                               style={{
                                 opacity: isSelectHovered ? 1 : 0,
-                                transition: 'opacity 140ms ease-out',
+                                transition: 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
                               }}
                             >
                               <path
@@ -289,7 +289,7 @@ export function ModelsFeature(props) {
                                 strokeDasharray="90"
                                 strokeDashoffset={isSelectHovered ? '0' : '90'}
                                 style={{
-                                  transition: isSelectHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                  transition: isSelectHovered ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
                                 }}
                               />
                               <circle
@@ -300,7 +300,7 @@ export function ModelsFeature(props) {
                                 style={{
                                   transform: isSelectHovered ? 'scale(1)' : 'scale(0)',
                                   transformOrigin: '38px 0px',
-                                  transition: 'transform 120ms ease-out',
+                                  transition: isSelectHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
                                 }}
                               />
                             </svg>
@@ -311,7 +311,9 @@ export function ModelsFeature(props) {
                               style={{
                                 opacity: isSelectHovered ? 1 : 0,
                                 transform: isSelectHovered ? 'translateY(0) scale(1)' : 'translateY(4px) scale(0.96)',
-                                transition: 'opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                transition: isSelectHovered
+                                  ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+                                  : 'opacity 180ms ease-out, transform 180ms ease-out',
                               }}
                             >
                               <div className="flex items-center gap-1.5">
@@ -498,7 +500,7 @@ export function ModelsFeature(props) {
                                       className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                       style={{
                                         opacity: isActiveStatusHovered ? 1 : 0,
-                                        transition: 'opacity 140ms ease-out',
+                                        transition: 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
                                       }}
                                     >
                                       <path
@@ -509,7 +511,7 @@ export function ModelsFeature(props) {
                                         strokeDasharray="120"
                                         strokeDashoffset={isActiveStatusHovered ? '0' : '120'}
                                         style={{
-                                          transition: isActiveStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                          transition: isActiveStatusHovered ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
                                         }}
                                       />
                                       {/* Solid Anchor Dot at the pill edge */}
@@ -521,7 +523,7 @@ export function ModelsFeature(props) {
                                         style={{
                                           transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
                                           transformOrigin: `${activeDotX}px 14px`,
-                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                          transition: isActiveStatusHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
                                         }}
                                       />
                                       {/* Middle Elbow Link Dot */}
@@ -533,7 +535,7 @@ export function ModelsFeature(props) {
                                         style={{
                                           transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
                                           transformOrigin: `${activeMidX}px 14px`,
-                                          transition: 'transform 140ms cubic-bezier(0.16, 1, 0.3, 1) 60ms',
+                                          transition: isActiveStatusHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms' : 'transform 150ms ease-out',
                                         }}
                                       />
                                       {/* Connection Dot locked directly to the Context Box corner */}
@@ -545,7 +547,7 @@ export function ModelsFeature(props) {
                                         style={{
                                           transform: isActiveStatusHovered ? 'scale(1)' : 'scale(0)',
                                           transformOrigin: `${activeBoxX}px ${activeBoxY}px`,
-                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1) 100ms',
+                                          transition: isActiveStatusHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 80ms' : 'transform 150ms ease-out',
                                         }}
                                       />
                                     </svg>
@@ -558,7 +560,9 @@ export function ModelsFeature(props) {
                                         top: `${activeBoxY}px`,
                                         transform: `${activeGoRight ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                         opacity: isActiveStatusHovered ? 1 : 0,
-                                        transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                        transition: isActiveStatusHovered
+                                          ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+                                          : 'opacity 180ms ease-out, transform 180ms ease-out',
                                       }}
                                     >
                                       <div className="w-[360px] p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-2 ring-1 ring-white/5 text-left overflow-hidden">
@@ -629,7 +633,7 @@ export function ModelsFeature(props) {
                                       className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                       style={{
                                         opacity: isOfflineStatusHovered ? 1 : 0,
-                                        transition: 'opacity 140ms ease-out',
+                                        transition: 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
                                       }}
                                     >
                                       <path
@@ -640,7 +644,7 @@ export function ModelsFeature(props) {
                                         strokeDasharray="120"
                                         strokeDashoffset={isOfflineStatusHovered ? '0' : '120'}
                                         style={{
-                                          transition: isOfflineStatusHovered ? 'stroke-dashoffset 200ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                                          transition: isOfflineStatusHovered ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
                                         }}
                                       />
                                       {/* Solid Anchor Dot at the pill edge */}
@@ -652,7 +656,7 @@ export function ModelsFeature(props) {
                                         style={{
                                           transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
                                           transformOrigin: `${offlineDotX}px 14px`,
-                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                          transition: isOfflineStatusHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
                                         }}
                                       />
                                       {/* Middle Elbow Link Dot */}
@@ -664,7 +668,7 @@ export function ModelsFeature(props) {
                                         style={{
                                           transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
                                           transformOrigin: `${offlineMidX}px 14px`,
-                                          transition: 'transform 140ms cubic-bezier(0.16, 1, 0.3, 1) 60ms',
+                                          transition: isOfflineStatusHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms' : 'transform 150ms ease-out',
                                         }}
                                       />
                                       {/* Connection Dot locked directly to the Context Box corner */}
@@ -676,7 +680,7 @@ export function ModelsFeature(props) {
                                         style={{
                                           transform: isOfflineStatusHovered ? 'scale(1)' : 'scale(0)',
                                           transformOrigin: `${offlineBoxX}px ${offlineBoxY}px`,
-                                          transition: 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1) 100ms',
+                                          transition: isOfflineStatusHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 80ms' : 'transform 150ms ease-out',
                                         }}
                                       />
                                     </svg>
@@ -689,7 +693,9 @@ export function ModelsFeature(props) {
                                         top: `${offlineBoxY}px`,
                                         transform: `${offlineGoRight ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                         opacity: isOfflineStatusHovered ? 1 : 0,
-                                        transition: 'opacity 160ms ease-out, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                        transition: isOfflineStatusHovered
+                                          ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+                                          : 'opacity 180ms ease-out, transform 180ms ease-out',
                                       }}
                                     >
                                       <div className="w-[360px] p-2 rounded-2xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] shadow-[0_16px_36px_rgba(0,0,0,0.5)] space-y-1.5 ring-1 ring-white/5 text-left overflow-hidden">
@@ -919,7 +925,7 @@ export function ModelsFeature(props) {
                             nexusLog('NAVIGATION', `Double-clicked provider card "${prov.id}" -> opening models view`);
                             setSelectedProviderId(prov.id);
                           }}
-                          className={`provider-card group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
+                          className={`provider-card group p-4 rounded-3xl border transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.99] active:duration-100 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
                               ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-[1.015] z-10'
                               : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:z-[99] focus-within:z-[99]'

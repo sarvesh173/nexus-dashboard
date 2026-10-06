@@ -195,8 +195,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-model-button.nav-model-active:hover .nav-model-icon,
   .nav-model-button.nav-model-active:focus-visible .nav-model-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(18deg) rotateY(-22deg)
-      translate3d(0, -1px, 3px) scale(1.12);
+    transform: scale(1.08);
   }
 
   .nav-model-button:hover .nav-model-icon::before,
@@ -213,13 +212,12 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   }
 
   .nav-model-button.nav-model-active .nav-model-icon {
-    transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
-      translate3d(0, -0.5px, 2px) scale(1.06);
+    transform: scale(1.04);
   }
 
   .nav-model-button:active .nav-model-icon,
   .nav-model-button.nav-model-active:active .nav-model-icon {
-    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+    transform: scale(0.96);
   }
 
   @keyframes nav-model-metal-sheen {
@@ -230,24 +228,19 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
 
   @keyframes nav-model-spring {
     0% {
-      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
-        translate3d(0, -0.5px, 2px) scale(1.06);
+      transform: scale(1.04);
     }
     22% {
-      transform: perspective(520px) rotateX(-18deg) rotateY(24deg)
-        translate3d(0, 2px, -3px) scale(0.86, 0.88);
+      transform: scale(0.92);
     }
     52% {
-      transform: perspective(520px) rotateX(22deg) rotateY(-27deg)
-        translate3d(0, -2px, 5px) scale(1.16);
+      transform: scale(1.12);
     }
     76% {
-      transform: perspective(520px) rotateX(8deg) rotateY(-10deg)
-        translate3d(0, 0.5px, 1px) scale(1.02);
+      transform: scale(0.98);
     }
     100% {
-      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
-        translate3d(0, -0.5px, 2px) scale(1.06);
+      transform: scale(1.04);
     }
   }
 
@@ -499,14 +492,14 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   }
 
   .nav-overview-button.nav-overview-active .nav-overview-icon {
-    transform: perspective(520px) rotateX(-8deg) rotateY(-10deg) translate3d(0, -0.5px, 2px) scale(1.05);
+    transform: scale(1.04);
   }
   .nav-overview-button:hover .nav-overview-icon,
   .nav-overview-button:focus-visible .nav-overview-icon,
   .nav-overview-button.nav-overview-active:hover .nav-overview-icon,
   .nav-overview-button.nav-overview-active:focus-visible .nav-overview-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(-12deg) rotateY(-14deg) translate3d(0, -1px, 3px) scale(1.1);
+    transform: scale(1.08);
   }
   .nav-overview-button:hover .nav-overview-cell,
   .nav-overview-button:focus-visible .nav-overview-cell {
@@ -516,35 +509,35 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-overview-cell[data-cell="2"] { animation-delay: 140ms !important; }
   .nav-overview-cell[data-cell="3"] { animation-delay: 210ms !important; }
   @keyframes nav-overview-grid-pulse {
-    0% { opacity: 0.3; transform: translate(0, 0) scale(0.7); }
-    45% { opacity: 0.95; transform: translate(1px, -1px) scale(1.35); }
-    100% { opacity: 0.55; transform: translate(0, 0) scale(1); }
+    0% { opacity: 0.3; transform: scale(0.8); }
+    45% { opacity: 0.95; transform: scale(1.2); }
+    100% { opacity: 0.55; transform: scale(1); }
   }
 
   /* Cost combines a coin rim with 3D tactile response */
   .nav-cost-button.nav-cost-active .nav-cost-icon {
-    transform: perspective(520px) rotateX(-8deg) rotateY(12deg) rotate(-8deg) scale(1.05);
+    transform: scale(1.04);
   }
   .nav-cost-button:hover .nav-cost-icon,
   .nav-cost-button:focus-visible .nav-cost-icon,
   .nav-cost-button.nav-cost-active:hover .nav-cost-icon,
   .nav-cost-button.nav-cost-active:focus-visible .nav-cost-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(-12deg) rotateY(18deg) rotate(-16deg) translate3d(0, -1px, 3px) scale(1.13);
+    transform: scale(1.08);
   }
 
   .nav-settings-button.nav-settings-active .nav-settings-icon {
-    transform: perspective(520px) rotateX(10deg) rotateY(-12deg) rotate(45deg) scale(1.05);
+    transform: scale(1.04);
   }
   .nav-settings-button:hover .nav-settings-icon,
   .nav-settings-button:focus-visible .nav-settings-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(90deg) translate3d(0, -1px, 3px) scale(1.12);
+    transform: scale(1.08);
   }
   .nav-settings-button.nav-settings-active:hover .nav-settings-icon,
   .nav-settings-button.nav-settings-active:focus-visible .nav-settings-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(135deg) translate3d(0, -1px, 3px) scale(1.12);
+    transform: scale(1.08);
   }
 
   .nav-overview-button:active .nav-overview-icon,
@@ -553,7 +546,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-cost-button.nav-cost-active:active .nav-cost-icon,
   .nav-settings-button:active .nav-settings-icon,
   .nav-settings-button.nav-settings-active:active .nav-settings-icon {
-    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+    transform: scale(0.96);
   }
 
   /* Stage 0: verified tactical chamfer. Keep these six distinct 3D poses;
@@ -566,32 +559,32 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-overview-button[data-variant="0"]:hover .nav-overview-icon,
   .nav-overview-button[data-variant="0"]:focus-visible .nav-overview-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(-12deg) rotateY(-14deg) translate3d(0, -1px, 3px) scale(1.1);
+    transform: scale(1.08);
   }
   .nav-model-button[data-variant="0"]:hover .nav-model-icon,
   .nav-model-button[data-variant="0"]:focus-visible .nav-model-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(18deg) rotateY(-22deg) translate3d(0, -1px, 3px) scale(1.12);
+    transform: scale(1.09) rotate(-3deg);
   }
   .nav-agent-button[data-variant="0"]:hover .nav-agent-icon,
   .nav-agent-button[data-variant="0"]:focus-visible .nav-agent-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 66%, transparent));
-    transform: perspective(520px) rotateX(-14deg) rotateY(12deg) translate3d(0, -1px, 3px) scale(1.1);
+    transform: scale(1.07) rotate(3deg);
   }
   .nav-playground-button[data-variant="0"]:hover .nav-playground-icon,
   .nav-playground-button[data-variant="0"]:focus-visible .nav-playground-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(-14deg) rotateY(16deg) translate3d(0, -1px, 3px) scale(1.1);
+    transform: scale(1.06) rotate(5deg);
   }
   .nav-cost-button[data-variant="0"]:hover .nav-cost-icon,
   .nav-cost-button[data-variant="0"]:focus-visible .nav-cost-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(-12deg) rotateY(18deg) rotate(-16deg) translate3d(0, -1px, 3px) scale(1.13);
+    transform: scale(1.08) rotate(-5deg);
   }
   .nav-settings-button[data-variant="0"]:hover .nav-settings-icon,
   .nav-settings-button[data-variant="0"]:focus-visible .nav-settings-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(16deg) rotateY(-18deg) rotate(90deg) translate3d(0, -1px, 3px) scale(1.12);
+    transform: scale(1.07) rotate(15deg);
   }
 
 
@@ -615,67 +608,14 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     }
   }
 
-  @keyframes editPenTilt {
-    0%, 100% {
-      transform: rotate(0deg);
-    }
-    30% {
-      transform: rotate(-12deg);
-    }
-    70% {
-      transform: rotate(10deg);
-    }
-  }
-
-  @keyframes addPlusRotate {
-    0% {
-      transform: rotate(0deg) scale(1);
-    }
-    50% {
-      transform: rotate(45deg) scale(1.12);
-    }
-    100% {
-      transform: rotate(90deg) scale(1);
-    }
-  }
-
-  .group:hover .svg-anim-fetch {
-    animation: fetchArrowBounce 800ms ease-in-out infinite;
-  }
-
-  .group:hover .svg-anim-edit {
-    animation: editPenTilt 700ms ease-in-out infinite;
-    transform-origin: bottom left;
-  }
-
-  @keyframes playPulse {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.2) translateX(1px);
-    }
-  }
-
-  @keyframes configGearSpin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(60deg);
-    }
-  }
-
-  .group:hover .svg-anim-play {
-    animation: playPulse 800ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .group:hover .svg-anim-config {
-    animation: configGearSpin 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
+  .group:hover .svg-anim-fetch,
+  .group:hover .svg-anim-edit,
+  .group:hover .svg-anim-play,
+  .group:hover .svg-anim-config,
   .group:hover .svg-anim-add {
-    animation: addPlusRotate 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 1;
+    transform: none;
+    transition: opacity 200ms ease-out;
   }
 
   
@@ -731,8 +671,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-playground-button:hover .nav-playground-icon,
   .nav-playground-button:focus-visible .nav-playground-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
-    transform: perspective(520px) rotateX(-14deg) rotateY(16deg)
-      translate3d(0, -1px, 3px) scale(1.1);
+    transform: scale(1.08);
   }
 
   .nav-playground-button:hover .nav-playground-icon::before,
@@ -748,7 +687,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
 
   .nav-playground-button:active .nav-playground-icon,
   .nav-playground-button.nav-playground-active:active .nav-playground-icon {
-    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+    transform: scale(0.96);
   }
 
   .nav-playground-button:hover .nav-playground-ring,
@@ -795,7 +734,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   }
 
   .nav-tab:hover {
-    transform: translateY(-0.5px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
   }
 
   .nav-tab:active {
@@ -808,7 +747,7 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     will-change: transform;
   }
   .apple-pressable:hover {
-    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
   }
   .apple-pressable:active {
     transform: scale(0.96) translateY(0);
@@ -862,33 +801,33 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     --nav-wave-light: 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
     --nav-echo-display: none;
     --nav-third-display: none;
-    --nav-attitude: perspective(520px) rotateX(var(--nav-tilt-x)) rotateY(var(--nav-tilt-y)) rotate(var(--nav-roll));
+    --nav-attitude: none;
   }
 
   /* Bespoke silhouettes, axes, rebound direction and echo cadence per tab. */
   .nav-overview-button {
-    --nav-tilt-x: -12deg; --nav-tilt-y: -14deg; --nav-roll: 0deg;
-    --nav-swing: -4deg; --nav-radius: 5px; --nav-orbit-start: 0deg; --nav-echo-delay: 240ms;
+    --nav-tilt-x: 0deg; --nav-tilt-y: 0deg; --nav-roll: 0deg;
+    --nav-swing: 0deg; --nav-radius: 5px; --nav-orbit-start: 0deg; --nav-echo-delay: 240ms;
   }
   .nav-model-button {
-    --nav-tilt-x: 18deg; --nav-tilt-y: -22deg; --nav-roll: 0deg;
-    --nav-swing: 6deg; --nav-radius: 3px; --nav-orbit-start: 60deg; --nav-echo-delay: 280ms;
+    --nav-tilt-x: 0deg; --nav-tilt-y: 0deg; --nav-roll: 0deg;
+    --nav-swing: 0deg; --nav-radius: 3px; --nav-orbit-start: 60deg; --nav-echo-delay: 280ms;
   }
   .nav-agent-button {
-    --nav-tilt-x: -14deg; --nav-tilt-y: 12deg; --nav-roll: 0deg;
-    --nav-swing: -3deg; --nav-radius: 50%; --nav-orbit-start: 120deg; --nav-echo-delay: 320ms;
+    --nav-tilt-x: 0deg; --nav-tilt-y: 0deg; --nav-roll: 0deg;
+    --nav-swing: 0deg; --nav-radius: 50%; --nav-orbit-start: 120deg; --nav-echo-delay: 320ms;
   }
   .nav-playground-button {
-    --nav-tilt-x: -14deg; --nav-tilt-y: 16deg; --nav-roll: 0deg;
-    --nav-swing: 4deg; --nav-radius: 4px; --nav-orbit-start: 180deg; --nav-echo-delay: 200ms;
+    --nav-tilt-x: 0deg; --nav-tilt-y: 0deg; --nav-roll: 0deg;
+    --nav-swing: 0deg; --nav-radius: 4px; --nav-orbit-start: 180deg; --nav-echo-delay: 200ms;
   }
   .nav-cost-button {
-    --nav-tilt-x: -12deg; --nav-tilt-y: 18deg; --nav-roll: -16deg;
-    --nav-swing: -8deg; --nav-radius: 50%; --nav-orbit-start: 240deg; --nav-echo-delay: 300ms;
+    --nav-tilt-x: 0deg; --nav-tilt-y: 0deg; --nav-roll: 0deg;
+    --nav-swing: 0deg; --nav-radius: 50%; --nav-orbit-start: 240deg; --nav-echo-delay: 300ms;
   }
   .nav-settings-button {
-    --nav-tilt-x: 16deg; --nav-tilt-y: -18deg; --nav-roll: 90deg;
-    --nav-swing: 15deg; --nav-radius: 38%; --nav-orbit-start: 300deg; --nav-echo-delay: 260ms;
+    --nav-tilt-x: 0deg; --nav-tilt-y: 0deg; --nav-roll: 0deg;
+    --nav-swing: 0deg; --nav-radius: 4px; --nav-orbit-start: 300deg; --nav-echo-delay: 260ms;
   }
 
   .nav-tab[data-variant] .nav-motion-icon::before,
@@ -1206,15 +1145,15 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
 
   /* Physical motion: tab-specific attitude survives every stage. */
   @keyframes nav-magnetic-lift {
-    0% { transform: var(--nav-attitude) translateY(0) scale(1); }
-    55% { transform: var(--nav-attitude) translateY(-3.2px) scale(1.13); }
-    100% { transform: var(--nav-attitude) translateY(-2.5px) scale(1.1); }
+    0%, 15% { transform: scale(0.96); }
+    48% { transform: scale(1.1); }
+    72% { transform: scale(1.02); }
+    100% { transform: scale(1.06); }
   }
   @keyframes nav-shutter-snap {
-    0%, 15% { transform: var(--nav-attitude) translateZ(-4px) scale(0.94); }
-    48% { transform: var(--nav-attitude) translateZ(6px) scale(1.17); }
-    72% { transform: var(--nav-attitude) translateZ(1px) scale(1.03); }
-    100% { transform: var(--nav-attitude) translateZ(3px) scale(1.1); }
+    0% { transform: scale(1); }
+    60% { transform: scale(0.92); }
+    100% { transform: scale(0.96); }
   }
   @keyframes nav-ambient-breathe {
     0%, 100% { transform: var(--nav-attitude) scale(1.02) rotate(calc(var(--nav-swing) * -0.3)); }
@@ -1246,38 +1185,31 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     100% { transform: var(--nav-attitude) scale(1.06); }
   }
   @keyframes nav-parallax-recess {
-    0% { transform: var(--nav-attitude) translateZ(0); }
-    60% { transform: var(--nav-attitude) translateZ(-16px) scale(0.88); }
-    100% { transform: var(--nav-attitude) translateZ(-10px) scale(0.94); }
+    0% { transform: scale(1); }
+    60% { transform: scale(0.92); }
+    100% { transform: scale(0.96); }
   }
   @keyframes nav-planetary-rock {
-    0%, 100% { transform: var(--nav-attitude) rotate(calc(var(--nav-swing) * -1)) scale(1.06); }
-    50% { transform: var(--nav-attitude) rotate(var(--nav-swing)) scale(1.1); }
+    0%, 100% { transform: scale(1.02); }
+    50% { transform: scale(1.06); }
   }
   @keyframes nav-quad-pulse {
-    0%, 20%, 38%, 58%, 78%, 100% { transform: var(--nav-attitude) scale(1.02); }
-    12% { transform: var(--nav-attitude) scale(1.13); }
-    30% { transform: var(--nav-attitude) scale(1.09); }
-    50% { transform: var(--nav-attitude) scale(1.15); }
-    68% { transform: var(--nav-attitude) scale(1.07); }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
   }
   @keyframes nav-corner-tip {
-    0% { transform: var(--nav-attitude); }
-    48% { transform: var(--nav-attitude) translate3d(-1px, -1.5px, 4px) rotateZ(45deg); }
-    100% { transform: var(--nav-attitude) translate3d(-0.5px, -1px, 2px) rotateZ(12deg) scale(1.08); }
+    0% { transform: scale(1); }
+    100% { transform: scale(1.06); }
   }
   @keyframes nav-accordion-bounce {
-    0% { transform: var(--nav-attitude) scaleY(0.82); }
-    22% { transform: var(--nav-attitude) translateY(-3px) scale(0.96, 1.18); }
-    44% { transform: var(--nav-attitude) translateY(1px) scale(1.1, 0.9); }
-    66% { transform: var(--nav-attitude) translateY(-1.6px) scale(1, 1.09); }
-    82% { transform: var(--nav-attitude) translateY(0.4px) scaleY(0.97); }
-    100% { transform: var(--nav-attitude) scale(1.05); }
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+    100% { transform: scale(1.04); }
   }
   @keyframes nav-corona-open {
-    0% { transform: var(--nav-attitude) scale(0.98); }
-    38% { transform: var(--nav-attitude) translateZ(4px) scale(1.17); }
-    100% { transform: var(--nav-attitude) translateZ(1px) scale(1.04); }
+    0% { transform: scale(0.98); }
+    38% { transform: scale(1.1); }
+    100% { transform: scale(1.04); }
   }
   @keyframes nav-clockwork-dial {
     0% { transform: var(--nav-attitude) rotate(0deg); animation-timing-function: steps(4, end); }
@@ -1308,10 +1240,10 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     100% { transform: var(--nav-attitude) rotate(90deg) scale(1.09); }
   }
   @keyframes nav-supernova-prism {
-    0% { transform: var(--nav-attitude) translateZ(-6px) scale(0.84); }
-    34% { transform: perspective(360px) rotateX(calc(var(--nav-tilt-x) * 2)) rotateY(calc(var(--nav-tilt-y) * 2)) rotate(var(--nav-roll)) translateZ(12px) scale(1.24); }
-    64% { transform: var(--nav-attitude) translateZ(3px) scale(1.03) rotate(var(--nav-swing)); }
-    100% { transform: var(--nav-attitude) translateZ(5px) scale(1.12); }
+    0% { transform: scale(0.84); }
+    34% { transform: scale(1.15); }
+    64% { transform: scale(1.03); }
+    100% { transform: scale(1.08); }
   }
 
   /* Glass and light choreography; no colored literal survives a palette swap. */
@@ -1674,31 +1606,8 @@ export function NavigationFeature(props) {
   };
   const endInteraction = (key, source) => {
     const sources = activeInteractions.current[key];
-    // A focus + pointer visit counts once, after BOTH have left. Touch scrolling
-    // and duplicate leave/cancel events must not consume unseen stages.
     if (!sources?.delete(source) || sources.size) return;
-    setTabMotions((previous) => ({
-      ...previous,
-      [key]: {
-        variant: (previous[key].variant + 1) % NAV_HOVER_STAGE_COUNT,
-        iconStyle: (previous[key].iconStyle % NAV_ICON_STYLE_COUNT) + 1,
-      },
-    }));
-
-    // Start 3-second reset timer: after 3 seconds of hover exit, smoothly reset SVG icon back to normal (style 1, variant 0)
-    if (resetTimers.current[key]) {
-      clearTimeout(resetTimers.current[key]);
-    }
-    resetTimers.current[key] = setTimeout(() => {
-      setTabMotions((previous) => ({
-        ...previous,
-        [key]: {
-          variant: 0,
-          iconStyle: 1,
-        },
-      }));
-      delete resetTimers.current[key];
-    }, 3000);
+    // Keep icons pure, stable, and deterministic: do not morph variants on mouse leave
   };
 
   React.useEffect(() => {

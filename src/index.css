@@ -513,9 +513,7 @@ body {
 }
 
 .overview-card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 300px;
-  contain: layout style paint;
+  contain: style;
   position: relative;
   isolation: isolate;
   z-index: 0;
@@ -526,9 +524,8 @@ body {
 }
 
 .provider-card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 320px;
-  contain: layout style paint;
+  /* Clean containment without paint-clipping so HUD leader lines and tooltips render cleanly */
+  contain: style;
 }
 
 .overview-card:hover,
@@ -538,7 +535,7 @@ body {
 }
 
 .overview-card:active {
-  transform: translateY(-1px) scale(0.997);
+  transform: scale(0.995);
 }
 
 /* M3 state layer: one content-coloured wash between container and content.
@@ -566,7 +563,7 @@ body {
     background-color var(--ov-dur-short) var(--ov-ease-standard);
 }
 .overview-card:hover .overview-card-icon-shell {
-  transform: translateY(-1px) scale(1.04);
+  transform: scale(1.05);
   background-color: var(--md-sys-color-surface-container-highest);
 }
 
@@ -581,7 +578,7 @@ body {
     filter var(--ov-dur-short) var(--ov-ease-standard);
 }
 .overview-card:hover .overview-card-icon {
-  transform: translateY(-0.5px) scale(1.04);
+  transform: scale(1.04);
   filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.2));
 }
 
@@ -749,8 +746,8 @@ body {
 .overview-neural-layer:nth-of-type(2) { animation-delay: 260ms; }
 .overview-neural-layer:nth-of-type(3) { animation-delay: 520ms; }
 @keyframes overview-neural-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-3.2px); }
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.02); }
 }
 
 /* Currency Coin Sheen & Glow - active on hover + 5s cooldown */
@@ -1210,9 +1207,7 @@ button:hover > .lucide line {
 }
 
 [data-selectable-id] {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 120px;
-  contain: layout style paint;
+  contain: style;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -1225,7 +1220,8 @@ button:hover > .lucide line {
               border-color 150ms ease-out !important;
 }
 .apple-pressable:hover {
-  transform: translateY(-1px);
+  /* No translateY shift to prevent hitbox jitter */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .apple-pressable:active {
   transform: translateY(1px) scale(0.96);
