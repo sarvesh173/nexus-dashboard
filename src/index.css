@@ -661,7 +661,20 @@ body {
    decelerate curve, so nothing overshoots.
    ===================================================================== */
 
-/* Resting state: animations disabled when idle to avoid processor spikes */
+/* Custom Drawer Scrollbar */
+.custom-drawer-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-drawer-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-drawer-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 9999px;
+}
+.custom-drawer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-primary);
+}
 .overview-icon-orbit,
 .overview-cpu-core,
 .overview-memory-bus,

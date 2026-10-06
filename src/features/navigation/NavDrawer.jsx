@@ -28,12 +28,12 @@ export function NavDrawer({
   }, [isOpen]);
 
   const navItems = [
-    { label: 'Overview', path: '/', icon: Activity, anim: 'animate-pulse' },
-    { label: 'Models', path: '/model', icon: Boxes, anim: 'hover:rotate-6' },
-    { label: 'Agents', path: '/agents', icon: Brain, anim: 'hover:scale-110' },
-    { label: 'Playground', path: '/playground', icon: Play, anim: 'hover:translate-x-1' },
-    { label: 'Cost', path: '/cost', icon: Coins, anim: 'hover:rotate-12' },
-    { label: 'Logs', path: '/logs', icon: ScrollText, anim: 'hover:-translate-y-0.5' },
+    { label: 'Overview', path: '/', icon: Activity, anim: 'group-hover:scale-110' },
+    { label: 'Models', path: '/model', icon: Boxes, anim: 'group-hover:scale-110 group-hover:-translate-y-0.5' },
+    { label: 'Agents', path: '/agents', icon: Brain, anim: 'group-hover:scale-110' },
+    { label: 'Playground', path: '/playground', icon: Play, anim: 'group-hover:translate-x-0.5 group-hover:scale-105' },
+    { label: 'Cost', path: '/cost', icon: Coins, anim: 'group-hover:scale-110 group-hover:-rotate-6' },
+    { label: 'Logs', path: '/logs', icon: ScrollText, anim: 'group-hover:-translate-y-0.5 group-hover:scale-105' },
   ];
 
   const handleSelect = (path) => {
@@ -48,10 +48,51 @@ export function NavDrawer({
         type="button"
         aria-label="Open Navigation Drawer"
         onClick={() => setIsOpen(true)}
-        className="group relative p-2 rounded-xl text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs overflow-hidden"
+        className="group relative p-2 rounded-xl text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs overflow-hidden flex items-center justify-center w-9 h-9"
       >
         <span className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-        <Menu size={18} className="transition-transform duration-300 group-hover:scale-110 group-hover:rotate-180" />
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-105"
+        >
+          {/* Top line with smooth morph on hover */}
+          <line
+            x1="2.5"
+            y1="4.5"
+            x2="15.5"
+            y2="4.5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            className="transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:translate-x-[2px]"
+          />
+          {/* Middle line - shorter dynamic bar */}
+          <line
+            x1="2.5"
+            y1="9"
+            x2="12.5"
+            y2="9"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            className="transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:translate-x-[-1px] group-hover:scale-x-125"
+          />
+          {/* Bottom line */}
+          <line
+            x1="2.5"
+            y1="13.5"
+            x2="15.5"
+            y2="13.5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            className="transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:translate-x-[1px]"
+          />
+        </svg>
       </button>
 
       {/* Drawer Backdrop Overlay with Blur Fade */}
@@ -118,9 +159,7 @@ export function NavDrawer({
               >
                 <Icon
                   size={16}
-                  className={`transition-transform duration-300 ${
-                    hoveredItem === item.path ? item.anim : ''
-                  }`}
+                  className={`transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${item.anim}`}
                 />
                 <span className="flex-1 text-left">{item.label}</span>
                 {isActive && (
@@ -136,13 +175,13 @@ export function NavDrawer({
           <button
             type="button"
             onClick={() => handleSelect('/settings')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer active:scale-95 hover:translate-y-[-1px] ${
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer active:scale-95 group hover:translate-x-1 ${
               currentPath === '/settings'
                 ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs'
                 : 'text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)]'
             }`}
           >
-            <Sliders size={16} className="transition-transform group-hover:rotate-45" />
+            <Sliders size={16} className="transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:rotate-90 group-hover:scale-110" />
             <span>Settings</span>
             <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)]">
               Core
