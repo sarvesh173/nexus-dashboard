@@ -1,6 +1,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import psutil
+import re
 import subprocess
 import os
 import sys
@@ -12,6 +13,8 @@ from paths import (
     hermes_env_path,
     hermes_gateway_state_path,
     hermes_logs_dir,
+    hermes_profiles_dir,
+    hermes_profile_logs_dir,
     omniroute_env_path,
     OMNI_BASE,
 )
@@ -39,6 +42,11 @@ try:
     import agent_stream
 except ImportError:
     agent_stream = None
+
+try:
+    import omniroute_logs
+except ImportError:
+    omniroute_logs = None
 
 _cached_data = None
 _last_poll_time = 0
@@ -501,13 +509,30 @@ def get_hermes_status():
     return payload
 
 
-def get_hermes_logs(limit=HERMES_LOG_DEFAULT_LIMIT, source='gateway'):
+def get_hermes_logs(limit=HERMES_LOG_DEFAULT_LIMIT, source='gateway', profile=None):
     """Tail of a Hermes log file, parsed into display records.
 
     Chronological (oldest first) so the frontend can append like a terminal.
 
     `source` is checked against HERMES_LOG_SOURCES rather than joined onto the
     logs directory, because it comes straight off the query string.
+
+    `profile` narrows the feed to one served profile and is resolved through
+    `_safe_hermes_profile`, never joined raw: it also reaches the filesystem.
+
+    Two independent sources, and which one wins is reported, not hidden
+    ---------------------------------------------------------------
+    A profile that runs as its own process writes a complete log of its own under
+    ~/.hermes/profiles/<name>/logs/. That file is the authoritative record for
+    that profile and is always preferred when it exists - measured on this
+    machine it holds ~9x the records of the shared log carries for the same
+    profile.
+
+    When a profile has no log directory of its own, the shared log is the only
+    record there is, so it is read and filtered by the profile marker the gateway
+    writes. `profile_source` reports which of the two happened, because a filter
+    that silently falls back from a rich per-profile file to a sparse marker
+    match would otherwise look like the profile has almost no activity.
     """
     try:
         limit = int(limit)
@@ -519,27 +544,33 @@ def get_hermes_logs(limit=HERMES_LOG_DEFAULT_LIMIT, source='gateway'):
     if source not in HERMES_LOG_SOURCES:
         source = 'gateway'
 
+    safe_profile = _safe_hermes_profile(profile)
+
+    # A profile was asked for but did not survive validation. Answering with every
+    # profile's traffic here would be indistinguishable, in the UI, from a filter
+    # that worked - so the rejection is reported instead of silently ignored.
+    if _hermes_profile_rejected(profile):
+        payload = {
+            'ok': True,
+            'source': source,
+            'profile': None,
+            'profile_requested': str(profile).strip(),
+            'profile_source': 'rejected',
+            'count': 0,
+            'logs': [],
+            'error': _HERMES_PROFILE_REJECTED,
+            'read_at': time.time(),
+        }
+        return payload
+
     now = time.time()
-    cache_key = (source, limit)
+    cache_key = (source, limit, safe_profile)
     cached = _hermes_log_cache['payload']
     if cached is not None and _hermes_log_cache['key'] == cache_key:
         if now - _hermes_log_cache['at'] < HERMES_LOG_CACHE_TTL:
             return cached
 
-    path = os.path.join(hermes_logs_dir(), f'{source}.log')
-    text = _read_text(path, HERMES_LOG_TAIL_BYTES)
-
-    error = None
-    if not text:
-        error = f'{source}.log is empty or unreadable' if os.path.exists(path) \
-            else f'{source}.log not found'
-
-    records = []
-    for line in text.splitlines():
-        parsed = _parse_log_line(line)
-        if parsed:
-            records.append(parsed)
-
+    records, reason, profile_source = _read_hermes_log_records(source, safe_profile)
     # The tail window is a byte budget, not a line budget, so trimming to the
     # newest `limit` records has to happen after parsing rather than before.
     records = records[-limit:]
@@ -547,15 +578,152 @@ def get_hermes_logs(limit=HERMES_LOG_DEFAULT_LIMIT, source='gateway'):
     payload = {
         'ok': True,
         'source': source,
+        'profile': safe_profile,
+        'profile_requested': str(profile).strip() if profile is not None else None,
+        'profile_source': profile_source,
         'count': len(records),
         'logs': records,
-        'error': error,
+        'error': reason,
         'read_at': now,
     }
     _hermes_log_cache['at'] = now
     _hermes_log_cache['key'] = cache_key
     _hermes_log_cache['payload'] = payload
     return payload
+
+
+# The shared gateway attributes a line to a profile with a trailing
+# '(profile: <name>)' marker. This is the only place a shared log line is
+# attributable to one profile, and it is written by the gateway itself rather
+# than inferred here.
+_PROFILE_MARKER_RE = re.compile(r'\(profile:\s*([A-Za-z0-9][A-Za-z0-9._-]{0,63})\s*\)')
+
+# A profile name is used as a path segment, so it is allowlisted by shape and
+# then confined by real path. The leading-alphanumeric requirement alone rejects
+# '.', '..' and every hidden/dotfile name; the confinement catches whatever the
+# shape check missed, including a symlink pointing out of the tree.
+_HERMES_PROFILE_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$')
+
+# Distinguishes "no profile requested" from "a profile was requested but did not
+# survive validation". The first is a normal unfiltered read; the second is a
+# client mistake and is reported rather than quietly answered with every profile.
+_HERMES_PROFILE_REJECTED = 'profile name is not a valid Hermes profile'
+
+
+def _safe_hermes_profile(profile):
+    """A profile name that is safe to use as a path segment, or None.
+
+    Returns the bare string for a usable name and None for anything else,
+    including an absent one. Callers distinguish the two cases with
+    `_hermes_profile_rejected()`, because both produce None here.
+    """
+    if profile is None:
+        return None
+    candidate = str(profile).strip()
+    if not candidate:
+        return None
+    if not _HERMES_PROFILE_RE.match(candidate):
+        return None
+
+    root = os.path.realpath(hermes_profiles_dir())
+    resolved = os.path.realpath(hermes_profile_logs_dir(candidate))
+    if resolved != root and not resolved.startswith(root + os.sep):
+        return None
+    return candidate
+
+
+def _hermes_profile_rejected(profile):
+    """True when a profile was asked for but could not be validated."""
+    return profile is not None and not str(profile).strip() == '' and _safe_hermes_profile(profile) is None
+
+
+def _line_matches_profile(line, profile):
+    """Does one shared-log line belong to `profile`?
+
+    Two cases, both positive claims rather than guesses:
+
+      - The line carries the gateway's own '(profile: <name>)' marker. It belongs
+        to exactly that profile, whatever else is in the file.
+      - The line carries no profile marker at all. It belongs to the profile whose
+        own log directory IS the shared directory, which is `default`. Attributing
+        an unattributed shared line to any other profile would be a guess.
+
+    A marker naming a DIFFERENT profile matches neither case, which is the point:
+    those lines are the shared gateway reporting on someone else's profile.
+    """
+    match = _PROFILE_MARKER_RE.search(line)
+    if match:
+        return match.group(1) == profile
+    return profile == HERMES_DEFAULT_PROFILE
+
+
+# `default` is the profile whose logs are the shared logs. It is the one name with
+# no subdirectory under ~/.hermes/profiles, so it is defined here rather than
+# discovered from the filesystem.
+HERMES_DEFAULT_PROFILE = 'default'
+
+
+def _read_hermes_log_records(source, profile):
+    """Parse the right log file for `profile`. Returns (records, reason, origin).
+
+    `origin` is 'profile-dir' when the profile's own log file was read, 'shared'
+    when the shared log was filtered by profile marker instead, and None when no
+    profile was requested at all.
+    """
+    records = []
+    if profile is None:
+        path = os.path.join(hermes_logs_dir(), f'{source}.log')
+        text = _read_text(path, HERMES_LOG_TAIL_BYTES)
+        records = _parse_log_records(text, None)
+        return records, _log_reason(path, text), None
+
+    # The profile's own log directory, when this profile actually has one.
+    own_path = os.path.join(hermes_profile_logs_dir(profile), f'{source}.log')
+    if os.path.exists(own_path):
+        text = _read_text(own_path, HERMES_LOG_TAIL_BYTES)
+        records = _parse_log_records(text, None)
+        reason = _log_reason(own_path, text)
+        # A per-profile log that exists but is empty is a real state ("this
+        # profile is not writing anything yet"), not a reason to fall through to
+        # the shared marker match and quietly show another profile's traffic.
+        return records, reason, 'profile-dir'
+
+    shared_path = os.path.join(hermes_logs_dir(), f'{source}.log')
+    text = _read_text(shared_path, HERMES_LOG_TAIL_BYTES)
+    records = _parse_log_records(text, profile)
+    reason = _log_reason(shared_path, text)
+    if not records and not reason:
+        # The shared log was read and matched nothing for this profile. Say which
+        # file was consulted so an empty feed is distinguishable from a filter
+        # that was never applied.
+        reason = f'no {source}.log records tagged (profile: {profile})'
+    return records, reason, 'shared'
+
+
+def _parse_log_records(text, profile=None):
+    """Parse a tail window into display records, newest last.
+
+    `profile` is applied to the RAW line, before parsing: the '(profile: x)'
+    marker is written into the message body, so filtering after parsing would
+    work but filtering here keeps `_parse_log_line` the single owner of what
+    counts as a record.
+    """
+    out = []
+    for line in text.splitlines():
+        if profile is not None and not _line_matches_profile(line, profile):
+            continue
+        parsed = _parse_log_line(line)
+        if parsed:
+            out.append(parsed)
+    return out
+
+
+def _log_reason(path, text):
+    """The 'why is this feed empty' string, or None when there is genuinely data."""
+    if text:
+        return None
+    return f'{os.path.basename(path)} is empty or unreadable' if os.path.exists(path) \
+        else f'{os.path.basename(path)} not found'
 
 
 def _parse_log_line(line):
@@ -1775,8 +1943,12 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             limit = qs.get('limit', [HERMES_LOG_DEFAULT_LIMIT])[0]
             source = qs.get('source', ['gateway'])[0]
+            # Absent -> None -> unfiltered read. Present-but-invalid is reported
+            # by get_hermes_logs rather than answered with every profile's
+            # traffic, which would be indistinguishable from a working filter.
+            profile = qs.get('profile', [None])[0]
             try:
-                return self.send_json(get_hermes_logs(limit, source))
+                return self.send_json(get_hermes_logs(limit, source, profile))
             except Exception as exc:  # noqa: BLE001
                 print(f'[hermes] logs failed: {type(exc).__name__}: {exc}', flush=True)
                 return self.send_json({
@@ -1784,6 +1956,78 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'error': f'{type(exc).__name__}: {exc}',
                     'logs': [],
                     'count': 0,
+                }, code=500)
+        elif self.path.startswith('/api/omniroute/call-logs'):
+            # startswith: self.path carries '?limit=&offset='.
+            import urllib.parse
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            limit = qs.get('limit', [str(omniroute_logs.CALLS_DEFAULT_LIMIT)])[0] \
+                if omniroute_logs else 40
+            offset = qs.get('offset', ['0'])[0] if omniroute_logs else 0
+            try:
+                if omniroute_logs is None:
+                    # The reader is missing. Say so with a status rather than
+                    # answering 200 with an empty ledger, which would render as
+                    # "no traffic yet" instead of "this build cannot read it".
+                    return self.send_json({
+                        'ok': False,
+                        'error': 'omniroute_logs module unavailable',
+                        'count': 0,
+                        'total': 0,
+                        'calls': [],
+                    }, code=503)
+                # The reader is total: an unreadable store comes back as data with
+                # source.ok false, so this calls straight through.
+                return self.send_json(omniroute_logs.read_call_logs(limit, offset))
+            except Exception as exc:  # noqa: BLE001
+                print(f'[omniroute] call-logs failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                    'count': 0,
+                    'total': 0,
+                    'calls': [],
+                }, code=500)
+        elif (self.path.startswith('/api/omniroute/call-log')
+                and not self.path.startswith('/api/omniroute/call-logs')):
+            # Singular: one call's detail payload, by id. Split from the list
+            # route so opening a row reads one 300KB artifact on demand instead of
+            # joining half a megabyte onto every page of the table.
+            #
+            # The plural route is matched first AND excluded here, because
+            # '/api/omniroute/call-logs' also starts with '/api/omniroute/call-log'
+            # and would otherwise be read as a detail request for the id 's'.
+            import urllib.parse
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            call_id = (qs.get('id', [''])[0] or '').strip()
+            try:
+                if omniroute_logs is None:
+                    return self.send_json({
+                        'ok': False,
+                        'available': False,
+                        'error': 'omniroute_logs module unavailable',
+                        'id': call_id,
+                    }, code=503)
+                if not call_id:
+                    return self.send_json({
+                        'ok': False,
+                        'available': False,
+                        'error': 'id query parameter is required',
+                        'id': '',
+                    }, code=400)
+                detail = omniroute_logs.read_call_log_detail(call_id)
+                # An unknown id is a real answer about a real request, so it is a
+                # 404 the client can branch on - not a 200 with an empty drawer
+                # that looks like a call with no captured body.
+                return self.send_json(detail, code=200 if detail.get('available')
+                                      else 404)
+            except Exception as exc:  # noqa: BLE001
+                print(f'[omniroute] call-log failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({
+                    'ok': False,
+                    'available': False,
+                    'error': f'{type(exc).__name__}: {exc}',
+                    'id': call_id,
                 }, code=500)
         elif self.path == '/api/synced-models':
             # Live-synced catalogue: gateway + Hermes config + OmniRoute, merged.

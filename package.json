@@ -30,7 +30,7 @@
     "lint": "oxlint --deny no-undef",
     "preview": "vite preview",
     "lint:fix": "oxlint --fix",
-    "test": "python3 tests/test_audit_fixes.py && python3 tests/test_live_sync.py && python3 tests/test_server_nvidia.py && python3 tests/test_overview_motion.py && python3 tests/test_nav_animations.py"
+    "test": "python3 tests/test_audit_fixes.py && python3 tests/test_live_sync.py && python3 tests/test_server_nvidia.py && python3 tests/test_overview_motion.py && python3 tests/test_nav_animations.py && python3 tests/test_agent_stream.py && python3 tests/test_tokens_m3.py"
   },
   "dependencies": {
     "clsx": "^2.1.1",

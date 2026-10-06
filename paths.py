@@ -32,8 +32,33 @@ def hermes_gateway_state_path():
 
 
 def hermes_logs_dir():
-    """Directory holding the rotating Hermes log files (gateway.log, ...)."""
+    """Directory holding the rotating Hermes log files (gateway.log, ...).
+
+    This is the DEFAULT profile's log directory. A profile that runs in its own
+    process keeps its own copies under `hermes_profile_logs_dir()`.
+    """
     return os.path.join(HERMES_HOME, 'logs')
+
+
+def hermes_profiles_dir():
+    """Directory holding one subdirectory per non-default Hermes profile.
+
+    Not every served profile has an entry here: `default` logs into
+    `hermes_logs_dir()` and has no profile subdirectory. Absence of a
+    subdirectory is therefore a normal state, not an error, and every caller must
+    handle it by falling back to the shared log.
+    """
+    return os.path.join(HERMES_HOME, 'profiles')
+
+
+def hermes_profile_logs_dir(profile):
+    """Log directory for one named profile.
+
+    Returns a path whether or not it exists; the caller resolves and confines it
+    before reading, because `profile` arrives from a query string and an
+    unvalidated join of it would be a filesystem traversal.
+    """
+    return os.path.join(hermes_profiles_dir(), str(profile), 'logs')
 
 
 def omniroute_env_path():

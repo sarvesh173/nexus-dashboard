@@ -38,7 +38,10 @@ Reference: <https://m3.material.io/styles/motion/overview> and
 | `long2` | 500ms | Large surface transition |
 | `long3` | 550ms | Fullscreen console enter |
 | `long4` | 600ms | Route transition |
-| `extra-long1`–`4` | 700–1000ms | Rare; only ambient loops |
+| `extra-long1` | 700ms | Rare; ambient loops only |
+| `extra-long2` | 800ms | Rare; ambient loops only |
+| `extra-long3` | 900ms | Rare; ambient loops only |
+| `extra-long4` | 1000ms | Rare; ambient loops only |
 
 CSS: `var(--m3-duration-short3)`, `var(--m3-duration-medium2)`, etc.
 
