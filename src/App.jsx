@@ -695,11 +695,11 @@ export default function App() {
   const smoothRamUsed    = useSmoothCounter(telemetry?.ram_used_mb ?? 0, TELEMETRY_RAMP_MS);
   const smoothSwapPercent = useSmoothCounter(telemetry?.swap_percent ?? 0, TELEMETRY_RAMP_MS);
 
-  // 5-second graceful hover cooldown timers for Overview card animations
-  const costHover = useHoverGraceTimer(5000);
-  const cpuHover = useHoverGraceTimer(5000);
-  const memoryHover = useHoverGraceTimer(5000);
-  const modelsHover = useHoverGraceTimer(5000);
+  // 5-second graceful hover cooldown timers for Overview card animations (only runs on Overview view)
+  const costHover = useHoverGraceTimer(isOverviewNavActive ? 5000 : 0);
+  const cpuHover = useHoverGraceTimer(isOverviewNavActive ? 5000 : 0);
+  const memoryHover = useHoverGraceTimer(isOverviewNavActive ? 5000 : 0);
+  const modelsHover = useHoverGraceTimer(isOverviewNavActive ? 5000 : 0);
 
   const fetchStats = async () => {
     setIsRefreshing(true);

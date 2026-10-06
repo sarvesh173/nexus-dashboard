@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Activity, ArrowLeft, AudioLines, Boxes, Brain, CheckCircle2, Copy, DownloadCloud, Edit2,
   Eye, EyeOff, ExternalLink, FileQuestion, ImageIcon, Layers, MessageSquare, Mic,
@@ -39,6 +39,21 @@ export function ModelsFeature(props) {
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [copyToast, setCopyToast] = useState('');
   const [modelRenderLimit, setModelRenderLimit] = useState(40);
+
+  // Memoized category counts to eliminate redundant activeModelsPool scans on each render
+  const categoryCounts = useMemo(() => {
+    const counts = { all: 0, text: 0, vision: 0, 'image-gen': 0, tts: 0, stt: 0, embedding: 0, decision: 0, specialized: 0 };
+    if (!activeModelsPool) return counts;
+    for (let i = 0; i < activeModelsPool.length; i++) {
+      const m = activeModelsPool[i];
+      if (m.scope !== 'specialized') counts.all++;
+      if (m.scope === 'specialized') counts.specialized++;
+      if (counts[m.category] !== undefined && m.category !== 'all') {
+        counts[m.category]++;
+      }
+    }
+    return counts;
+  }, [activeModelsPool]);
 
   const handleTestSelected = useCallback(async () => {
     if (!selectedModelIds || selectedModelIds.size === 0) return;
@@ -862,7 +877,7 @@ export function ModelsFeature(props) {
                             nexusLog('NAVIGATION', `Double-clicked provider card "${prov.id}" -> opening models view`);
                             setSelectedProviderId(prov.id);
                           }}
-                          className={`group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
+                          className={`provider-card group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
                               ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-[1.015] z-10'
                               : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:-translate-y-1.5 hover:scale-[1.012] hover:z-[99] focus-within:z-[99]'
@@ -1138,15 +1153,15 @@ export function ModelsFeature(props) {
                         className="flex items-center gap-1 overflow-x-auto text-xs no-scrollbar select-none py-1 scroll-smooth"
                       >
                         {[
-                          { id: 'all', label: 'All Daily', count: activeModelsPool.filter(m => m.scope !== 'specialized').length, icon: Layers },
-                          { id: 'text', label: 'LLM', count: activeModelsPool.filter(m => m.category === 'text').length, icon: MessageSquare },
-                          { id: 'vision', label: 'Vision', count: activeModelsPool.filter(m => m.category === 'vision').length, icon: Eye },
-                          { id: 'image-gen', label: 'Image Gen', count: activeModelsPool.filter(m => m.category === 'image-gen').length, icon: ImageIcon },
-                          { id: 'tts', label: 'TTS', count: activeModelsPool.filter(m => m.category === 'tts').length, icon: Volume2 },
-                          { id: 'stt', label: 'STT', count: activeModelsPool.filter(m => m.category === 'stt').length, icon: Mic },
-                          { id: 'embedding', label: 'Embeddings', count: activeModelsPool.filter(m => m.category === 'embedding').length, icon: AudioLines },
-                          { id: 'decision', label: 'Reasoning', count: activeModelsPool.filter(m => m.category === 'decision').length, icon: Brain },
-                          { id: 'specialized', label: 'Lab/Robotics', count: activeModelsPool.filter(m => m.scope === 'specialized').length, icon: Sparkles },
+                          { id: 'all', label: 'All Daily', count: categoryCounts.all, icon: Layers },
+                          { id: 'text', label: 'LLM', count: categoryCounts.text, icon: MessageSquare },
+                          { id: 'vision', label: 'Vision', count: categoryCounts.vision, icon: Eye },
+                          { id: 'image-gen', label: 'Image Gen', count: categoryCounts['image-gen'], icon: ImageIcon },
+                          { id: 'tts', label: 'TTS', count: categoryCounts.tts, icon: Volume2 },
+                          { id: 'stt', label: 'STT', count: categoryCounts.stt, icon: Mic },
+                          { id: 'embedding', label: 'Embeddings', count: categoryCounts.embedding, icon: AudioLines },
+                          { id: 'decision', label: 'Reasoning', count: categoryCounts.decision, icon: Brain },
+                          { id: 'specialized', label: 'Lab/Robotics', count: categoryCounts.specialized, icon: Sparkles },
                         ].map((cat) => {
                           const Icon = cat.icon;
                           const isActive = activeCategory === cat.id;

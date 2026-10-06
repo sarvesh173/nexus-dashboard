@@ -515,19 +515,20 @@ body {
 .overview-card {
   content-visibility: auto;
   contain-intrinsic-size: auto 300px;
-  /* Without its own stacking context a hovered card lifts on transform but
-     is painted UNDER later siblings, so the CPU card would slide out of
-     sight behind the next one. Own the layer, and raise it on hover. */
+  contain: layout style paint;
   position: relative;
   isolation: isolate;
   z-index: 0;
-  /* No overflow:hidden here. The cost tooltip is a DOM descendant of a trigger
-     inside this card, so clipping the card also clips the tooltip and traps it
-     inside the box. The state layer below gets the card's radius instead. */
   transition:
     transform var(--ov-dur-medium) var(--ov-ease-emphasized),
     box-shadow var(--ov-dur-medium) var(--ov-ease-standard),
     border-color var(--ov-dur-short) var(--ov-ease-standard);
+}
+
+.provider-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+  contain: layout style paint;
 }
 
 .overview-card:hover,
@@ -1192,6 +1193,7 @@ button:hover > .lucide line {
 [data-selectable-id] {
   content-visibility: auto;
   contain-intrinsic-size: auto 120px;
+  contain: layout style paint;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════

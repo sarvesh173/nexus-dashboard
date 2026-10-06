@@ -8,6 +8,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    target: 'esnext',
+    cssMinify: true,
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
