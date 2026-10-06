@@ -279,7 +279,15 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
         tabIndex={0}
         aria-label={`${label}: ${convertFromUsd(baseUsd, currency)}`}
         aria-describedby={coords ? tooltipId : undefined}
-        onMouseEnter={showTooltip}
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const relY = (e.clientY - rect.top) / rect.height;
+          if (relY >= 0.20 && relY <= 0.85) {
+            if (!coords) showTooltip();
+          } else {
+            if (coords) hideTooltip();
+          }
+        }}
         onMouseLeave={hideTooltip}
         onFocus={showTooltip}
         onBlur={() => setCoords(null)}

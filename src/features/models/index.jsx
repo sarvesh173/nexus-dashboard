@@ -35,10 +35,11 @@ export function ModelsFeature(props) {
   } = useModelConnection({ enabled: isModelsNavActive });
 
   const [isSyncingNow, setIsSyncingNow] = useState(false);
+  const [providerRenderLimit, setProviderRenderLimit] = useState(24);
   const [isBatchTesting, setIsBatchTesting] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [copyToast, setCopyToast] = useState('');
-  const [modelRenderLimit, setModelRenderLimit] = useState(40);
+  const [modelRenderLimit, setModelRenderLimit] = useState(25);
 
   // Memoized category counts to eliminate redundant activeModelsPool scans on each render
   const categoryCounts = useMemo(() => {
@@ -237,7 +238,15 @@ export function ModelsFeature(props) {
                         {/* 1. Primary "Select" Toggle Button with Interactive Leader Line Animation */}
                         <div
                           className="relative inline-block select-none"
-                          onMouseEnter={() => setIsSelectHovered(true)}
+                          onMouseMove={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const relY = (e.clientY - rect.top) / rect.height;
+                            if (relY >= 0.20 && relY <= 0.85) {
+                              if (!isSelectHovered) setIsSelectHovered(true);
+                            } else {
+                              if (isSelectHovered) setIsSelectHovered(false);
+                            }
+                          }}
                           onMouseLeave={() => setIsSelectHovered(false)}
                         >
                           <button
@@ -365,7 +374,15 @@ export function ModelsFeature(props) {
                           {/* Vault / Hide Selected with Interactive Apple Leader-Style Hover Tooltip */}
                           <div
                             className="relative inline-block"
-                            onMouseEnter={() => setIsHideHovered(true)}
+                            onMouseMove={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const relY = (e.clientY - rect.top) / rect.height;
+                              if (relY >= 0.20 && relY <= 0.85) {
+                                if (!isHideHovered) setIsHideHovered(true);
+                              } else {
+                                if (isHideHovered) setIsHideHovered(false);
+                              }
+                            }}
                             onMouseLeave={() => setIsHideHovered(false)}
                           >
                             <button
@@ -459,7 +476,15 @@ export function ModelsFeature(props) {
                                 {/* Active Providers Pill with Leader-Line HUD Hover */}
                                 <div 
                                   className="relative"
-                                  onMouseEnter={() => setIsActiveStatusHovered(true)}
+                                  onMouseMove={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const relY = (e.clientY - rect.top) / rect.height;
+                                    if (relY >= 0.20 && relY <= 0.85) {
+                                      if (!isActiveStatusHovered) setIsActiveStatusHovered(true);
+                                    } else {
+                                      if (isActiveStatusHovered) setIsActiveStatusHovered(false);
+                                    }
+                                  }}
                                   onMouseLeave={() => setIsActiveStatusHovered(false)}
                                 >
                                   <span className="px-2.5 py-1 text-emerald-400 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/15 rounded-full transition-all duration-150">
@@ -582,7 +607,15 @@ export function ModelsFeature(props) {
                                 {/* Offline Providers Pill with Leader-Line HUD Hover */}
                                 <div 
                                   className="relative"
-                                  onMouseEnter={() => setIsOfflineStatusHovered(true)}
+                                  onMouseMove={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const relY = (e.clientY - rect.top) / rect.height;
+                                    if (relY >= 0.20 && relY <= 0.85) {
+                                      if (!isOfflineStatusHovered) setIsOfflineStatusHovered(true);
+                                    } else {
+                                      if (isOfflineStatusHovered) setIsOfflineStatusHovered(false);
+                                    }
+                                  }}
                                   onMouseLeave={() => setIsOfflineStatusHovered(false)}
                                 >
                                   <span className="px-2.5 py-1 text-zinc-400 font-medium flex items-center gap-1.5 cursor-pointer hover:bg-zinc-500/15 rounded-full transition-all duration-150">
@@ -714,7 +747,15 @@ export function ModelsFeature(props) {
                         {/* 1. Apple Logo Theme Segmented Control with Auto-Hover Preview */}
                         <div 
                           className="relative"
-                          onMouseEnter={() => setIsLogoHovered(true)}
+                          onMouseMove={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const relY = (e.clientY - rect.top) / rect.height;
+                            if (relY >= 0.20 && relY <= 0.85) {
+                              if (!isLogoHovered) setIsLogoHovered(true);
+                            } else {
+                              if (isLogoHovered) setIsLogoHovered(false);
+                            }
+                          }}
                           onMouseLeave={() => setIsLogoHovered(false)}
                         >
                           <button
@@ -847,6 +888,7 @@ export function ModelsFeature(props) {
 
                     {/* Responsive tracks never exceed the available width, even with a saved card size. */}
                     {!catalogError && visibleProviders.length > 0 && (
+                    <>
                     <div
                       ref={marqueeContainerRef}
                       className="grid gap-3.5 items-stretch w-full min-w-0"
@@ -854,7 +896,7 @@ export function ModelsFeature(props) {
                         gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${cardWidthPx > 0 ? cardWidthPx : 320}px), 1fr))`,
                       }}
                     >
-                      {visibleProviders.map((prov) => {
+                      {visibleProviders.slice(0, providerRenderLimit).map((prov) => {
                         const isCompact = (cardHeightPx < 290) || (cardWidthPx > 0 && cardWidthPx < 330);
                         const isProvSelected = selectedProviderIds.has(prov.id);
                         return (
@@ -880,7 +922,7 @@ export function ModelsFeature(props) {
                           className={`provider-card group p-4 rounded-3xl border transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.98] active:duration-150 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
                             isProvSelected
                               ? 'ring-2 ring-[var(--md-sys-color-primary)] border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary)]/15 shadow-[0_16px_40px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-[1.015] z-10'
-                              : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:-translate-y-1.5 hover:scale-[1.012] hover:z-[99] focus-within:z-[99]'
+                              : 'bg-[var(--md-sys-color-surface-container)]/60 hover:bg-[var(--md-sys-color-surface-container-high)]/90 border-[var(--md-sys-color-outline-variant)]/40 hover:border-[var(--md-sys-color-primary)]/80 shadow-[0_4px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:z-[99] focus-within:z-[99]'
                           }`}
                           style={{ minHeight: `${cardHeightPx}px` }}
                         >
@@ -1091,6 +1133,20 @@ export function ModelsFeature(props) {
                       );
                       })}
                     </div>
+
+                    {/* Clamped Provider Load More Button for Extreme Memory Savings */}
+                    {visibleProviders.length > providerRenderLimit && (
+                      <div className="flex justify-center pt-8 pb-4">
+                        <button
+                          type="button"
+                          onClick={() => setProviderRenderLimit(prev => prev + 24)}
+                          className="px-6 py-2.5 rounded-full text-xs font-mono font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer flex items-center gap-2"
+                        >
+                          <span>Load More Providers ({visibleProviders.length - providerRenderLimit} remaining)</span>
+                        </button>
+                      </div>
+                    )}
+                    </>
                     )}
                   </div>
                 )}

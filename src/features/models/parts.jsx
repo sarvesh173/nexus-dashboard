@@ -278,10 +278,28 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
     setIsHovered(true);
   };
 
+  const handleMouseMove = (e) => {
+    if (!pillRef.current) return;
+    const rect = pillRef.current.getBoundingClientRect();
+    const relY = (e.clientY - rect.top) / rect.height;
+    // Sarvesh rule: activate only when crosshair is within the safe 20% - 85% vertical zone
+    // Edge zones (< 20% or > 85%) are filtered out to prevent borderline jitter / loop glitches
+    if (relY >= 0.20 && relY <= 0.85) {
+      if (!isHovered) {
+        handleMouseEnter();
+      }
+    } else {
+      if (isHovered) {
+        setIsHovered(false);
+      }
+    }
+  };
+
   return (
     <div
       ref={pillRef}
-      onMouseEnter={handleMouseEnter}
+      onMouseEnter={handleMouseMove}
+      onMouseMove={handleMouseMove}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         e.stopPropagation();
@@ -405,7 +423,15 @@ export function InteractiveActiveModelsBadge({ provider, totalCount, onSelect })
   return (
     <div
       ref={badgeRef}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const relY = (e.clientY - rect.top) / rect.height;
+        if (relY >= 0.20 && relY <= 0.85) {
+          if (!isHovered) setIsHovered(true);
+        } else {
+          if (isHovered) setIsHovered(false);
+        }
+      }}
       onMouseLeave={() => setIsHovered(false)}
       className="relative select-none"
     >

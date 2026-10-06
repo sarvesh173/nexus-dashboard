@@ -534,7 +534,6 @@ body {
 .overview-card:hover,
 .overview-card:focus-within {
   z-index: 2;
-  transform: translateY(-3px);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.16);
 }
 

@@ -717,6 +717,7 @@ export function OverviewFeature(props) {
                     className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer ${costHover.isActive ? 'is-animating' : ''}`}
                     onClick={() => navigate('/cost')}
                     onMouseEnter={costHover.onMouseEnter}
+                    onMouseMove={costHover.onMouseMove}
                     onMouseLeave={costHover.onMouseLeave}
                   >
                     <div>
@@ -804,6 +805,7 @@ export function OverviewFeature(props) {
                   <div
                     className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] ${cpuHover.isActive ? 'is-animating' : ''}`}
                     onMouseEnter={cpuHover.onMouseEnter}
+                    onMouseMove={cpuHover.onMouseMove}
                     onMouseLeave={cpuHover.onMouseLeave}
                   >
                     <div>
@@ -860,6 +862,7 @@ export function OverviewFeature(props) {
                   <div
                     className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] ${memoryHover.isActive ? 'is-animating' : ''}`}
                     onMouseEnter={memoryHover.onMouseEnter}
+                    onMouseMove={memoryHover.onMouseMove}
                     onMouseLeave={memoryHover.onMouseLeave}
                   >
                     <div>
@@ -913,6 +916,7 @@ export function OverviewFeature(props) {
                     className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer ${modelsHover.isActive ? 'is-animating' : ''}`}
                     onClick={() => navigate('/model')}
                     onMouseEnter={modelsHover.onMouseEnter}
+                    onMouseMove={modelsHover.onMouseMove}
                     onMouseLeave={modelsHover.onMouseLeave}
                   >
                     <div>

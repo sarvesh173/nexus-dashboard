@@ -13,6 +13,20 @@ export function useHoverGraceTimer(cooldownMs = 5000) {
     setIsActive(true);
   }, []);
 
+  const onMouseMove = useCallback((e) => {
+    if (!e || !e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relY = (e.clientY - rect.top) / rect.height;
+    // 20% to 85% safe crosshair vertical hitbox zone
+    if (relY >= 0.20 && relY <= 0.85) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      setIsActive(true);
+    }
+  }, []);
+
   const onMouseLeave = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
@@ -25,7 +39,7 @@ export function useHoverGraceTimer(cooldownMs = 5000) {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  return { isActive, onMouseEnter, onMouseLeave };
+  return { isActive, onMouseEnter, onMouseMove, onMouseLeave };
 }
 
 /** Animate numeric telemetry changes without fabricating the initial sample. */
