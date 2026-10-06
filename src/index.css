@@ -513,6 +513,8 @@ body {
 }
 
 .overview-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
   /* Without its own stacking context a hovered card lifts on transform but
      is painted UNDER later siblings, so the CPU card would slide out of
      sight behind the next one. Own the layer, and raise it on hover. */
@@ -1185,6 +1187,11 @@ button:hover > .lucide line {
   .lucide:hover circle,
   .lucide:hover rect,
   .lucide:hover line { animation: none !important; }
+}
+
+[data-selectable-id] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════

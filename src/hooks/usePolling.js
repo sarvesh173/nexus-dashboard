@@ -80,6 +80,8 @@ export function usePolling(fetcher, options = {}) {
     let cancelled = false;
 
     const tick = async () => {
+      // Pause polling when tab is in background to save CPU, GPU, and RAM
+      if (typeof document !== 'undefined' && document.hidden) return;
       // Ignore results from an effect that has already been torn down, so a
       // fast unmount cannot setState on an unmounted component.
       if (!cancelled) await run();
@@ -88,9 +90,20 @@ export function usePolling(fetcher, options = {}) {
     tick();
     if (intervalMs > 0) {
       const id = setInterval(tick, intervalMs);
+      const onVisibilityChange = () => {
+        if (!document.hidden && !cancelled) {
+          tick();
+        }
+      };
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', onVisibilityChange);
+      }
       return () => {
         cancelled = true;
         clearInterval(id);
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('visibilitychange', onVisibilityChange);
+        }
       };
     }
     return () => {

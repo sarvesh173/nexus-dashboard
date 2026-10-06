@@ -38,6 +38,7 @@ export function ModelsFeature(props) {
   const [isBatchTesting, setIsBatchTesting] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [copyToast, setCopyToast] = useState('');
+  const [modelRenderLimit, setModelRenderLimit] = useState(40);
 
   const handleTestSelected = useCallback(async () => {
     if (!selectedModelIds || selectedModelIds.size === 0) return;
@@ -1290,7 +1291,7 @@ export function ModelsFeature(props) {
 
                     {/* Model List Cards */}
                     <div className="space-y-3">
-                      {filteredModels.map((item) => {
+                      {filteredModels.slice(0, modelRenderLimit).map((item) => {
                         const isMSelected = selectedModelIds.has(item.id);
                         return (
                         <div
@@ -1521,6 +1522,17 @@ export function ModelsFeature(props) {
                         </div>
                       );})}
                     </div>
+                    {filteredModels.length > modelRenderLimit && (
+                      <div className="pt-2 pb-6 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setModelRenderLimit(prev => prev + 40)}
+                          className="px-5 py-2.5 rounded-full text-xs font-mono font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all shadow-xs active:scale-95 cursor-pointer"
+                        >
+                          Load More Models ({filteredModels.length - modelRenderLimit} remaining)
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

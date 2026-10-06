@@ -16,7 +16,7 @@ import { useMemo } from 'react';
 import { fetchStats } from '../api/stats.js';
 import { usePolling } from './usePolling.js';
 
-export const STATS_INTERVAL_MS = 2000;
+export const STATS_INTERVAL_MS = 6000;
 
 /**
  * @param {object} [options]

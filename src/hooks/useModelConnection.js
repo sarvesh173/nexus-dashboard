@@ -9,7 +9,7 @@ import { useState, useCallback } from 'react';
 import { fetchConnectionHealth, setActiveModel as apiSetActiveModel } from '../api/modelConnection.js';
 import { usePolling } from './usePolling.js';
 
-export const CONNECTION_POLL_INTERVAL_MS = 15000;
+export const CONNECTION_POLL_INTERVAL_MS = 30000;
 
 /**
  * @param {object} [options]

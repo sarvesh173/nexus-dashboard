@@ -712,9 +712,13 @@ export default function App() {
   const fetchCostOverview = costResource.refresh;
 
   useEffect(() => {
-    const costInterval = setInterval(fetchCostOverview, 30000);
+    if (!isCostNavActive) return undefined;
+    const costInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchCostOverview();
+    }, 60000);
     return () => clearInterval(costInterval);
-  }, [fetchCostOverview]);
+  }, [fetchCostOverview, isCostNavActive]);
 
   // Publish the ramp as a CSS custom property so the stylesheet's bar transition
   // cannot drift away from the counter it is tracking. These two were

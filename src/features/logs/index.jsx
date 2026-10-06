@@ -10,16 +10,18 @@ export function LogsFeature({ isLogsNavActive, nexusLog }) {
   const [logs, setLogs] = useState([]);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
 
-  // Poll recent events
+  // Poll recent events only when view is active and page is visible
   useEffect(() => {
+    if (!isLogsNavActive) return undefined;
     const updateLogs = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       const entries = nexusLog?.getRecent ? nexusLog.getRecent(100) : [];
       setLogs(entries);
     };
     updateLogs();
-    const interval = setInterval(updateLogs, 3000);
+    const interval = setInterval(updateLogs, 8000);
     return () => clearInterval(interval);
-  }, [nexusLog]);
+  }, [isLogsNavActive, nexusLog]);
 
   const filteredLogs = logs.filter((l) => {
     if (filter !== 'ALL' && l.level !== filter) return false;
