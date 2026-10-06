@@ -260,8 +260,8 @@ export function ModelsFeature(props) {
                             }}
                             className={`px-3 py-1 rounded-full border text-[11px] font-mono font-semibold transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1) flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-xs ${
                               isSelectionMode
-                                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30 hover:scale-105'
-                                : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:scale-105'
+                                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] border-[var(--md-sys-color-primary)] ring-2 ring-[var(--md-sys-color-primary)]/30'
+                                : 'bg-[var(--md-sys-color-surface-container)] border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-on-surface)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]'
                             }`}
 
                           >
@@ -427,7 +427,7 @@ export function ModelsFeature(props) {
                               className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5 border bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20 cursor-pointer shadow-xs"
                               title="Sequentially probe latency for all selected models"
                             >
-                              <Activity size={12} className={isBatchTesting ? 'animate-spin' : ''} />
+                              <Activity size={12} className={isBatchTesting ? 'animate-pulse text-emerald-400' : ''} />
                               <span>{isBatchTesting ? `Testing ${batchProgress.current}/${batchProgress.total}…` : `Test Selected (${selectedModelIds.size})`}</span>
                             </button>
                           )}
@@ -1173,7 +1173,7 @@ export function ModelsFeature(props) {
                     <button
                       type="button"
                       onClick={() => setSelectedProviderId(null)}
-                      className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm active:scale-95 transition-all cursor-pointer"
                     >
                       <ArrowLeft size={14} />
                       <span>All Providers</span>
@@ -1510,7 +1510,7 @@ export function ModelsFeature(props) {
                                         : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/30'
                                     }`}
                                   >
-                                    <Activity size={12} className={isTesting ? 'animate-spin' : ''} />
+                                    <Activity size={12} className={isTesting ? 'animate-pulse text-emerald-400' : ''} />
                                     <span>
                                       {isTesting
                                         ? 'Testing…'

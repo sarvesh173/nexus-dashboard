@@ -1064,7 +1064,7 @@ export function FetchModelsModal({ isOpen, provider, onImport, onClose, suggeste
 
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3 text-cyan-400">
-            <DownloadCloud size={32} className="animate-bounce" />
+            <DownloadCloud size={32} className="text-[var(--md-sys-color-primary)] opacity-80" />
             <p className="text-xs font-mono text-[var(--md-sys-color-on-surface-variant)]">Syncing latest releases from upstream API…</p>
           </div>
         ) : (
@@ -1452,7 +1452,7 @@ export function ProviderEditModal({ provider, overrides, onSave, onReset, onClos
                 <button
                   type="button"
                   onClick={handleApplyCrop}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm active:scale-95 transition-all cursor-pointer"
                 >
                   Apply Crop
                 </button>
@@ -1514,7 +1514,7 @@ export function ProviderEditModal({ provider, overrides, onSave, onReset, onClos
             <button
               type="button"
               onClick={handleSave}
-              className="px-5 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="px-5 py-2 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm active:scale-95 transition-all cursor-pointer"
             >
               Save Changes
             </button>
@@ -1543,7 +1543,7 @@ export function ProviderHeaderAction({ prov, isSelected, isSelectionMode, onTogg
           className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1) cursor-pointer active:scale-90 animate-in fade-in zoom-in-75 backdrop-blur-md ${
             isSelected
               ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_2px_8px_rgba(124,58,237,0.35)] scale-110 ring-2 ring-[var(--md-sys-color-primary)]/50'
-              : 'bg-[var(--md-sys-color-surface-container-highest)]/85 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:scale-105'
+              : 'bg-[var(--md-sys-color-surface-container-highest)]/85 text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)]'
           }`}
 
         >

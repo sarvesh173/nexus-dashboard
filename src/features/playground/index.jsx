@@ -116,7 +116,7 @@ export function PlaygroundFeature(props) {
               )}
               {isPlaygroundSending && (
                 <div className="flex items-center gap-2 text-xs text-[var(--md-sys-color-primary)] font-mono animate-pulse">
-                  <Sparkles size={14} className="animate-spin" />
+                  <Sparkles size={14} className="animate-pulse text-[var(--md-sys-color-primary)]" />
                   <span>Generating response…</span>
                 </div>
               )}
