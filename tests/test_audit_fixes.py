@@ -329,5 +329,33 @@ class TestMetaCountsAgreeWithRows(unittest.TestCase):
         self.assertLessEqual(meta["unique_models"], meta["models"])
 
 
+class TestNoThirdPartyDependencyCrashes(unittest.TestCase):
+    """Ensure modules can be imported and executed without psutil, requests, or yaml."""
+
+    def test_model_health_without_requests(self):
+        import model_health
+        orig = model_health.requests
+        model_health.requests = None
+        try:
+            status, detail = model_health._probe("http://invalid.stub", "dummy_key", "test-model", "/v1/chat/completions")
+            self.assertEqual(status, "UNREACHABLE")
+        finally:
+            model_health.requests = orig
+
+    def test_server_telemetry_without_psutil(self):
+        import server
+        orig_psutil = server.psutil
+        server.psutil = None
+        server._cached_data = None
+        try:
+            data = server.get_telemetry()
+            self.assertIn("ram_percent", data)
+            self.assertIn("cpu_percent", data)
+            self.assertIn("disk_percent", data)
+        finally:
+            server.psutil = orig_psutil
+            server._cached_data = None
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

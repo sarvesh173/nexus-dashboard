@@ -17,6 +17,10 @@ class TestModelConnectionEndpoints(unittest.TestCase):
                 self.assertIn("active_model", data)
         except urllib.error.HTTPError as e:
             self.fail(f"HTTPError: {e.code} {e.reason}")
+        except urllib.error.URLError as e:
+            if isinstance(e.reason, ConnectionRefusedError):
+                self.skipTest("Server not running on port 5174; skipping live endpoint test")
+            raise
 
     def test_set_active_model_endpoint(self):
         payload = json.dumps({"model": "test/model-alpha", "provider": "openrouter"}).encode()
@@ -34,6 +38,10 @@ class TestModelConnectionEndpoints(unittest.TestCase):
                 self.assertEqual(data.get("active_model"), "test/model-alpha")
         except urllib.error.HTTPError as e:
             self.fail(f"HTTPError: {e.code} {e.reason}")
+        except urllib.error.URLError as e:
+            if isinstance(e.reason, ConnectionRefusedError):
+                self.skipTest("Server not running on port 5174; skipping live endpoint test")
+            raise
 
 if __name__ == "__main__":
     unittest.main()
