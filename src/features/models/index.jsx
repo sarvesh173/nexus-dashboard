@@ -282,7 +282,7 @@ export function ModelsFeature(props) {
                               }}
                             >
                               <path
-                                d="M 38 0 L 38 -14 L 64 -24"
+                                d="M 38 28 L 38 42 L 64 52"
                                 fill="none"
                                 stroke="var(--md-sys-color-primary)"
                                 strokeWidth="1.5"
@@ -294,23 +294,23 @@ export function ModelsFeature(props) {
                               />
                               <circle
                                 cx="38"
-                                cy="0"
+                                cy="28"
                                 r="2.5"
                                 fill="var(--md-sys-color-primary)"
                                 style={{
                                   transform: isSelectHovered ? 'scale(1)' : 'scale(0)',
-                                  transformOrigin: '38px 0px',
+                                  transformOrigin: '38px 28px',
                                   transition: isSelectHovered ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
                                 }}
                               />
                             </svg>
 
-                            {/* Animated Leader Box Floating Above */}
+                            {/* Animated Leader Box Floating Below into safe visible content area */}
                             <div
-                              className="absolute left-10 bottom-full mb-3 z-50 px-3 py-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-highest)]/95 text-[var(--md-sys-color-on-surface)] text-[10px] font-mono shadow-[0_12px_32px_rgba(0,0,0,0.5)] border border-[var(--md-sys-color-primary)]/40 backdrop-blur-2xl whitespace-nowrap pointer-events-none"
+                              className="absolute left-10 top-full mt-3 z-50 px-3 py-1.5 rounded-xl bg-[var(--md-sys-color-surface-container-highest)]/95 text-[var(--md-sys-color-on-surface)] text-[10px] font-mono shadow-[0_12px_32px_rgba(0,0,0,0.5)] border border-[var(--md-sys-color-primary)]/40 backdrop-blur-2xl whitespace-nowrap pointer-events-none"
                               style={{
                                 opacity: isSelectHovered ? 1 : 0,
-                                transform: isSelectHovered ? 'translateY(0) scale(1)' : 'translateY(4px) scale(0.96)',
+                                transform: isSelectHovered ? 'translateY(0) scale(1)' : 'translateY(-4px) scale(0.96)',
                                 transition: isSelectHovered
                                   ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
                                   : 'opacity 180ms ease-out, transform 180ms ease-out',
@@ -466,12 +466,12 @@ export function ModelsFeature(props) {
                             const activeDotX = activeGoRight ? 70 : 0;
                             const activeMidX = activeGoRight ? 98 : -28;
                             const activeBoxX = activeGoRight ? 122 : -46;
-                            const activeBoxY = -52;
+                            const activeBoxY = 38;
 
                             const offlineDotX = offlineGoRight ? 76 : 0;
                             const offlineMidX = offlineGoRight ? 104 : -28;
                             const offlineBoxX = offlineGoRight ? 106 : -46;
-                            const offlineBoxY = -52;
+                            const offlineBoxY = 38;
 
                             return (
                               <>
@@ -558,7 +558,7 @@ export function ModelsFeature(props) {
                                       style={{
                                         left: `${activeBoxX}px`,
                                         top: `${activeBoxY}px`,
-                                        transform: `${activeGoRight ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
+                                        transform: `${activeGoRight ? 'translate(0, 0)' : 'translate(-100%, 0)'} ${isActiveStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                         opacity: isActiveStatusHovered ? 1 : 0,
                                         transition: isActiveStatusHovered
                                           ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
@@ -691,7 +691,7 @@ export function ModelsFeature(props) {
                                       style={{
                                         left: `${offlineBoxX}px`,
                                         top: `${offlineBoxY}px`,
-                                        transform: `${offlineGoRight ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
+                                        transform: `${offlineGoRight ? 'translate(0, 0)' : 'translate(-100%, 0)'} ${isOfflineStatusHovered ? 'scale(1)' : 'scale(0.94)'}`,
                                         opacity: isOfflineStatusHovered ? 1 : 0,
                                         transition: isOfflineStatusHovered
                                           ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
