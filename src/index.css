@@ -207,9 +207,29 @@ body {
   will-change: transform;
 }
 
-/* 3. Travelling Specular Glint Sweep disabled to prevent distracting continuous sheen */
+/* 3. Travelling Specular Glint Sweep (reactive-ui-theming-and-motion staggered shine) */
 .m3-linear-indicator::after {
-  display: none;
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--md-sys-color-primary) 30%, white) 50%,
+    transparent 100%
+  );
+  opacity: 0.85;
+  animation: m3-metallic-specular-flow 2.6s var(--m3-easing-standard) infinite;
+  animation-delay: 200ms;
+  pointer-events: none;
+}
+
+@keyframes m3-metallic-specular-flow {
+  0%        { transform: translateX(-100%); }
+  55%, 100% { transform: translateX(280%); }
 }
 
 /* 4. Hardware End Cap / Optical Sensor Bead (.m3-linear-stop) */
