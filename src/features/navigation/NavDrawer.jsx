@@ -16,6 +16,7 @@ export function NavDrawer({
   onNavigate,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHamburgerHovered, setIsHamburgerHovered] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -42,12 +43,14 @@ export function NavDrawer({
 
   return (
     <>
-      {/* 3-Lines Hamburger Trigger Button with Tactile Physics */}
+      {/* 3-Lines Hamburger Trigger Button with Theme-Aware Morphing */}
       <button
         type="button"
         aria-label="Open Navigation Drawer"
         onClick={() => setIsOpen(true)}
-        className="relative p-2 rounded-xl text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs overflow-hidden flex items-center justify-center w-9 h-9"
+        onMouseEnter={() => setIsHamburgerHovered(true)}
+        onMouseLeave={() => setIsHamburgerHovered(false)}
+        className="group/hamburger relative p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer shadow-xs overflow-hidden flex items-center justify-center w-9 h-9"
       >
         <svg
           width="18"
@@ -55,33 +58,40 @@ export function NavDrawer({
           viewBox="0 0 18 18"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          className="transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]"
         >
+          {/* Top Line: Staggered stretch */}
           <line
-            x1="2.5"
+            x1={isHamburgerHovered ? "2" : "3"}
             y1="4.5"
-            x2="15.5"
+            x2={isHamburgerHovered ? "16" : "15"}
             y2="4.5"
-            stroke="currentColor"
+            stroke={isHamburgerHovered ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface-variant)"}
             strokeWidth="1.75"
             strokeLinecap="round"
+            className="transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]"
           />
+          {/* Middle Line: Elastic center expand */}
           <line
-            x1="2.5"
+            x1={isHamburgerHovered ? "2" : "5.5"}
             y1="9"
-            x2="15.5"
+            x2={isHamburgerHovered ? "16" : "12.5"}
             y2="9"
-            stroke="currentColor"
+            stroke={isHamburgerHovered ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface)"}
             strokeWidth="1.75"
             strokeLinecap="round"
+            className="transition-all duration-250 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
           />
+          {/* Bottom Line: Stepped tail anchor */}
           <line
-            x1="2.5"
+            x1={isHamburgerHovered ? "2" : "3"}
             y1="13.5"
-            x2="15.5"
+            x2={isHamburgerHovered ? "14" : "9.5"}
             y2="13.5"
-            stroke="currentColor"
+            stroke={isHamburgerHovered ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface-variant)"}
             strokeWidth="1.75"
             strokeLinecap="round"
+            className="transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]"
           />
         </svg>
       </button>

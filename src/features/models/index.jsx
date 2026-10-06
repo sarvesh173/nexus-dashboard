@@ -123,11 +123,11 @@ export function ModelsFeature(props) {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)] hover:text-[var(--md-sys-color-on-primary)] transition-all active:scale-95 shadow-xs cursor-pointer group"
 
                           >
-                            <Edit2 size={13} className="svg-anim-edit transition-transform" />
+                            <Edit2 size={13} className="theme-icon-edit" />
                             <span>Edit Provider</span>
                           </button>
 
-                          {/* Fetch Button with subtle downward-bounce SVG animation */}
+                          {/* Fetch Button with subtle theme SVG animation */}
                           <button
                             type="button"
                             onClick={() => {
@@ -137,11 +137,11 @@ export function ModelsFeature(props) {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
 
                           >
-                            <DownloadCloud size={13} className="text-cyan-400 svg-anim-fetch transition-transform" />
+                            <DownloadCloud size={13} className="theme-icon-fetch" />
                             <span>Fetch</span>
                           </button>
 
-                          {/* Add Button with subtle rotation SVG animation */}
+                          {/* Add Button with subtle theme SVG animation */}
                           <button
                             type="button"
                             onClick={() => {
@@ -151,7 +151,7 @@ export function ModelsFeature(props) {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all active:scale-95 shadow-xs cursor-pointer group"
 
                           >
-                            <Plus size={13} className="text-emerald-400 svg-anim-add transition-transform" />
+                            <Plus size={13} className="theme-icon-add" />
                             <span>Add</span>
                           </button>
                         </div>
@@ -1516,7 +1516,7 @@ export function ModelsFeature(props) {
                                         : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 border-[var(--md-sys-color-outline-variant)] hover:border-cyan-500/30'
                                     }`}
                                   >
-                                    <Activity size={12} className={isTesting ? 'animate-pulse text-emerald-400' : ''} />
+                                    <Activity size={12} className={`theme-icon-test ${isTesting ? 'animate-pulse text-emerald-400' : ''}`} />
                                     <span>
                                       {isTesting
                                         ? 'Testing…'
@@ -1544,7 +1544,7 @@ export function ModelsFeature(props) {
                                 className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-amber-400 border border-[var(--md-sys-color-outline-variant)] hover:border-amber-500/40 hover:bg-amber-500/10 transition-all active:scale-95 shadow-xs cursor-pointer"
 
                               >
-                                <Sliders size={12} className="svg-anim-config transition-transform" />
+                                <Sliders size={12} className="theme-icon-config" />
                                 <span className="hidden sm:inline">Context</span>
                               </button>
 

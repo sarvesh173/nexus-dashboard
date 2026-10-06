@@ -1252,3 +1252,63 @@ button:hover > svg.lucide-trash-2 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   border-color: var(--md-sys-color-primary);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   M3 Theme-Customized SVG Micro-Interactions
+   Harmonized with --md-sys-color-primary, surface tokens & fluid micro-geometry
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* 1. Edit Provider: Theme-colored nib illumination & subtle precision micro-angle */
+.theme-icon-edit {
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), color 200ms ease, filter 200ms ease;
+}
+.group:hover .theme-icon-edit,
+button:hover > .theme-icon-edit {
+  color: var(--md-sys-color-primary) !important;
+  transform: rotate(-6deg) scale(1.06);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 65%, transparent));
+}
+
+/* 2. Fetch Models: Upstream stream beacon — cloud illuminates with cyan / primary theme mix */
+.theme-icon-fetch {
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), color 200ms ease, filter 200ms ease;
+}
+.group:hover .theme-icon-fetch,
+button:hover > .theme-icon-fetch {
+  color: color-mix(in srgb, var(--md-sys-color-primary) 40%, #22d3ee) !important;
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, #22d3ee 60%, transparent));
+}
+
+/* 3. Add Model: Geometric cross expansion with theme primary illumination */
+.theme-icon-add {
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), color 200ms ease, filter 200ms ease;
+}
+.group:hover .theme-icon-add,
+button:hover > .theme-icon-add {
+  color: color-mix(in srgb, var(--md-sys-color-primary) 40%, #34d399) !important;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, #34d399 60%, transparent));
+}
+
+/* 4. Context & Config Slider: Micro-notch displacement */
+.theme-icon-config {
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), color 200ms ease, filter 200ms ease;
+}
+.group:hover .theme-icon-config,
+button:hover > .theme-icon-config {
+  color: color-mix(in srgb, var(--md-sys-color-primary) 50%, #f59e0b) !important;
+  transform: rotate(12deg) scale(1.05);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, #f59e0b 55%, transparent));
+}
+
+/* 5. Model Test Pulse: Ambient bio-pulse */
+.theme-icon-test {
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), color 200ms ease, filter 200ms ease;
+}
+.group:hover .theme-icon-test,
+button:hover > .theme-icon-test {
+  color: var(--md-sys-color-primary) !important;
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent));
+}

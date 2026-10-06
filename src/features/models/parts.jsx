@@ -651,7 +651,7 @@ export function ModelConfigModal({ model, currentConfig, onSave, onReset, onClos
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--md-sys-color-outline-variant)]/40">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-[var(--md-sys-color-primary)]/10 text-[var(--md-sys-color-primary)] flex items-center justify-center border border-[var(--md-sys-color-primary)]/25 shadow-xs">
-              <Sliders size={16} className="svg-anim-config" />
+              <Sliders size={16} className="theme-icon-config" />
             </div>
             <div>
               <h2 className="text-base font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">Configure Context & Tokens</h2>
