@@ -21,9 +21,16 @@ import json
 import os
 import tempfile
 import time
+import urllib.request
+import urllib.error
+import urllib.parse
+import socket
 from paths import hermes_config_path, hermes_env_path, omniroute_env_path
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'
@@ -53,13 +60,24 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
     key = key or _api_key()
     ids = set()
     if key:
-        try:
-            r = requests.get(base.rstrip('/') + '/models', timeout=15,
-                             headers={'Authorization': 'Bearer {key}'.format(key=key)})
-            if r.status_code == 200:
-                ids = {m.get('id') for m in r.json().get('data', []) if m.get('id')}
-        except Exception:
-            pass
+        headers = {'Authorization': 'Bearer {key}'.format(key=key)}
+        url = base.rstrip('/') + '/models'
+        if requests is not None:
+            try:
+                r = requests.get(url, timeout=15, headers=headers)
+                if r.status_code == 200:
+                    ids = {m.get('id') for m in r.json().get('data', []) if m.get('id')}
+            except Exception:
+                pass
+        else:
+            req = urllib.request.Request(url, headers=headers)
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    if resp.status == 200:
+                        data = json.loads(resp.read().decode('utf-8'))
+                        ids = {m.get('id') for m in data.get('data', []) if m.get('id')}
+            except Exception:
+                pass
     _catalog_cache.update({'ids': ids, 'at': time.time()})
     return ids
 
@@ -127,9 +145,13 @@ def is_hidden(mid):
 
 def _api_key():
     try:
-        import yaml
-        with open(CONFIG_PATH) as fh:
-            cfg = yaml.safe_load(fh) or {}
+        try:
+            import yaml
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as fh:
+                cfg = yaml.safe_load(fh) or {}
+        except Exception:
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as fh:
+                cfg = json.load(fh) or {}
         n = (cfg.get('providers') or {}).get('nvidia') or {}
         key = n.get('api_key')
         if key:
@@ -160,26 +182,48 @@ def _probe(base, key, mid, route):
         body = {'model': mid,
                 'messages': [{'role': 'user', 'content': 'hi'}],
                 'max_tokens': 1}
-    try:
-        r = requests.post(url, json=body, timeout=PROBE_TIMEOUT,
-                          headers={'Authorization': 'Bearer {key}'.format(key=key),
-                                   'Content-Type': 'application/json'})
-    except requests.Timeout:
-        return 'UNREACHABLE', 'timeout'
-    except Exception as exc:                      # connection reset, DNS, ...
-        return 'UNREACHABLE', type(exc).__name__
 
-    code = r.status_code
+    headers = {'Authorization': 'Bearer {key}'.format(key=key),
+               'Content-Type': 'application/json'}
+
+    if requests is not None:
+        try:
+            r = requests.post(url, json=body, timeout=PROBE_TIMEOUT, headers=headers)
+            code = r.status_code
+            text = r.text
+        except requests.Timeout:
+            return 'UNREACHABLE', 'timeout'
+        except Exception as exc:
+            return 'UNREACHABLE', type(exc).__name__
+    else:
+        req_data = json.dumps(body).encode('utf-8')
+        req = urllib.request.Request(url, data=req_data, headers=headers, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as resp:
+                code = resp.status
+                text = resp.read().decode('utf-8', errors='replace')
+        except urllib.error.HTTPError as e:
+            code = e.code
+            text = e.read().decode('utf-8', errors='replace') if e.fp else ''
+        except urllib.error.URLError as e:
+            if isinstance(e.reason, socket.timeout):
+                return 'UNREACHABLE', 'timeout'
+            return 'UNREACHABLE', type(e.reason).__name__
+        except socket.timeout:
+            return 'UNREACHABLE', 'timeout'
+        except Exception as exc:
+            return 'UNREACHABLE', type(exc).__name__
+
     if code == 200:
         return 'ALIVE', 'ok'
     if code == 410:
-        return 'RETIRED', r.text[:180]
+        return 'RETIRED', text[:180]
     if code == 404:
         # "Function '<uuid>' Not Found" == retired NIM deployment
-        if 'Function' in r.text or 'not found' in r.text.lower():
-            if "'" in r.text and 'Not Found' in r.text:
-                return 'RETIRED', r.text[:180]
-        return 'WRONG_EP', r.text[:120]
+        if 'Function' in text or 'not found' in text.lower():
+            if "'" in text and 'Not Found' in text:
+                return 'RETIRED', text[:180]
+        return 'WRONG_EP', text[:120]
     if code in (500, 502, 503):
         # reached the model but it errored server-side -> not dead
         return 'ALIVE', 'http_{}'.format(code)

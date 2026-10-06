@@ -24,15 +24,25 @@ BASE = 'https://integrate.api.nvidia.com/v1'
 
 def fetch_specs():
     """(model_id, category) straight from the live NVIDIA catalog."""
-    import yaml
-    import requests
+    import urllib.request
+    import urllib.error
 
     key = model_health._api_key()
     if not key:
         raise SystemExit('no NVIDIA key found in Hermes config')
 
-    with open(hermes_config_path()) as fh:
-        cfg = yaml.safe_load(fh) or {}
+    cfg = {}
+    try:
+        import yaml
+        with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
+            cfg = yaml.safe_load(fh) or {}
+    except Exception:
+        try:
+            with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
+                cfg = json.load(fh) or {}
+        except Exception:
+            cfg = {}
+
     nv = (cfg.get('providers') or {}).get('nvidia') or {}
     base = nv.get('base_url') or BASE
 
@@ -56,9 +66,18 @@ def fetch_specs():
               'categorisation'.format(type(exc).__name__))
 
     if not specs:
-        r = requests.get(base.rstrip('/') + '/models', timeout=20,
-                         headers={'Authorization': 'Bearer {key}'.format(key=key)})
-        for m in r.json().get('data', []):
+        data_models = []
+        headers = {'Authorization': 'Bearer {key}'.format(key=key)}
+        url = base.rstrip('/') + '/models'
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                data_models = data.get('data', [])
+        except Exception:
+            data_models = []
+
+        for m in data_models:
             mid = m.get('id', '').lower()
             cat = 'text'
             if any(k in mid for k in ('embed', 'retriever')):
