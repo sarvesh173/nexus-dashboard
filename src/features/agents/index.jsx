@@ -92,16 +92,11 @@ export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliA
           .agent-card {
             position: relative;
             overflow: hidden;
-            transition: transform 380ms cubic-bezier(0.22, 1.4, 0.36, 1),
-                        box-shadow 320ms ease,
-                        border-color 240ms ease;
-            will-change: transform;
+            transition: border-color 200ms ease, box-shadow 200ms ease;
           }
           .agent-card:hover {
-            transform: translateY(-3.5px) scale(1.012);
             border-color: color-mix(in srgb, var(--md-sys-color-primary) 55%, transparent);
-            box-shadow: 0 16px 32px -8px color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent),
-                        0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.35);
           }
           .agent-card:active {
             transform: scale(0.98);
@@ -109,64 +104,24 @@ export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliA
           }
 
           .agent-card-logo-shell {
-            perspective: 520px;
-            transform-style: preserve-3d;
-            transition: transform 420ms cubic-bezier(0.22, 1.4, 0.36, 1),
-                        box-shadow 260ms ease,
-                        border-color 260ms ease;
-            will-change: transform;
+            transition: border-color 200ms ease, box-shadow 200ms ease;
             position: relative;
           }
           .agent-card:hover .agent-card-logo-shell {
-            transform: scale(1.08);
-            box-shadow: 0 0 14px color-mix(in srgb, var(--md-sys-color-primary) 38%, transparent);
+            box-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
             border-color: var(--md-sys-color-primary);
           }
 
-          .agent-card-ring {
-            position: absolute;
-            inset: -3px;
-            border-radius: 14px;
-            border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 80%, white);
-            opacity: 0;
-            pointer-events: none;
-            z-index: 0;
-          }
-          .agent-card:hover .agent-card-ring {
-            animation: agentCardRing 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
-          }
-          @keyframes agentCardRing {
-            0%   { opacity: 0; transform: scale(0.7); }
-            26%  { opacity: 0.85; }
-            100% { opacity: 0; transform: scale(1.4); }
-          }
-
+          .agent-card-ring,
           .agent-card-sheen {
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 60%;
-            height: 100%;
-            background: linear-gradient(
-              90deg,
-              transparent,
-              rgba(255, 255, 255, 0.12),
-              transparent
-            );
-            transform: skewX(-25deg);
-            pointer-events: none;
-            transition: none;
-          }
-          .agent-card:hover .agent-card-sheen {
-            left: 200%;
-            transition: left 850ms cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: none !important;
           }
 
           .agent-enter-btn {
-            transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 180ms ease;
           }
           .agent-enter-btn:hover {
-            transform: translateY(-0.5px) scale(1.04);
+            opacity: 0.95;
           }
           .agent-enter-btn:active {
             transform: scale(0.95);
