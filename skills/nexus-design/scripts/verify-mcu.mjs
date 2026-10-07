@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global Buffer */
 // Optional networked gate: install ONLY pinned MCU into a disposable temp folder.
 // Never changes the vault's or a downstream application's dependencies/settings.
 import { mkdtemp, readFile, rm } from "node:fs/promises";

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process */
 // Offline structure/snippet/regression gate; --browser adds a real Chromium gate.
 import assert from "node:assert/strict";
 import { readdir, readFile, stat, mkdtemp, writeFile, rm } from "node:fs/promises";

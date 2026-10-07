@@ -1,28 +1,58 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
   AnimatedCurrencyValue,
+  CURRENCY_OPTIONS,
   CostBreakdownTooltip,
   convertFromUsd,
 } from '../cost/index.jsx';
+import { usePrefersReducedMotion } from '../shared/motion.js';
 
 const OVERVIEW_MOTION_STYLES = `
+  .overview-motion-root .overview-card-entry {
+    position: relative;
+    min-width: 0;
+    border-radius: 1rem;
+  }
+
+  .overview-motion-root[data-active="true"] .overview-card-entry {
+    animation: overview-card-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(var(--card-order, 0) * 65ms);
+  }
+
+  .overview-motion-root .overview-card-entry::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.8),
+      0 4px 12px -8px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 240ms ease-out, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   .overview-motion-root .overview-card {
     isolation: isolate;
     position: relative;
+    height: 100%;
+    min-width: 0;
     transform: translate3d(0, 0, 0);
-    transition:
-      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 180ms ease-out;
-    will-change: transform;
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .overview-motion-root .overview-card:hover,
-  .overview-motion-root .overview-card:focus-within {
+  .overview-motion-root .overview-card-entry:focus-within {
+    z-index: 10;
+  }
+
+  .overview-motion-root .overview-card-entry:focus-within .overview-card,
+  .overview-motion-root .overview-card-entry:focus-within::before {
     transform: translate3d(0, -4px, 0);
-    box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.8),
-      0 4px 12px -8px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+  }
+
+  .overview-motion-root .overview-card-entry:focus-within::before {
+    opacity: 1;
   }
 
   .overview-card-sheen-clip {
@@ -34,15 +64,21 @@ const OVERVIEW_MOTION_STYLES = `
     z-index: 0;
   }
 
+  .overview-card-sheen-clip::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 12%;
+    right: 12%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+    opacity: 0.45;
+    transition: opacity 200ms ease-out;
+  }
+
   .overview-card-sheen {
-    background: linear-gradient(
-      108deg,
-      transparent 34%,
-      rgba(255, 255, 255, 0.02) 43%,
-      rgba(255, 255, 255, 0.2) 50%,
-      rgba(255, 255, 255, 0.03) 57%,
-      transparent 66%
-    );
+    background: linear-gradient(108deg, transparent 34%, rgba(255, 255, 255, 0.02) 43%,
+      rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.03) 57%, transparent 66%);
     inset: -35% -55%;
     opacity: 0;
     position: absolute;
@@ -50,15 +86,123 @@ const OVERVIEW_MOTION_STYLES = `
     transition: opacity 160ms ease-out, transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .overview-card:hover .overview-card-sheen,
-  .overview-card:focus-within .overview-card-sheen {
+  .overview-card-entry:focus-within .overview-card-sheen {
     opacity: 1;
     transform: translate3d(72%, 0, 0) skewX(-12deg);
+  }
+
+  .overview-card-entry:focus-within .overview-card-sheen-clip::before {
+    opacity: 1;
   }
 
   .overview-motion-root .overview-card > :not(.overview-card-sheen-clip) {
     position: relative;
     z-index: 1;
+  }
+
+  .overview-motion-root .overview-control {
+    transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease-out;
+  }
+  .overview-motion-root .overview-control:active:not(:disabled) { transform: scale(0.95); }
+  .overview-motion-root .overview-control:disabled { opacity: 0.55; }
+
+  .overview-motion-root .m3-linear-progress {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 8px;
+  }
+  .overview-motion-root .m3-linear-track {
+    position: relative;
+    flex: 1;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--md-sys-color-surface-container-highest);
+  }
+  .overview-motion-root .m3-linear-stop {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+  }
+  .overview-motion-root .m3-linear-indicator {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--md-sys-color-primary);
+    transform: scaleX(var(--ov-progress, 0));
+    transform-origin: left center;
+    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .overview-status-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    position: relative;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  .overview-status-dot[data-live="true"] { opacity: 1; }
+  .overview-status-dot[data-live="true"]::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    border: 1px solid currentColor;
+    animation: overview-status-breathe 2800ms ease-in-out infinite;
+  }
+
+  .overview-metric-trend {
+    display: block;
+    width: 100%;
+    height: 28px;
+    margin-top: 10px;
+    color: var(--md-sys-color-primary);
+    overflow: visible;
+  }
+
+  .overview-spark-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: overview-spark-pulse 1000ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  }
+
+  .overview-motion-root[data-active="false"] *,
+  .overview-motion-root[data-active="false"] *::after {
+    animation-play-state: paused !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* The stationary wrapper owns hover, so a lifted edge cannot flicker. */
+    .overview-motion-root .overview-card-entry:hover { z-index: 10; }
+    .overview-motion-root .overview-card-entry:hover .overview-card,
+    .overview-motion-root .overview-card-entry:hover::before {
+      transform: translate3d(0, -4px, 0);
+    }
+    .overview-motion-root .overview-card-entry:hover::before { opacity: 1; }
+    .overview-card-entry:hover .overview-card-sheen {
+      opacity: 1;
+      transform: translate3d(72%, 0, 0) skewX(-12deg);
+    }
+    .overview-card-entry:hover .overview-card-sheen-clip::before { opacity: 1; }
+  }
+
+  @keyframes overview-card-enter {
+    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+  @keyframes overview-status-breathe {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 0.65; transform: scale(1.25); }
+  }
+  @keyframes overview-spark-pulse {
+    from { opacity: 0.65; transform: scale(1); }
+    to { opacity: 0; transform: scale(2.6); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -69,19 +213,25 @@ const OVERVIEW_MOTION_STYLES = `
       scroll-behavior: auto !important;
       transition: none !important;
     }
-
-    .overview-motion-root .overview-card,
-    .overview-motion-root .overview-card:hover,
-    .overview-motion-root .overview-card:focus-within {
+    .overview-motion-root .overview-card-entry,
+    .overview-motion-root .overview-card-entry .overview-card,
+    .overview-motion-root .overview-card-entry::before,
+    .overview-motion-root .overview-control:active:not(:disabled) {
       transform: none !important;
       will-change: auto;
     }
-
-    .overview-motion-root .overview-card-sheen-clip {
+    .overview-motion-root .overview-card-sheen,
+    .overview-motion-root .overview-spark-pulse,
+    .overview-motion-root .overview-status-dot::after {
       display: none;
     }
   }
 `;
+
+const EMPTY_HOVER = Object.freeze({ isActive: false });
+const HISTORY_SIZE = 24;
+const finiteNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+const percentage = (value) => Math.max(0, Math.min(100, finiteNumber(value)));
 
 const CardSpecularSheen = () => (
   <span className="overview-card-sheen-clip" aria-hidden="true">
@@ -89,6 +239,53 @@ const CardSpecularSheen = () => (
   </span>
 );
 
+const StatusDot = ({ live }) => (
+  <span className="overview-status-dot" data-live={Boolean(live)} aria-hidden="true" />
+);
+
+// Record actual samples only; never synthesize a trend or run an idle timer.
+function MetricSparkline({ value, enabled, ceiling }) {
+  const numeric = value == null ? NaN : Number(value);
+  const valid = enabled && Number.isFinite(numeric);
+  const [history, setHistory] = useState(() => ({ samples: valid ? [numeric] : [], revision: 0 }));
+  const lastSample = useRef({ value: valid ? numeric : null, time: 0 });
+  const { samples, revision } = history;
+
+  useEffect(() => {
+    if (!valid || lastSample.current.value === numeric) return;
+    const now = Date.now();
+    // Parent-supplied smooth metrics may update each frame. Sample at most 1Hz.
+    if (now - lastSample.current.time < 1000) return;
+    lastSample.current = { value: numeric, time: now };
+    setHistory((previous) => ({
+      samples: [...previous.samples.slice(-(HISTORY_SIZE - 1)), numeric],
+      revision: previous.revision + 1,
+    }));
+  }, [numeric, valid]);
+
+  const min = ceiling || !samples.length ? 0 : Math.min(...samples);
+  const max = ceiling || (samples.length ? Math.max(...samples) : 1);
+  const span = Math.max(0.001, max - min);
+  const points = samples.map((sample, index) => ({
+    x: 4 + ((HISTORY_SIZE - samples.length + index) / (HISTORY_SIZE - 1)) * 112,
+    y: max === min ? 14 : 24 - ((sample - min) / span) * 20,
+  }));
+  const latest = points.at(-1);
+  const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
+
+  return (
+    <svg className="overview-metric-trend" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M 4 24 H 116" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.12" />
+      {valid && latest && (
+        <>
+          <path d={path} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" opacity="0.7" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx={latest.x} cy={latest.y} r="2" fill="currentColor" />
+          <circle key={revision} className="overview-spark-pulse" cx={latest.x} cy={latest.y} r="3" fill="none" stroke="currentColor" strokeWidth="1" />
+        </>
+      )}
+    </svg>
+  );
+}
 const CostStaticIcon = ({ symbol = '$' }) => {
   const isMultiChar = symbol && symbol.length > 2;
   const isRupee = symbol === '₹';
@@ -734,20 +931,54 @@ const MemoryActiveIcon = ({ load = 0 }) => {
   );
 };
 
-// Active while hovered, plus 5-second graceful cooldown after unhovering.
-// Prevents continuous animation loops and CPU spikes on idle.
-
-export function OverviewFeature(props) {
+// Keep parent-owned hover/cooldown state intact, but never mount active SVGs
+// in hidden panes or when motion is disabled at the OS level.
+export function OverviewFeature(props = {}) {
   const {
-    isOverviewNavActive, currencyCode, activeCurrency, onCycleCurrency,
-    onRefreshStats, isRefreshing, costHover, cpuHover, memoryHover, modelsHover,
-    navigate, costOverview, costHasUsage, costLoadState, smoothCpu, smoothCore0,
-    smoothCore1, smoothRamPercent, smoothRamUsed, smoothSwapPercent,
-    hasRealTelemetry, telemetry, providersList,
+    isOverviewNavActive, currencyCode, activeCurrency: currencyProp, onCycleCurrency,
+    onRefreshStats, isRefreshing, costHover: costHoverProp, cpuHover: cpuHoverProp,
+    memoryHover: memoryHoverProp, modelsHover: modelsHoverProp,
+    navigate, costOverview: costOverviewProp, costHasUsage, costLoadState,
+    smoothCpu: cpuValue, smoothCore0: core0Value, smoothCore1: core1Value,
+    smoothRamPercent: ramValue, smoothRamUsed, smoothSwapPercent: swapValue,
+    hasRealTelemetry: telemetryReady, telemetry, providersList: providersProp,
   } = props;
-  const fetchStats = onRefreshStats;
+  const reducedMotion = usePrefersReducedMotion();
+  const motionEnabled = Boolean(isOverviewNavActive) && !reducedMotion;
+  const currency = CURRENCY_OPTIONS.find((option) => option.id === currencyProp?.id) ?? CURRENCY_OPTIONS[0];
+  const activeCurrency = {
+    ...currency,
+    ...currencyProp,
+    id: currencyProp?.id || currency.id,
+    symbol: currencyProp?.symbol || currency.symbol,
+  };
+  const costOverview = costOverviewProp ?? {};
+  const costHover = costHoverProp ?? EMPTY_HOVER;
+  const cpuHover = cpuHoverProp ?? EMPTY_HOVER;
+  const memoryHover = memoryHoverProp ?? EMPTY_HOVER;
+  const modelsHover = modelsHoverProp ?? EMPTY_HOVER;
+  const providersList = Array.isArray(providersProp) ? providersProp.filter(Boolean) : [];
+  const modelCount = providersList.reduce((total, provider) => total + Math.max(0, finiteNumber(provider.total_models)), 0);
+  const hasRealTelemetry = Boolean(telemetryReady && telemetry);
+  const smoothCpu = percentage(cpuValue);
+  const smoothCore0 = percentage(core0Value);
+  const smoothCore1 = percentage(core1Value);
+  const smoothRamPercent = percentage(ramValue);
+  const smoothSwapPercent = percentage(swapValue);
+  const totalCost = parseFloat(String(costOverview.total_accrued ?? '').split('/')[0]);
+  const hasCostTotal = Boolean(costHasUsage) && Number.isFinite(totalCost) && totalCost >= 0;
+  const hasInputRate = costLoadState === 'ready'
+    && Number.isFinite(parseFloat(String(costOverview.input_token_price ?? '').split('/')[0]));
+  const hasOutputRate = costLoadState === 'ready'
+    && Number.isFinite(parseFloat(String(costOverview.output_token_price ?? '').split('/')[0]));
+  const handleCardKeyDown = (event, path) => {
+    if (event.target === event.currentTarget && event.key === 'Enter') {
+      event.preventDefault();
+      navigate?.(path);
+    }
+  };
   return (
-        <div className={`overview-motion-root w-full space-y-6 ${isOverviewNavActive ? 'block apple-view-pane' : 'hidden'}`}>
+        <div data-active={Boolean(isOverviewNavActive)} className={`overview-motion-root w-full space-y-6 ${isOverviewNavActive ? 'block apple-view-pane' : 'hidden'}`}>
                 <style>{OVERVIEW_MOTION_STYLES}</style>
                 {/* Section Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -761,7 +992,8 @@ export function OverviewFeature(props) {
                   </div>
                   
                   <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                    <span className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1.5" title={hasRealTelemetry ? 'Live host telemetry' : 'Waiting for live host telemetry'}>
+                      <StatusDot live={hasRealTelemetry} />
                       Dual-Core CPU & Physical Swap
                     </span>
                     <button
@@ -769,17 +1001,22 @@ export function OverviewFeature(props) {
                         const list = ['INR', 'USD', 'EUR', 'GBP', 'JPY'];
                         const idx = list.indexOf(currencyCode);
                         const next = list[(idx + 1) % list.length];
-                        onCycleCurrency(next);
+                        onCycleCurrency?.(next);
                       }}
-                      className="px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] active:scale-95 transition-all flex items-center gap-1.5 text-xs font-bold font-mono shadow-2xs cursor-pointer"
+                      type="button"
+                      aria-label={`Change currency (currently ${activeCurrency.id})`}
+                      className="overview-control px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] flex items-center gap-1.5 text-xs font-bold font-mono shadow-2xs cursor-pointer"
                     >
                       <span>{activeCurrency.flag}</span>
                       <span>{activeCurrency.symbol} {activeCurrency.id}</span>
                     </button>
                     <button
-                      onClick={fetchStats}
+                      onClick={onRefreshStats}
                       disabled={isRefreshing}
-                      className="p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] active:scale-95 transition-all"
+                      type="button"
+                      aria-label={isRefreshing ? 'Refreshing telemetry' : 'Refresh telemetry'}
+                      aria-busy={Boolean(isRefreshing)}
+                      className="overview-control p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)]"
                     >
                       <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
                     </button>
@@ -790,10 +1027,15 @@ export function OverviewFeature(props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 w-full items-stretch">
                   
                   {/* CARD 1: Total Cost */}
+                  <div className="overview-card-entry" style={{ '--card-order': 0 }}>
                   <div
-                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] cursor-pointer ${costHover.isActive ? 'is-animating' : ''}`}
-                    onClick={() => navigate('/cost')}
-                    onMouseMove={costHover.onMouseMove}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${motionEnabled && costHover.isActive ? 'is-animating' : ''}`}
+                    role="link"
+                    tabIndex={0}
+                    aria-label="View cost details"
+                    onKeyDown={(event) => handleCardKeyDown(event, '/cost')}
+                    onClick={() => navigate?.('/cost')}
+                    onMouseMove={motionEnabled ? costHover.onMouseMove : undefined}
                     onMouseLeave={costHover.onMouseLeave}
                   >
                     <CardSpecularSheen />
@@ -801,7 +1043,7 @@ export function OverviewFeature(props) {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {costHover.isActive ? (
+                          {motionEnabled && costHover.isActive ? (
                             <CostActiveIcon symbol={activeCurrency.symbol} />
                           ) : (
                             <CostStaticIcon symbol={activeCurrency.symbol} />
@@ -813,14 +1055,15 @@ export function OverviewFeature(props) {
                           baseUsd={costOverview.total_accrued}
                           currency={activeCurrency}
                           label="Total Cost"
+                          enabled={Boolean(isOverviewNavActive && hasCostTotal)}
                           rows={[
-                            { label: 'Input Token', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
-                            { label: 'Output Token', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
+                            { label: 'Input Token', value: hasInputRate ? convertFromUsd(costOverview.input_token_price, activeCurrency) : '—' },
+                            { label: 'Output Token', value: hasOutputRate ? convertFromUsd(costOverview.output_token_price, activeCurrency) : '—' },
                           ]}
                           trigger={
                             <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)] inline-block">
-                              {costHasUsage
-                                ? <AnimatedCurrencyValue usdAmount={costOverview.total_accrued} currency={activeCurrency} />
+                              {hasCostTotal
+                                ? <AnimatedCurrencyValue usdAmount={costOverview.total_accrued} currency={activeCurrency} enabled={Boolean(isOverviewNavActive)} />
                                 : <span className="overview-pending">—</span>}
                             </span>
                           }
@@ -832,6 +1075,7 @@ export function OverviewFeature(props) {
                               baseUsd={costOverview.input_token_price}
                               currency={activeCurrency}
                               label="Input Token"
+                              enabled={Boolean(isOverviewNavActive && hasInputRate)}
                               rows={[
                                 { label: 'Per 1M tokens', value: convertFromUsd(costOverview.input_token_price, activeCurrency) },
                                 { label: 'Basis', value: 'USD published' },
@@ -840,8 +1084,8 @@ export function OverviewFeature(props) {
                                 <span>
                                   <span className="text-[var(--md-sys-color-on-surface-variant)] block whitespace-nowrap text-[10px]">Input Token</span>
                                   <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
-                                    {costLoadState === 'ready'
-                                      ? <AnimatedCurrencyValue usdAmount={costOverview.input_token_price} currency={activeCurrency} />
+                                    {hasInputRate
+                                      ? <AnimatedCurrencyValue usdAmount={costOverview.input_token_price} currency={activeCurrency} enabled={Boolean(isOverviewNavActive)} />
                                       : <span className="overview-pending">—</span>}
                                   </span>
                                 </span>
@@ -853,6 +1097,7 @@ export function OverviewFeature(props) {
                               baseUsd={costOverview.output_token_price}
                               currency={activeCurrency}
                               label="Output Token"
+                              enabled={Boolean(isOverviewNavActive && hasOutputRate)}
                               rows={[
                                 { label: 'Per 1M tokens', value: convertFromUsd(costOverview.output_token_price, activeCurrency) },
                                 { label: 'Basis', value: 'USD published' },
@@ -861,8 +1106,8 @@ export function OverviewFeature(props) {
                                 <span>
                                   <span className="text-[var(--md-sys-color-on-surface-variant)] block whitespace-nowrap text-[10px]">Output Token</span>
                                   <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
-                                    {costLoadState === 'ready'
-                                      ? <AnimatedCurrencyValue usdAmount={costOverview.output_token_price} currency={activeCurrency} />
+                                    {hasOutputRate
+                                      ? <AnimatedCurrencyValue usdAmount={costOverview.output_token_price} currency={activeCurrency} enabled={Boolean(isOverviewNavActive)} />
                                       : <span className="overview-pending">—</span>}
                                   </span>
                                 </span>
@@ -872,16 +1117,21 @@ export function OverviewFeature(props) {
                         </div>
                       </div>
                     </div>
-                    <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                      <span>Auto-Scan</span>
-                      <span className="text-[var(--md-sys-color-primary)] font-medium">1h-24h cycle</span>
+                    <div>
+                      <MetricSparkline value={totalCost} enabled={Boolean(isOverviewNavActive && hasCostTotal)} />
+                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                        <span className="flex items-center gap-1.5"><StatusDot live={costLoadState === 'ready'} />Auto-Scan</span>
+                        <span className="text-[var(--md-sys-color-primary)] font-medium">1h-24h cycle</span>
+                      </div>
                     </div>
+                  </div>
                   </div>
 
                   {/* CARD 2: CPU Load */}
+                  <div className="overview-card-entry" style={{ '--card-order': 1 }}>
                   <div
-                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] ${cpuHover.isActive ? 'is-animating' : ''}`}
-                    onMouseMove={cpuHover.onMouseMove}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] ${motionEnabled && cpuHover.isActive ? 'is-animating' : ''}`}
+                    onMouseMove={motionEnabled ? cpuHover.onMouseMove : undefined}
                     onMouseLeave={cpuHover.onMouseLeave}
                   >
                     <CardSpecularSheen />
@@ -889,7 +1139,7 @@ export function OverviewFeature(props) {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {cpuHover.isActive ? (
+                          {motionEnabled && cpuHover.isActive ? (
                             <CpuActiveIcon load={smoothCpu} />
                           ) : (
                             <CpuStaticIcon />
@@ -916,15 +1166,12 @@ export function OverviewFeature(props) {
                     </div>
 
                     <div className="mt-3 pt-2">
+                      <MetricSparkline value={smoothCpu} enabled={Boolean(isOverviewNavActive && hasRealTelemetry)} ceiling={100} />
                       <div className="m3-linear-progress" aria-hidden={!hasRealTelemetry}>
                         <div className="m3-linear-track">
                           <div
                             className="m3-linear-indicator"
-                            style={{
-                              '--ov-progress': hasRealTelemetry
-                                ? Math.min(smoothCpu, 100) / 100
-                                : 0,
-                            }}
+                            style={{ '--ov-progress': hasRealTelemetry ? smoothCpu / 100 : 0 }}
                           />
                         </div>
                         <div className="m3-linear-stop" />
@@ -934,11 +1181,13 @@ export function OverviewFeature(props) {
                       )}
                     </div>
                   </div>
+                  </div>
 
                   {/* CARD 3: Memory (RAM & Swap) */}
+                  <div className="overview-card-entry" style={{ '--card-order': 2 }}>
                   <div
-                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] ${memoryHover.isActive ? 'is-animating' : ''}`}
-                    onMouseMove={memoryHover.onMouseMove}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] ${motionEnabled && memoryHover.isActive ? 'is-animating' : ''}`}
+                    onMouseMove={motionEnabled ? memoryHover.onMouseMove : undefined}
                     onMouseLeave={memoryHover.onMouseLeave}
                   >
                     <CardSpecularSheen />
@@ -946,7 +1195,7 @@ export function OverviewFeature(props) {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {memoryHover.isActive ? (
+                          {motionEnabled && memoryHover.isActive ? (
                             <MemoryActiveIcon load={telemetry?.ram_percent ?? 0} />
                           ) : (
                             <MemoryStaticIcon />
@@ -959,40 +1208,43 @@ export function OverviewFeature(props) {
                           {hasRealTelemetry ? <>{smoothRamPercent}%</> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
                         </div>
                         <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
-                          {hasRealTelemetry ? <>{smoothRamUsed}M / {telemetry.ram_total_mb}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}
+                          {hasRealTelemetry ? <>{finiteNumber(smoothRamUsed)}M / {finiteNumber(telemetry?.ram_total_mb)}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}
                         </div>
 
                         <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between">
                           <span className="text-[var(--md-sys-color-on-surface-variant)] text-[10px]">Swap/Spoke:</span>
                           <span className="text-[var(--md-sys-color-primary)] font-bold">
-                            {hasRealTelemetry ? <>{smoothSwapPercent}% ({telemetry.swap_used_mb}M)</> : <span className="overview-pending">—</span>}
+                            {hasRealTelemetry ? <>{smoothSwapPercent}% ({finiteNumber(telemetry?.swap_used_mb)}M)</> : <span className="overview-pending">—</span>}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-3 pt-2">
+                      <MetricSparkline value={smoothRamPercent} enabled={Boolean(isOverviewNavActive && hasRealTelemetry)} ceiling={100} />
                       <div className="m3-linear-progress" aria-hidden={!hasRealTelemetry}>
                         <div className="m3-linear-track">
                           <div
                             className="m3-linear-indicator"
-                            style={{
-                              '--ov-progress': hasRealTelemetry
-                                ? Math.min(smoothRamPercent, 100) / 100
-                                : 0,
-                            }}
+                            style={{ '--ov-progress': hasRealTelemetry ? smoothRamPercent / 100 : 0 }}
                           />
                         </div>
                         <div className="m3-linear-stop" />
                       </div>
                     </div>
                   </div>
+                  </div>
 
                   {/* CARD 4: Models & Providers */}
+                  <div className="overview-card-entry" style={{ '--card-order': 3 }}>
                   <div
-                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] cursor-pointer ${modelsHover.isActive ? 'is-animating' : ''}`}
-                    onClick={() => navigate('/model')}
-                    onMouseMove={modelsHover.onMouseMove}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${motionEnabled && modelsHover.isActive ? 'is-animating' : ''}`}
+                    role="link"
+                    tabIndex={0}
+                    aria-label="View models and providers"
+                    onKeyDown={(event) => handleCardKeyDown(event, '/model')}
+                    onClick={() => navigate?.('/model')}
+                    onMouseMove={motionEnabled ? modelsHover.onMouseMove : undefined}
                     onMouseLeave={modelsHover.onMouseLeave}
                   >
                     <CardSpecularSheen />
@@ -1000,7 +1252,7 @@ export function OverviewFeature(props) {
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
-                          {modelsHover.isActive ? (
+                          {motionEnabled && modelsHover.isActive ? (
                             <ModelsActiveIcon />
                           ) : (
                             <ModelsStaticIcon />
@@ -1011,7 +1263,7 @@ export function OverviewFeature(props) {
                       <div className="my-2 flex items-baseline gap-6">
                         <div>
                           <div className="text-3xl sm:text-4xl font-bold font-mono text-[var(--md-sys-color-on-surface)]">
-                            {providersList.length > 0 ? providersList.reduce((acc, p) => acc + p.total_models, 0) : <span className="overview-pending">—</span>}
+                            {providersList.length > 0 ? modelCount : <span className="overview-pending">—</span>}
                           </div>
                           <div className="text-[11px] text-[var(--md-sys-color-primary)] font-semibold uppercase tracking-wider mt-1">
                             Live Models
@@ -1029,10 +1281,14 @@ export function OverviewFeature(props) {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                      <span>Live Catalog</span>
-                      <span className="text-[var(--md-sys-color-primary)] font-medium">Flagship & Free SLA</span>
+                    <div>
+                      <MetricSparkline value={modelCount} enabled={Boolean(isOverviewNavActive && providersList.length)} />
+                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                        <span className="flex items-center gap-1.5"><StatusDot live={providersList.length > 0} />Live Catalog</span>
+                        <span className="text-[var(--md-sys-color-primary)] font-medium">Flagship & Free SLA</span>
+                      </div>
                     </div>
+                  </div>
                   </div>
 
                 </div>

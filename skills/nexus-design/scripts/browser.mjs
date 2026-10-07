@@ -1,3 +1,4 @@
+/* global process */
 // Dependency-free Chromium/CDP gate. Node >=22 supplies WebSocket.
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
