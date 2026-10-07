@@ -28,13 +28,14 @@ jobs:
         run: |
           cp src/App.jsx /tmp/App.jsx.orig
           printf '\nfunction __canary(){ return __neverDefined; }\n' >> src/App.jsx
-          if npx oxlint src/App.jsx 2>&1 | grep -q "__neverDefined"; then
+          CANARY_OUTPUT=$(npx oxlint src/App.jsx 2>&1 || true)
+          cp /tmp/App.jsx.orig src/App.jsx
+          if echo "$CANARY_OUTPUT" | grep -q "__neverDefined"; then
             echo "no-undef fired on the canary, the rule is live"
           else
             echo "::error::no-undef is inert, it did not catch a canary. Fix the lint config before trusting a green run."
             exit 1
           fi
-          cp /tmp/App.jsx.orig src/App.jsx
 
       - name: Lint
         run: npm run lint
