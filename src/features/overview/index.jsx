@@ -895,7 +895,7 @@ export function OverviewFeature(props = {}) {
     onRefreshStats, isRefreshing, costHover: costHoverProp, cpuHover: cpuHoverProp,
     memoryHover: memoryHoverProp, modelsHover: modelsHoverProp,
     navigate, costOverview: costOverviewProp, costHasUsage, costLoadState,
-    smoothCpu: cpuValue,
+    smoothCpu: cpuValue, smoothCore0: core0Value, smoothCore1: core1Value,
     smoothRamPercent: ramValue, smoothRamUsed, smoothSwapPercent: swapValue,
     hasRealTelemetry: telemetryReady, telemetry, providersList: providersProp,
   } = props;
@@ -917,6 +917,8 @@ export function OverviewFeature(props = {}) {
   const modelCount = providersList.reduce((total, provider) => total + Math.max(0, finiteNumber(provider.total_models)), 0);
   const hasRealTelemetry = Boolean(telemetryReady && telemetry);
   const smoothCpu = percentage(cpuValue);
+  const smoothCore0 = percentage(core0Value);
+  const smoothCore1 = percentage(core1Value);
   const smoothRamPercent = percentage(ramValue);
   const smoothSwapPercent = percentage(swapValue);
   const totalCost = parseFloat(String(costOverview.total_accrued ?? '').split('/')[0]);
@@ -1102,6 +1104,17 @@ export function OverviewFeature(props = {}) {
                         <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
                           {hasRealTelemetry ? <>{smoothCpu}%</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
                         </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs ">
+                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                            <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 1</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}%</> : <span className="overview-pending">—</span>}</span>
+                          </div>
+                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                            <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 2</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}%</> : <span className="overview-pending">—</span>}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -1113,6 +1126,7 @@ export function OverviewFeature(props = {}) {
                             style={{ '--ov-progress': hasRealTelemetry ? smoothCpu / 100 : 0 }}
                           />
                         </div>
+                        <div className="m3-linear-stop" />
                       </div>
                       {!hasRealTelemetry && (
                         <span className="overview-pending-caption">waiting for live reading…</span>
@@ -1166,6 +1180,7 @@ export function OverviewFeature(props = {}) {
                             style={{ '--ov-progress': hasRealTelemetry ? smoothRamPercent / 100 : 0 }}
                           />
                         </div>
+                        <div className="m3-linear-stop" />
                       </div>
                     </div>
                   </div>
