@@ -2,9 +2,23 @@ import unittest
 import urllib.request
 import urllib.error
 import json
+import threading
+from http.server import HTTPServer
+import server as srv
 
 class TestModelConnectionEndpoints(unittest.TestCase):
-    BASE_URL = "http://127.0.0.1:5174"
+    @classmethod
+    def setUpClass(cls):
+        srv.TelemetryHandler.log_message = lambda *a, **k: None
+        cls.httpd = HTTPServer(('127.0.0.1', 0), srv.TelemetryHandler)
+        cls.port = cls.httpd.server_address[1]
+        cls.server_thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.server_thread.start()
+        cls.BASE_URL = f"http://127.0.0.1:{cls.port}"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
 
     def test_connection_health_endpoint(self):
         req = urllib.request.Request(f"{self.BASE_URL}/api/model/connection-health")

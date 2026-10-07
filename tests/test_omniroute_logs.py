@@ -36,8 +36,15 @@ os.environ['OMNIROUTE_HOME'] = _OMNI_HOME
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import importlib
+import paths
+importlib.reload(paths)
+
 import omniroute_logs as o  # noqa: E402
+importlib.reload(o)
+
 import server  # noqa: E402
+importlib.reload(server)
 
 
 def _write(path, text):

@@ -1,0 +1,195 @@
+/* Material Design 3 (M3) System Tokens for Nexus Dashboard
+   Authoritative token registry as specified in design-skills/tokens.md */
+
+:root {
+  /* Shape Tokens */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* Typography Tokens */
+  --md-sys-typescale-font: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --md-sys-typescale-mono-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --md-sys-typescale-display-small: 400 2.25rem/2.75rem var(--md-sys-typescale-font);
+  --md-sys-typescale-headline-small: 400 1.5rem/2rem var(--md-sys-typescale-font);
+  --md-sys-typescale-title-large: 400 1.375rem/1.75rem var(--md-sys-typescale-font);
+  --md-sys-typescale-title-medium: 500 1rem/1.5rem var(--md-sys-typescale-font);
+  --md-sys-typescale-body-large: 400 1rem/1.5rem var(--md-sys-typescale-font);
+  --md-sys-typescale-body-medium: 400 0.875rem/1.25rem var(--md-sys-typescale-font);
+  --md-sys-typescale-body-small: 400 0.75rem/1rem var(--md-sys-typescale-font);
+  --md-sys-typescale-label-small: 500 0.6875rem/1rem var(--md-sys-typescale-font);
+
+  /* Elevation Tokens */
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --md-sys-elevation-level2: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --md-sys-elevation-level3: 0 10px 20px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.10);
+  --md-sys-elevation-level4: 0 15px 25px rgba(0, 0, 0, 0.15), 0 5px 10px rgba(0, 0, 0, 0.05);
+  --md-sys-elevation-level5: 0 20px 40px rgba(0, 0, 0, 0.2);
+
+  /* State Layer Opacity Tokens */
+  --md-sys-state-hover-state-layer-opacity: 0.08;
+  --md-sys-state-focus-state-layer-opacity: 0.10;
+  --md-sys-state-pressed-state-layer-opacity: 0.10;
+  --md-sys-state-dragged-state-layer-opacity: 0.16;
+
+  /* Default Theme (indigo-violet) fallback variables */
+  color-scheme: dark;
+  --md-sys-color-primary: oklch(0.834926 0.094575 298.018);
+  --md-sys-color-on-primary: oklch(0.24 0.08 298);
+  --md-sys-color-primary-container: oklch(0.35 0.09 298);
+  --md-sys-color-on-primary-container: oklch(0.92 0.05 298);
+
+  --md-sys-color-secondary: oklch(0.78 0.06 280);
+  --md-sys-color-on-secondary: oklch(0.22 0.05 280);
+  --md-sys-color-secondary-container: oklch(0.32 0.06 280);
+  --md-sys-color-on-secondary-container: oklch(0.90 0.04 280);
+
+  --md-sys-color-tertiary: oklch(0.82 0.08 330);
+  --md-sys-color-on-tertiary: oklch(0.25 0.06 330);
+  --md-sys-color-tertiary-container: oklch(0.35 0.07 330);
+  --md-sys-color-on-tertiary-container: oklch(0.91 0.04 330);
+
+  --md-sys-color-error: oklch(0.72 0.19 22);
+  --md-sys-color-on-error: oklch(0.20 0.10 22);
+  --md-sys-color-error-container: oklch(0.32 0.12 22);
+  --md-sys-color-on-error-container: oklch(0.90 0.08 22);
+
+  --md-sys-color-background: oklch(0.14 0.02 280);
+  --md-sys-color-on-background: oklch(0.94 0.01 280);
+
+  --md-sys-color-surface: oklch(0.16 0.02 280);
+  --md-sys-color-on-surface: oklch(0.94 0.01 280);
+  --md-sys-color-surface-variant: oklch(0.26 0.03 280);
+  --md-sys-color-on-surface-variant: oklch(0.78 0.02 280);
+
+  --md-sys-color-outline: oklch(0.55 0.02 280);
+  --md-sys-color-outline-variant: oklch(0.28 0.02 280);
+
+  --md-sys-color-surface-container-lowest: oklch(0.12 0.02 280);
+  --md-sys-color-surface-container-low: oklch(0.18 0.02 280);
+  --md-sys-color-surface-container: oklch(0.20 0.02 280);
+  --md-sys-color-surface-container-high: oklch(0.24 0.02 280);
+  --md-sys-color-surface-container-highest: oklch(0.28 0.02 280);
+
+  --md-sys-color-surface-bright: oklch(0.32 0.02 280);
+  --md-sys-color-surface-dim: oklch(0.14 0.02 280);
+
+  --md-sys-color-inverse-surface: oklch(0.90 0.01 280);
+  --md-sys-color-inverse-on-surface: oklch(0.18 0.02 280);
+  --md-sys-color-inverse-primary: oklch(0.48 0.15 298);
+}
+
+/* Theme 1: indigo-violet (dark default) */
+[data-theme="indigo-violet"] {
+  color-scheme: dark;
+  --md-sys-color-primary: oklch(0.834926 0.094575 298.018);
+  --md-sys-color-on-primary: oklch(0.24 0.08 298);
+  --md-sys-color-primary-container: oklch(0.35 0.09 298);
+  --md-sys-color-on-primary-container: oklch(0.92 0.05 298);
+  --md-sys-color-background: oklch(0.14 0.02 280);
+  --md-sys-color-on-background: oklch(0.94 0.01 280);
+  --md-sys-color-surface: oklch(0.16 0.02 280);
+  --md-sys-color-on-surface: oklch(0.94 0.01 280);
+  --md-sys-color-surface-variant: oklch(0.26 0.03 280);
+  --md-sys-color-on-surface-variant: oklch(0.78 0.02 280);
+  --md-sys-color-outline: oklch(0.55 0.02 280);
+  --md-sys-color-outline-variant: oklch(0.28 0.02 280);
+  --md-sys-color-surface-container-lowest: oklch(0.12 0.02 280);
+  --md-sys-color-surface-container-low: oklch(0.18 0.02 280);
+  --md-sys-color-surface-container: oklch(0.20 0.02 280);
+  --md-sys-color-surface-container-high: oklch(0.24 0.02 280);
+  --md-sys-color-surface-container-highest: oklch(0.28 0.02 280);
+}
+
+/* Theme 2: obsidian-emerald (dark) */
+[data-theme="obsidian-emerald"] {
+  color-scheme: dark;
+  --md-sys-color-primary: oklch(0.799422 0.113979 166.232);
+  --md-sys-color-on-primary: oklch(0.20 0.08 166);
+  --md-sys-color-primary-container: oklch(0.32 0.09 166);
+  --md-sys-color-on-primary-container: oklch(0.90 0.06 166);
+  --md-sys-color-background: oklch(0.12 0.01 166);
+  --md-sys-color-on-background: oklch(0.94 0.01 166);
+  --md-sys-color-surface: oklch(0.15 0.01 166);
+  --md-sys-color-on-surface: oklch(0.94 0.01 166);
+  --md-sys-color-surface-variant: oklch(0.24 0.02 166);
+  --md-sys-color-on-surface-variant: oklch(0.78 0.02 166);
+  --md-sys-color-outline: oklch(0.52 0.02 166);
+  --md-sys-color-outline-variant: oklch(0.26 0.02 166);
+  --md-sys-color-surface-container-lowest: oklch(0.10 0.01 166);
+  --md-sys-color-surface-container-low: oklch(0.16 0.01 166);
+  --md-sys-color-surface-container: oklch(0.18 0.01 166);
+  --md-sys-color-surface-container-high: oklch(0.22 0.01 166);
+  --md-sys-color-surface-container-highest: oklch(0.26 0.02 166);
+}
+
+/* Theme 3: cyberpunk-neon (dark) */
+[data-theme="cyberpunk-neon"] {
+  color-scheme: dark;
+  --md-sys-color-primary: oklch(0.765693 0.127601 358.964);
+  --md-sys-color-on-primary: oklch(0.22 0.09 359);
+  --md-sys-color-primary-container: oklch(0.34 0.10 359);
+  --md-sys-color-on-primary-container: oklch(0.92 0.06 359);
+  --md-sys-color-background: oklch(0.13 0.02 320);
+  --md-sys-color-on-background: oklch(0.95 0.01 320);
+  --md-sys-color-surface: oklch(0.16 0.02 320);
+  --md-sys-color-on-surface: oklch(0.95 0.01 320);
+  --md-sys-color-surface-variant: oklch(0.25 0.03 320);
+  --md-sys-color-on-surface-variant: oklch(0.80 0.02 320);
+  --md-sys-color-outline: oklch(0.55 0.03 320);
+  --md-sys-color-outline-variant: oklch(0.28 0.02 320);
+  --md-sys-color-surface-container-lowest: oklch(0.11 0.02 320);
+  --md-sys-color-surface-container-low: oklch(0.17 0.02 320);
+  --md-sys-color-surface-container: oklch(0.19 0.02 320);
+  --md-sys-color-surface-container-high: oklch(0.23 0.02 320);
+  --md-sys-color-surface-container-highest: oklch(0.27 0.02 320);
+}
+
+/* Theme 4: industrial-amber (dark) */
+[data-theme="industrial-amber"] {
+  color-scheme: dark;
+  --md-sys-color-primary: oklch(0.832723 0.142916 74.076);
+  --md-sys-color-on-primary: oklch(0.25 0.08 74);
+  --md-sys-color-primary-container: oklch(0.36 0.10 74);
+  --md-sys-color-on-primary-container: oklch(0.93 0.06 74);
+  --md-sys-color-background: oklch(0.14 0.02 60);
+  --md-sys-color-on-background: oklch(0.94 0.01 60);
+  --md-sys-color-surface: oklch(0.16 0.02 60);
+  --md-sys-color-on-surface: oklch(0.94 0.01 60);
+  --md-sys-color-surface-variant: oklch(0.26 0.02 60);
+  --md-sys-color-on-surface-variant: oklch(0.78 0.02 60);
+  --md-sys-color-outline: oklch(0.55 0.02 60);
+  --md-sys-color-outline-variant: oklch(0.28 0.02 60);
+  --md-sys-color-surface-container-lowest: oklch(0.12 0.02 60);
+  --md-sys-color-surface-container-low: oklch(0.18 0.02 60);
+  --md-sys-color-surface-container: oklch(0.20 0.02 60);
+  --md-sys-color-surface-container-high: oklch(0.24 0.02 60);
+  --md-sys-color-surface-container-highest: oklch(0.28 0.02 60);
+}
+
+/* Theme 5: paper-light (light) */
+[data-theme="paper-light"] {
+  color-scheme: light;
+  --md-sys-color-primary: oklch(0.495521 0.130457 293.709);
+  --md-sys-color-on-primary: oklch(0.98 0.01 293);
+  --md-sys-color-primary-container: oklch(0.90 0.04 293);
+  --md-sys-color-on-primary-container: oklch(0.22 0.08 293);
+  --md-sys-color-background: oklch(0.98 0.005 280);
+  --md-sys-color-on-background: oklch(0.18 0.02 280);
+  --md-sys-color-surface: oklch(0.97 0.005 280);
+  --md-sys-color-on-surface: oklch(0.18 0.02 280);
+  --md-sys-color-surface-variant: oklch(0.92 0.01 280);
+  --md-sys-color-on-surface-variant: oklch(0.35 0.02 280);
+  --md-sys-color-outline: oklch(0.50 0.02 280);
+  --md-sys-color-outline-variant: oklch(0.85 0.01 280);
+  --md-sys-color-surface-container-lowest: oklch(1.00 0 0);
+  --md-sys-color-surface-container-low: oklch(0.96 0.005 280);
+  --md-sys-color-surface-container: oklch(0.94 0.005 280);
+  --md-sys-color-surface-container-high: oklch(0.91 0.01 280);
+  --md-sys-color-surface-container-highest: oklch(0.88 0.01 280);
+}
