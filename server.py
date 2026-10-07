@@ -1835,7 +1835,19 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
             if not res_context and model_id:
                 s = model_id.lower()
-                if 'gpt-6' in s or 'sol' in s or 'astra' in s:
+                if 'space-bunny' in s:
+                    res_context = 1000000
+                    res_output = 65536
+                    source = 'stealth-openrouter'
+                elif 'union-alpha' in s:
+                    res_context = 262144
+                    res_output = 32768
+                    source = 'stealth-openrouter'
+                elif 'ox-alpha' in s:
+                    res_context = 128000
+                    res_output = 16384
+                    source = 'stealth-openrouter'
+                elif 'gpt-6' in s or 'sol' in s or 'astra' in s:
                     res_context = 400000
                     res_output = 128000
                     source = 'stealth-frontier'

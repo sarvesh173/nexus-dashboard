@@ -1819,6 +1819,11 @@ function resolve9RouterContext(modelId, rawUpstream) {
 
 
 export const SUGGESTED_MODELS = {
+  openrouter: [
+    { id: 'stealth/space-bunny-alpha', name: 'Space Bunny Alpha (Stealth 1M Multimodal)', category: 'vision', context_length: 1000000, tier: 'free', reasoning: true },
+    { id: 'stealth/union-alpha', name: 'Union Alpha (Stealth Frontier 262K)', category: 'text', context_length: 262144, tier: 'free', reasoning: true },
+    { id: 'stealth/ox-alpha', name: 'Ox Alpha (Stealth Architecture)', category: 'text', context_length: 128000, tier: 'free', reasoning: true },
+  ],
   omnirush: [
     { id: 'gpt-6.1-sol', name: 'GPT 6.1 Sol (Stealth Frontier)', category: 'text', context_length: 400000, tier: 'free', reasoning: true },
     { id: 'gpt-6-sol', name: 'GPT 6 Sol (Stealth Reasoning)', category: 'text', context_length: 400000, tier: 'free', reasoning: true },
