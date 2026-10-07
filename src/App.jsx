@@ -503,19 +503,19 @@ export default function App() {
   })();
   const hiddenCount = hidden.providers.length + hidden.models.length;
 
-  // Hide/show is applied through the shared visibility hook. It performs the
-  // same optimistic update/rollback while keeping the endpoint out of JSX.
-  const visBusy = useRef(false);
+  // Hide/show is applied through the shared visibility hook with a concurrent queue
+  const pendingVis = useRef(new Set());
   const setVisibility = async (kind, id, shouldHide) => {
-    if (visBusy.current) return;
-    visBusy.current = true;
+    const key = `${kind}:${id}`;
+    if (pendingVis.current.has(key)) return;
+    pendingVis.current.add(key);
     try {
       await setItemHidden(kind, id, shouldHide);
       setToast(`${shouldHide ? 'Hidden' : 'Restored'}: ${id}`);
     } catch (error) {
       setToast(`Failed: ${error.message}`);
     } finally {
-      visBusy.current = false;
+      pendingVis.current.delete(key);
     }
   };
 

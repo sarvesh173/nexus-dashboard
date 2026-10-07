@@ -79,10 +79,8 @@ export function useVisibility(options = {}) {
   }, [enabled]);
 
   const setItemHidden = useCallback(async (kind, id, shouldHide = true) => {
-    // Snapshot for rollback, then apply optimistically.
-    let previous = null;
+    // Optimistic update
     setHiddenState((current) => {
-      previous = current;
       const list = current[kind] ?? [];
       const next = new Set(list);
       if (shouldHide) next.add(id);
@@ -102,9 +100,13 @@ export function useVisibility(options = {}) {
         });
       }
     } catch (cause) {
-      // Roll back to the server's last known truth rather than keeping a
-      // locally-invented state the backend never accepted.
-      if (previous) setHiddenState(previous);
+      // Roll back ONLY the failed item rather than overwriting concurrent sibling updates
+      setHiddenState((current) => {
+        const next = new Set(current[kind] ?? []);
+        if (shouldHide) next.delete(id);
+        else next.add(id);
+        return { ...current, [kind]: [...next] };
+      });
       const normalised = cause instanceof Error ? cause : new Error(String(cause));
       setError(normalised);
       throw normalised;

@@ -1,17 +1,94 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
-import { CostBreakdownTooltip, convertFromUsd } from '../cost/index.jsx';
+import {
+  AnimatedCurrencyValue,
+  CostBreakdownTooltip,
+  convertFromUsd,
+} from '../cost/index.jsx';
 
-const IconFrame = ({ children, active = false }) => (
-  <svg
-    viewBox="0 0 32 32"
-    aria-hidden="true"
-    focusable="false"
-    className={`overview-card-icon ${active ? 'overview-card-icon-active' : ''}`}
-  >
-    {children}
-  </svg>
+const OVERVIEW_MOTION_STYLES = `
+  .overview-motion-root .overview-card {
+    isolation: isolate;
+    position: relative;
+    transform: translate3d(0, 0, 0);
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms ease-out;
+    will-change: transform;
+  }
+
+  .overview-motion-root .overview-card:hover,
+  .overview-motion-root .overview-card:focus-within {
+    transform: translate3d(0, -4px, 0);
+    box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.8),
+      0 4px 12px -8px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+  }
+
+  .overview-card-sheen-clip {
+    border-radius: inherit;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+  }
+
+  .overview-card-sheen {
+    background: linear-gradient(
+      108deg,
+      transparent 34%,
+      rgba(255, 255, 255, 0.02) 43%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.03) 57%,
+      transparent 66%
+    );
+    inset: -35% -55%;
+    opacity: 0;
+    position: absolute;
+    transform: translate3d(-72%, 0, 0) skewX(-12deg);
+    transition: opacity 160ms ease-out, transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .overview-card:hover .overview-card-sheen,
+  .overview-card:focus-within .overview-card-sheen {
+    opacity: 1;
+    transform: translate3d(72%, 0, 0) skewX(-12deg);
+  }
+
+  .overview-motion-root .overview-card > :not(.overview-card-sheen-clip) {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .overview-motion-root *,
+    .overview-motion-root *::before,
+    .overview-motion-root *::after {
+      animation: none !important;
+      scroll-behavior: auto !important;
+      transition: none !important;
+    }
+
+    .overview-motion-root .overview-card,
+    .overview-motion-root .overview-card:hover,
+    .overview-motion-root .overview-card:focus-within {
+      transform: none !important;
+      will-change: auto;
+    }
+
+    .overview-motion-root .overview-card-sheen-clip {
+      display: none;
+    }
+  }
+`;
+
+const CardSpecularSheen = () => (
+  <span className="overview-card-sheen-clip" aria-hidden="true">
+    <span className="overview-card-sheen" />
+  </span>
 );
+
 const CostStaticIcon = ({ symbol = '$' }) => {
   const isMultiChar = symbol && symbol.length > 2;
   const isRupee = symbol === '₹';
@@ -670,8 +747,8 @@ export function OverviewFeature(props) {
   } = props;
   const fetchStats = onRefreshStats;
   return (
-        <div className={`w-full space-y-6 ${isOverviewNavActive ? 'block apple-view-pane' : 'hidden'}`}>
-                
+        <div className={`overview-motion-root w-full space-y-6 ${isOverviewNavActive ? 'block apple-view-pane' : 'hidden'}`}>
+                <style>{OVERVIEW_MOTION_STYLES}</style>
                 {/* Section Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--md-sys-color-outline-variant)]">
                   <div>
@@ -714,11 +791,12 @@ export function OverviewFeature(props) {
                   
                   {/* CARD 1: Total Cost */}
                   <div
-                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer ${costHover.isActive ? 'is-animating' : ''}`}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] cursor-pointer ${costHover.isActive ? 'is-animating' : ''}`}
                     onClick={() => navigate('/cost')}
                     onMouseMove={costHover.onMouseMove}
                     onMouseLeave={costHover.onMouseLeave}
                   >
+                    <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Total Cost</span>
@@ -742,7 +820,7 @@ export function OverviewFeature(props) {
                           trigger={
                             <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)] inline-block">
                               {costHasUsage
-                                ? convertFromUsd(costOverview.total_accrued, activeCurrency)
+                                ? <AnimatedCurrencyValue usdAmount={costOverview.total_accrued} currency={activeCurrency} />
                                 : <span className="overview-pending">—</span>}
                             </span>
                           }
@@ -763,7 +841,7 @@ export function OverviewFeature(props) {
                                   <span className="text-[var(--md-sys-color-on-surface-variant)] block whitespace-nowrap text-[10px]">Input Token</span>
                                   <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
                                     {costLoadState === 'ready'
-                                      ? convertFromUsd(costOverview.input_token_price, activeCurrency)
+                                      ? <AnimatedCurrencyValue usdAmount={costOverview.input_token_price} currency={activeCurrency} />
                                       : <span className="overview-pending">—</span>}
                                   </span>
                                 </span>
@@ -784,7 +862,7 @@ export function OverviewFeature(props) {
                                   <span className="text-[var(--md-sys-color-on-surface-variant)] block whitespace-nowrap text-[10px]">Output Token</span>
                                   <span className="text-[var(--md-sys-color-on-surface)] font-bold text-xs">
                                     {costLoadState === 'ready'
-                                      ? convertFromUsd(costOverview.output_token_price, activeCurrency)
+                                      ? <AnimatedCurrencyValue usdAmount={costOverview.output_token_price} currency={activeCurrency} />
                                       : <span className="overview-pending">—</span>}
                                   </span>
                                 </span>
@@ -802,10 +880,11 @@ export function OverviewFeature(props) {
 
                   {/* CARD 2: CPU Load */}
                   <div
-                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] ${cpuHover.isActive ? 'is-animating' : ''}`}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] ${cpuHover.isActive ? 'is-animating' : ''}`}
                     onMouseMove={cpuHover.onMouseMove}
                     onMouseLeave={cpuHover.onMouseLeave}
                   >
+                    <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
@@ -858,10 +937,11 @@ export function OverviewFeature(props) {
 
                   {/* CARD 3: Memory (RAM & Swap) */}
                   <div
-                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] ${memoryHover.isActive ? 'is-animating' : ''}`}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] ${memoryHover.isActive ? 'is-animating' : ''}`}
                     onMouseMove={memoryHover.onMouseMove}
                     onMouseLeave={memoryHover.onMouseLeave}
                   >
+                    <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
@@ -910,11 +990,12 @@ export function OverviewFeature(props) {
 
                   {/* CARD 4: Models & Providers */}
                   <div
-                    className={`overview-card p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs transition-all hover:border-[var(--md-sys-color-outline)] cursor-pointer ${modelsHover.isActive ? 'is-animating' : ''}`}
+                    className={`overview-card overview-card-motion p-5 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] flex flex-col justify-between shadow-xs hover:border-[var(--md-sys-color-outline)] cursor-pointer ${modelsHover.isActive ? 'is-animating' : ''}`}
                     onClick={() => navigate('/model')}
                     onMouseMove={modelsHover.onMouseMove}
                     onMouseLeave={modelsHover.onMouseLeave}
                   >
+                    <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider">Models & Providers</span>

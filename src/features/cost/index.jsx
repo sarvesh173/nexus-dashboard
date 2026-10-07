@@ -24,6 +24,201 @@ export const CURRENCY_OPTIONS = [
 // available here. Replace with a rates endpoint when one exists.
 // Half-height of the cost tooltip panel, used only to keep it on screen.
 const PANEL_HALF_H = 110;
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+const SPRING_STIFFNESS = 210;
+const SPRING_DAMPING = 29;
+const SPRING_EPSILON = 0.01;
+const SPRING_POSITION_KEYS = [
+  'dotX', 'dotY', 'midX', 'midY', 'boxX', 'boxY',
+  'panelWidth', 'landingX', 'landingY',
+];
+
+/**
+ * Keep the animation system usable in SSR and in browser test environments,
+ * while still reacting when the user changes the OS motion preference.
+ */
+function readReducedMotionPreference() {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function usePrefersReducedMotion() {
+  const [reducedMotion, setReducedMotion] = useState(readReducedMotionPreference);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+    const updatePreference = () => setReducedMotion(mediaQuery.matches);
+
+    updatePreference();
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updatePreference);
+      return () => mediaQuery.removeEventListener('change', updatePreference);
+    }
+
+    mediaQuery.addListener?.(updatePreference);
+    return () => mediaQuery.removeListener?.(updatePreference);
+  }, []);
+
+  return reducedMotion;
+}
+
+/**
+ * A small critically-damped spring. It is deliberately local instead of
+ * pulling in a motion dependency: coordinates and currency values share the
+ * same tactile response, and reduced motion can stop the RAF loop entirely.
+ */
+function useSpringNumber(target, reducedMotion) {
+  const safeTarget = Number.isFinite(target) ? target : 0;
+  const valueRef = useRef(safeTarget);
+  const frameRef = useRef(null);
+  const [value, setValue] = useState(safeTarget);
+
+  useEffect(() => {
+    const cancel = () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+
+    cancel();
+    if (
+      reducedMotion
+      || typeof window === 'undefined'
+      || typeof window.requestAnimationFrame !== 'function'
+    ) {
+      valueRef.current = safeTarget;
+      setValue(safeTarget);
+      return undefined;
+    }
+
+    let current = valueRef.current;
+    let velocity = 0;
+    let lastTime;
+
+    const tick = (timestamp) => {
+      if (lastTime === undefined) lastTime = timestamp;
+      const delta = Math.min(0.032, Math.max(0.001, (timestamp - lastTime) / 1000));
+      lastTime = timestamp;
+
+      velocity += (safeTarget - current) * SPRING_STIFFNESS * delta;
+      velocity *= Math.exp(-SPRING_DAMPING * delta);
+      current += velocity * delta;
+
+      const settled = Math.abs(safeTarget - current) < SPRING_EPSILON
+        && Math.abs(velocity) < SPRING_EPSILON;
+      if (settled) {
+        valueRef.current = safeTarget;
+        setValue(safeTarget);
+        frameRef.current = null;
+        return;
+      }
+
+      valueRef.current = current;
+      setValue(current);
+      frameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    frameRef.current = window.requestAnimationFrame(tick);
+    return cancel;
+  }, [safeTarget, reducedMotion]);
+
+  return reducedMotion ? safeTarget : value;
+}
+
+/** Spring the full tooltip geometry so a reposition never jumps between cells. */
+function useSpringCoordinates(target, reducedMotion) {
+  const frameRef = useRef(null);
+  const valueRef = useRef(target);
+  const [value, setValue] = useState(target);
+
+  useEffect(() => {
+    const cancel = () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+
+    cancel();
+    if (!target) {
+      valueRef.current = null;
+      setValue(null);
+      return undefined;
+    }
+
+    if (
+      reducedMotion
+      || typeof window === 'undefined'
+      || typeof window.requestAnimationFrame !== 'function'
+    ) {
+      valueRef.current = target;
+      setValue(target);
+      return undefined;
+    }
+
+    const previous = valueRef.current;
+    const start = previous || {
+      ...target,
+      // A short retracted origin gives the first reveal a springy travel as
+      // well as the existing scale/opacity transition.
+      boxY: target.boxY + (target.isBelow ? 12 : 8),
+      midY: target.midY + (target.isBelow ? 8 : 4),
+      landingY: target.landingY + (target.isBelow ? 12 : 8),
+    };
+    let current = { ...start, ...target };
+    const velocity = Object.fromEntries(SPRING_POSITION_KEYS.map((key) => [key, 0]));
+    let lastTime;
+
+    valueRef.current = current;
+    setValue(current);
+
+    const tick = (timestamp) => {
+      if (lastTime === undefined) lastTime = timestamp;
+      const delta = Math.min(0.032, Math.max(0.001, (timestamp - lastTime) / 1000));
+      lastTime = timestamp;
+      let settled = true;
+      const next = { ...current };
+
+      SPRING_POSITION_KEYS.forEach((key) => {
+        velocity[key] += (target[key] - current[key]) * SPRING_STIFFNESS * delta;
+        velocity[key] *= Math.exp(-SPRING_DAMPING * delta);
+        next[key] = current[key] + velocity[key] * delta;
+        if (
+          Math.abs(target[key] - next[key]) >= SPRING_EPSILON
+          || Math.abs(velocity[key]) >= SPRING_EPSILON
+        ) {
+          settled = false;
+        }
+      });
+
+      next.isRightAligned = target.isRightAligned;
+      next.isBelow = target.isBelow;
+      current = next;
+
+      if (settled) {
+        valueRef.current = target;
+        setValue(target);
+        frameRef.current = null;
+        return;
+      }
+
+      valueRef.current = next;
+      setValue(next);
+      frameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    frameRef.current = window.requestAnimationFrame(tick);
+    return cancel;
+  }, [target, reducedMotion]);
+
+  return value ?? target;
+}
 
 const USD_RATES = {
   USD: 1, CNY: 7.24, EUR: 0.92, JPY: 149.5, INR: 86.8, GBP: 0.79,
@@ -50,6 +245,50 @@ function usdBase(usdAmount) {
   const base = parseFloat(String(usdAmount ?? '').split('/')[0]);
   return Number.isFinite(base) ? base : 0;
 }
+
+function formatCurrencyAmount(amount, currency) {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  return `${currency.symbol}${safeAmount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * Currency values keep their old numeric identity while the symbol changes,
+ * so a currency switch reads as a spring rather than a hard text replacement.
+ */
+export function AnimatedCurrencyValue({ usdAmount, currency, className = '' }) {
+  const reducedMotion = usePrefersReducedMotion();
+  const rate = USD_RATES[currency.id] ?? 1;
+  const target = usdBase(usdAmount) * rate;
+  const value = useSpringNumber(target, reducedMotion);
+
+  return (
+    <span className={`currency-swap-value ${className}`.trim()}>
+      {formatCurrencyAmount(value, currency)}
+    </span>
+  );
+}
+
+export const COST_MOTION_STYLES = `
+  .cost-tooltip-motion [role="tooltip"] {
+    will-change: left, top, opacity, transform;
+  }
+
+  .currency-swap-value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cost-tooltip-motion,
+    .cost-tooltip-motion *,
+    .currency-swap-value {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+`;
 
 /**
  * Worked example for the tooltip: tokens → USD → active currency.
@@ -93,6 +332,7 @@ function buildCostWalkthrough(usdAmount, currency, tokens = 1_000_000) {
  * the right or bottom edge.
  */
 export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }) {
+  const reducedMotion = usePrefersReducedMotion();
   // Position and reveal are ONE piece of state, not two.
   //
   // They were separate, which forced a `setDrawn(false)` to run synchronously
@@ -106,16 +346,21 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
 
   const coords = tooltip?.coords ?? null;
   const drawn = tooltip?.drawn === true;
+  const springCoords = useSpringCoordinates(coords, reducedMotion);
 
   useEffect(() => {
-    // Nothing to reveal without a position. The update below is scheduled on
-    // the next frame, so this effect never sets state synchronously.
+    // Reduced motion reveals the panel in its final position without a frame
+    // delay. The full motion path still uses a single frame to arm CSS fades.
     if (!coords) return undefined;
+    if (reducedMotion) {
+      setTooltip((prev) => (prev?.coords === coords ? { coords, drawn: true } : prev));
+      return undefined;
+    }
     const raf = requestAnimationFrame(() => {
       setTooltip((prev) => (prev?.coords === coords ? { coords, drawn: true } : prev));
     });
     return () => cancelAnimationFrame(raf);
-  }, [coords]);
+  }, [coords, reducedMotion]);
 
   const dismissTooltip = () => setTooltip(null);
 
@@ -313,51 +558,58 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
             dismissTooltip();
           }
         }}
-        className={`cursor-default select-none rounded-md outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords ? 'relative z-50' : ''}`}
+        className={`cost-tooltip-motion cursor-default select-none rounded-md outline-none focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords ? 'relative z-50' : ''}`}
       >
         {trigger}
         {coords && (
         <>
+          <style>{COST_MOTION_STYLES}</style>
           {/* Badi Dandi: signature leader drawn from the figure to the panel. */}
           <svg
             aria-hidden="true"
             className="absolute inset-0 w-full h-full overflow-visible pointer-events-none z-[998]"
             style={{
-              opacity: drawn ? 1 : 0,
-              transition: 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
+              opacity: drawn || reducedMotion ? 1 : 0,
+              transition: reducedMotion ? 'none' : 'opacity 250ms cubic-bezier(0.2, 0, 0, 1)',
             }}
           >
             <path
-              d={`M ${coords.dotX} ${coords.dotY} L ${coords.midX} ${coords.midY} L ${coords.landingX} ${coords.landingY}`}
+              d={`M ${springCoords?.dotX ?? coords.dotX} ${springCoords?.dotY ?? coords.dotY} L ${springCoords?.midX ?? coords.midX} ${springCoords?.midY ?? coords.midY} L ${springCoords?.landingX ?? coords.landingX} ${springCoords?.landingY ?? coords.landingY}`}
               fill="none"
               stroke="var(--md-sys-color-primary)"
               strokeWidth="1.5"
               strokeDasharray="90"
-              strokeDashoffset={drawn ? '0' : '90'}
+              strokeDashoffset={drawn || reducedMotion ? '0' : '90'}
               style={{
-                transition: drawn ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
+                transition: reducedMotion
+                  ? 'none'
+                  : drawn ? 'stroke-dashoffset 350ms cubic-bezier(0.2, 0, 0, 1)' : 'stroke-dashoffset 200ms ease-out',
               }}
             />
             <circle
-              cx={coords.dotX}
-              cy={coords.dotY}
+              cx={springCoords?.dotX ?? coords.dotX}
+              cy={springCoords?.dotY ?? coords.dotY}
               r="3"
               fill="var(--md-sys-color-primary)"
               style={{
-                transformOrigin: `${coords.dotX}px ${coords.dotY}px`,
-                transform: drawn ? 'scale(1)' : 'scale(0)',
-                transition: drawn ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
+                transformOrigin: `${springCoords?.dotX ?? coords.dotX}px ${springCoords?.dotY ?? coords.dotY}px`,
+                transform: drawn || reducedMotion ? 'scale(1)' : 'scale(0)',
+                transition: reducedMotion
+                  ? 'none'
+                  : drawn ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1)' : 'transform 150ms ease-out',
               }}
             />
             <circle
-              cx={coords.landingX}
-              cy={coords.landingY}
+              cx={springCoords?.landingX ?? coords.landingX}
+              cy={springCoords?.landingY ?? coords.landingY}
               r="2.5"
               fill="var(--md-sys-color-primary)"
               style={{
-                transformOrigin: `${coords.landingX}px ${coords.landingY}px`,
-                transform: drawn ? 'scale(1)' : 'scale(0)',
-                transition: drawn ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 50ms' : 'transform 150ms ease-out',
+                transformOrigin: `${springCoords?.landingX ?? coords.landingX}px ${springCoords?.landingY ?? coords.landingY}px`,
+                transform: drawn || reducedMotion ? 'scale(1)' : 'scale(0)',
+                transition: reducedMotion
+                  ? 'none'
+                  : drawn ? 'transform 300ms cubic-bezier(0.38, 1.21, 0.22, 1) 50ms' : 'transform 150ms ease-out',
               }}
             />
           </svg>
@@ -366,14 +618,16 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
           role="tooltip"
           className="absolute z-[999] px-3.5 py-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/10 text-left text-[var(--md-sys-color-on-surface)]"
           style={{
-            left: coords.boxX,
-            top: coords.boxY,
-            width: coords.panelWidth,
-            transform: `${coords.isBelow ? 'translate(0, 0)' : coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} scale(${drawn ? 1 : 0.92})`,
-            opacity: drawn ? 1 : 0,
-            transition: drawn
-              ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
-              : 'opacity 180ms ease-out, transform 180ms ease-out',
+            left: springCoords?.boxX ?? coords.boxX,
+            top: springCoords?.boxY ?? coords.boxY,
+            width: springCoords?.panelWidth ?? coords.panelWidth,
+            transform: `${coords.isBelow ? 'translate(0, 0)' : coords.isRightAligned ? 'translate(0, -50%)' : 'translate(-100%, -50%)'} scale(${drawn || reducedMotion ? 1 : 0.92})`,
+            opacity: drawn || reducedMotion ? 1 : 0,
+            transition: reducedMotion
+              ? 'none'
+              : drawn
+                ? 'opacity 300ms cubic-bezier(0.2, 0, 0, 1) 40ms, transform 350ms cubic-bezier(0.38, 1.21, 0.22, 1) 40ms'
+                : 'opacity 180ms ease-out, transform 180ms ease-out',
           }}
         >
           <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[var(--md-sys-color-outline-variant)]">
@@ -409,7 +663,7 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
                   1 USD = {USD_RATES[currency.id] ?? 1} {currency.id}
                 </span>
                 <span className="font-mono text-[10px] font-semibold text-[var(--md-sys-color-primary)]">
-                  {convertFromUsd(baseUsd, currency)}
+                  <AnimatedCurrencyValue usdAmount={baseUsd} currency={currency} />
                 </span>
               </div>
             )}
@@ -437,7 +691,7 @@ export function CostBreakdownTooltip({ baseUsd, currency, rows, label, trigger }
                     × {walk.rate} ({currency.id} per $)
                   </span>
                   <span className="font-mono text-[10px] font-bold text-[var(--md-sys-color-primary)]">
-                    {walk.converted}
+                    <AnimatedCurrencyValue usdAmount={walk.dollars} currency={currency} />
                   </span>
                 </div>
               </div>
