@@ -1108,11 +1108,11 @@ export function OverviewFeature(props = {}) {
                         <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs ">
                           <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 1</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}</> : <span className="overview-pending">—</span>}</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}%</> : <span className="overview-pending">—</span>}</span>
                           </div>
                           <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 2</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}</> : <span className="overview-pending">—</span>}</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}%</> : <span className="overview-pending">—</span>}</span>
                           </div>
                         </div>
                       </div>
@@ -1126,7 +1126,6 @@ export function OverviewFeature(props = {}) {
                             style={{ '--ov-progress': hasRealTelemetry ? smoothCpu / 100 : 0 }}
                           />
                         </div>
-                        <div className="m3-linear-stop" />
                       </div>
                       {!hasRealTelemetry && (
                         <span className="overview-pending-caption">waiting for live reading…</span>
@@ -1145,7 +1144,7 @@ export function OverviewFeature(props = {}) {
                     <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM & Swap)</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM)</span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {motionEnabled && memoryHover.isActive ? (
                             <MemoryActiveIcon load={telemetry?.ram_percent ?? 0} />
@@ -1162,13 +1161,6 @@ export function OverviewFeature(props = {}) {
                         <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
                           {hasRealTelemetry ? <>{finiteNumber(smoothRamUsed)}M / {finiteNumber(telemetry?.ram_total_mb)}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}
                         </div>
-
-                        <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between">
-                          <span className="text-[var(--md-sys-color-on-surface-variant)] text-[10px]">Swap/Spoke:</span>
-                          <span className="text-[var(--md-sys-color-primary)] font-bold">
-                            {hasRealTelemetry ? <>{smoothSwapPercent}% ({finiteNumber(telemetry?.swap_used_mb)}M)</> : <span className="overview-pending">—</span>}
-                          </span>
-                        </div>
                       </div>
                     </div>
 
@@ -1180,7 +1172,6 @@ export function OverviewFeature(props = {}) {
                             style={{ '--ov-progress': hasRealTelemetry ? smoothRamPercent / 100 : 0 }}
                           />
                         </div>
-                        <div className="m3-linear-stop" />
                       </div>
                     </div>
                   </div>
