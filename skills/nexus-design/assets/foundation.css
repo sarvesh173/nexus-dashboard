@@ -1,0 +1,97 @@
+/* Load after tokens.css. Baseline: OKLCH-capable browsers with native dialog. */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  background: var(--nx-color-canvas);
+  color: var(--nx-color-on-surface);
+  font-family: var(--nx-font-sans);
+  font-size: 100%;
+  font-synthesis: none;
+  font-optical-sizing: auto;
+}
+body {
+  margin: 0;
+  min-block-size: 100svh;
+  font-size: var(--nx-font-size-body);
+  line-height: var(--nx-leading-body);
+}
+button, input, select, textarea { font: inherit; max-inline-size: 100%; }
+input:not([type="checkbox"]):not([type="radio"]), select, textarea { min-inline-size: 0; }
+button, select { min-block-size: var(--nx-control-min); }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+a { color: var(--nx-color-primary); }
+[hidden] { display: none !important; }
+h1, h2, h3, p { margin-block-start: 0; }
+h1, h2, h3, p, label, a, button { overflow-wrap: anywhere; }
+h1 {
+  font-size: var(--nx-font-size-title);
+  line-height: var(--nx-leading-tight);
+  letter-spacing: var(--nx-tracking-display);
+}
+h2 { font-size: 1.25rem; line-height: 1.4; }
+h3 { font-size: 1rem; line-height: 1.5; }
+::selection { background: var(--nx-selection); color: var(--nx-color-on-surface); }
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+.nx-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.nx-skip-link { position: fixed; inset: 0 auto auto 0; z-index: 100; translate: 0 -200%; }
+.nx-skip-link:focus { translate: 0 0; background: var(--nx-color-surface); padding: 1rem; }
+.nx-button {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nx-space-2);
+  min-inline-size: var(--nx-hit-min);
+  min-block-size: var(--nx-control-min);
+  padding: var(--nx-space-2) var(--nx-space-4);
+  border: 1px solid var(--nx-color-outline);
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-color-surface-container-high);
+  color: var(--nx-color-on-surface);
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.nx-button[data-variant="primary"] {
+  border-color: transparent;
+  background: var(--nx-color-primary);
+  color: var(--nx-color-on-primary);
+}
+.nx-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .nx-button:not(:disabled):hover::before { opacity: var(--nx-state-hover); }
+}
+.nx-button:focus-visible::before { opacity: var(--nx-state-focus); }
+.nx-button:not(:disabled):active::before { opacity: var(--nx-state-pressed); }
+.nx-button:disabled { border-style: dashed; }
+.nx-button > :not(.nx-ripple-layer) { position: relative; }
+.nx-ripple-layer { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.nx-ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: 0.12; pointer-events: none; }
+@media (forced-colors: active) {
+  .nx-button { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+  .nx-button::before, .nx-ripple-layer { display: none; }
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible { outline-color: Highlight; }
+}

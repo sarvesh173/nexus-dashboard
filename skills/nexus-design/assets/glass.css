@@ -1,0 +1,65 @@
+/* A Nexus foreground web translation; not native Liquid Glass refraction.
+   Opaque FIRST. Unsupported enhancement must never leave an unblurred pane. */
+.nx-glass {
+  position: relative;
+  isolation: isolate;
+  background: var(--nx-color-surface);
+  color: var(--nx-color-on-surface);
+  border: var(--nx-glass-rim-width) solid var(--nx-color-outline);
+  border-radius: var(--nx-radius-xl);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and (background: color-mix(in oklab, white, transparent)) {
+  .nx-glass {
+    background:
+      linear-gradient(var(--nx-glass-ambient), var(--nx-glass-ambient)),
+      var(--nx-glass-fill);
+    border-color: var(--nx-glass-border);
+    box-shadow: var(--nx-shadow-floating);
+    -webkit-backdrop-filter: blur(var(--nx-glass-blur)) saturate(var(--nx-glass-saturation));
+    backdrop-filter: blur(var(--nx-glass-blur)) saturate(var(--nx-glass-saturation));
+  }
+  .nx-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    border: var(--nx-glass-rim-width) solid transparent;
+    border-block-start-color: var(--nx-glass-highlight);
+    border-inline-start-color: color-mix(in srgb, var(--nx-glass-highlight) 40%, transparent);
+  }
+}
+/* Product settings are OUTSIDE media queries: they work in every browser. */
+:root[data-nx-reduced-transparency="true"] .nx-glass,
+:root[data-nx-high-contrast="true"] .nx-glass {
+  background: var(--nx-color-surface);
+  border-color: var(--nx-color-outline);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-nx-reduced-transparency="true"] .nx-glass::before,
+:root[data-nx-high-contrast="true"] .nx-glass::before { display: none; }
+:root[data-nx-high-contrast="true"] .nx-glass { border-width: 2px; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .nx-glass {
+    background: var(--nx-color-surface);
+    border-color: var(--nx-color-outline);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .nx-glass::before { display: none; }
+}
+@media (forced-colors: active) {
+  .nx-glass {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border: 2px solid CanvasText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .nx-glass::before { display: none; }
+}

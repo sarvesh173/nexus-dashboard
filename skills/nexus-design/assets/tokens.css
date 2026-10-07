@@ -1,0 +1,307 @@
+/* Nexus web tokens. Custom values, not Apple/Google platform constants.
+   Neutral/brand stop numbers ascend from black (0) to white (100).
+   They are Nexus OKLCH stop IDs, NOT Material HCT tone numbers. */
+:root {
+  --nx-neutral-0: oklch(0% 0 265);
+  --nx-neutral-5: oklch(13% 0.010 265);
+  --nx-neutral-10: oklch(19% 0.012 265);
+  --nx-neutral-15: oklch(23% 0.014 265);
+  --nx-neutral-20: oklch(28% 0.014 265);
+  --nx-neutral-25: oklch(33% 0.014 265);
+  --nx-neutral-30: oklch(40% 0.014 265);
+  --nx-neutral-40: oklch(49% 0.014 265);
+  --nx-neutral-50: oklch(59% 0.014 265);
+  --nx-neutral-60: oklch(68% 0.014 265);
+  --nx-neutral-70: oklch(77% 0.012 265);
+  --nx-neutral-80: oklch(86% 0.010 265);
+  --nx-neutral-90: oklch(94% 0.008 265);
+  --nx-neutral-92: oklch(95.5% 0.007 265);
+  --nx-neutral-95: oklch(97% 0.005 265);
+  --nx-neutral-98: oklch(99% 0.002 265);
+  --nx-neutral-100: oklch(100% 0 265);
+
+  --nx-primary-0: oklch(0% 0 275);
+  --nx-primary-10: oklch(18% 0.035 275);
+  --nx-primary-20: oklch(28% 0.070 275);
+  --nx-primary-30: oklch(38% 0.120 275);
+  --nx-primary-40: oklch(48% 0.175 275);
+  --nx-primary-50: oklch(56% 0.180 275);
+  --nx-primary-60: oklch(65% 0.160 275);
+  --nx-primary-70: oklch(73% 0.130 275);
+  --nx-primary-80: oklch(81% 0.090 275);
+  --nx-primary-90: oklch(93% 0.032 275);
+  --nx-primary-95: oklch(97% 0.014 275);
+  --nx-primary-100: oklch(100% 0 275);
+
+  --nx-secondary-0: oklch(0% 0 220);
+  --nx-secondary-10: oklch(18% 0.018 220);
+  --nx-secondary-20: oklch(28% 0.035 220);
+  --nx-secondary-30: oklch(38% 0.050 220);
+  --nx-secondary-40: oklch(48% 0.070 220);
+  --nx-secondary-50: oklch(57% 0.085 220);
+  --nx-secondary-60: oklch(65% 0.090 220);
+  --nx-secondary-70: oklch(72% 0.090 220);
+  --nx-secondary-80: oklch(80% 0.080 220);
+  --nx-secondary-90: oklch(93% 0.032 220);
+  --nx-secondary-95: oklch(97% 0.014 220);
+  --nx-secondary-100: oklch(100% 0 220);
+
+  --nx-tertiary-0: oklch(0% 0 330);
+  --nx-tertiary-10: oklch(18% 0.035 330);
+  --nx-tertiary-20: oklch(28% 0.060 330);
+  --nx-tertiary-30: oklch(38% 0.100 330);
+  --nx-tertiary-40: oklch(48% 0.150 330);
+  --nx-tertiary-50: oklch(58% 0.170 330);
+  --nx-tertiary-60: oklch(66% 0.150 330);
+  --nx-tertiary-70: oklch(74% 0.120 330);
+  --nx-tertiary-80: oklch(81% 0.085 330);
+  --nx-tertiary-90: oklch(93% 0.030 330);
+  --nx-tertiary-95: oklch(97% 0.014 330);
+  --nx-tertiary-100: oklch(100% 0 330);
+
+  --nx-success-20: oklch(28% 0.035 150);
+  --nx-success-40: oklch(46% 0.090 150);
+  --nx-success-80: oklch(80% 0.110 150);
+  --nx-success-90: oklch(93% 0.040 150);
+  --nx-warning-20: oklch(28% 0.040 80);
+  --nx-warning-40: oklch(48% 0.095 80);
+  --nx-warning-80: oklch(80% 0.115 80);
+  --nx-warning-90: oklch(94% 0.040 80);
+  --nx-danger-20: oklch(28% 0.050 25);
+  --nx-danger-40: oklch(48% 0.165 25);
+  --nx-danger-80: oklch(80% 0.095 25);
+  --nx-danger-90: oklch(93% 0.032 25);
+
+  --nx-space-0: 0;
+  --nx-space-1: 0.25rem;
+  --nx-space-2: 0.5rem;
+  --nx-space-3: 0.75rem;
+  --nx-space-4: 1rem;
+  --nx-space-5: 1.25rem;
+  --nx-space-6: 1.5rem;
+  --nx-space-8: 2rem;
+  --nx-space-10: 2.5rem;
+  --nx-space-12: 3rem;
+  --nx-space-16: 4rem;
+  --nx-radius-xs: 0.375rem;
+  --nx-radius-sm: 0.625rem;
+  --nx-radius-md: 0.875rem;
+  --nx-radius-lg: 1.25rem;
+  --nx-radius-xl: 1.75rem;
+  --nx-radius-pill: 999px;
+  --nx-hit-min: 44px;
+  --nx-control-min: 48px;
+  --nx-focus-width: 3px;
+  --nx-focus-offset: 3px;
+  --nx-shell-sidebar: 16.5rem;
+  --nx-content-max: 100rem;
+  --nx-content-gutter: clamp(1rem, 2.4vw, 2.5rem);
+  --nx-grid-gap: clamp(1rem, 1.8vw, 1.5rem);
+  --nx-z-sticky: 5;
+
+  /* System SF on Apple platforms; do not distribute SF Pro font files. */
+  --nx-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --nx-font-size-body: 1rem;
+  --nx-font-size-label: 0.875rem;
+  --nx-font-size-caption: 0.8125rem;
+  --nx-font-size-title: clamp(1.75rem, 3vw, 2.5rem);
+  --nx-font-size-kpi: clamp(1.75rem, 3.2vw, 2.75rem);
+  --nx-leading-tight: 1.15;
+  --nx-leading-body: 1.5;
+  --nx-tracking-display: -0.02em;
+
+  --nx-duration-fast: 120ms;
+  --nx-duration-standard: 180ms;
+  --nx-duration-slow: 280ms;
+  --nx-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --nx-state-hover: 0.08;
+  --nx-state-focus: 0.12;
+  --nx-state-pressed: 0.12;
+  --nx-state-dragged: 0.16;
+
+  /* Response is the natural-period convention, not a fixed duration. */
+  --nx-spring-quiet-response: 0.32;
+  --nx-spring-quiet-ratio: 1;
+  --nx-spring-fluid-response: 0.35;
+  --nx-spring-fluid-ratio: 0.75;
+  --nx-spring-fluid-mass: 1;
+
+  --nx-shadow-ambient: 0 4px 16px rgb(0 0 0 / 0.10);
+  --nx-shadow-key: 0 2px 6px rgb(0 0 0 / 0.16);
+  --nx-shadow-floating: var(--nx-shadow-ambient), var(--nx-shadow-key);
+  --nx-glass-blur: 28px;
+  --nx-glass-saturation: 190%;
+  --nx-glass-rim-width: 1px;
+  --nx-glass-highlight: rgb(255 255 255 / 0.62);
+}
+
+:root,
+:root[data-nx-theme="light"] {
+  color-scheme: light;
+  --nx-color-canvas: var(--nx-neutral-98);
+  --nx-color-surface: var(--nx-neutral-98);
+  --nx-color-surface-dim: var(--nx-neutral-90);
+  --nx-color-surface-bright: var(--nx-neutral-100);
+  --nx-color-surface-container-lowest: var(--nx-neutral-100);
+  --nx-color-surface-container-low: var(--nx-neutral-98);
+  --nx-color-surface-container: var(--nx-neutral-95);
+  --nx-color-surface-container-high: var(--nx-neutral-92);
+  --nx-color-surface-container-highest: var(--nx-neutral-90);
+  --nx-color-on-surface: var(--nx-neutral-5);
+  --nx-color-on-surface-muted: var(--nx-neutral-30);
+  --nx-color-on-surface-subtle: var(--nx-neutral-40);
+  --nx-color-outline: var(--nx-neutral-40);
+  --nx-color-outline-variant: var(--nx-neutral-80);
+  --nx-color-inverse-surface: var(--nx-neutral-20);
+  --nx-color-inverse-on-surface: var(--nx-neutral-95);
+  --nx-color-inverse-primary: var(--nx-primary-80);
+  --nx-color-primary: var(--nx-primary-40);
+  --nx-color-on-primary: var(--nx-neutral-100);
+  --nx-color-primary-hover: var(--nx-primary-30);
+  --nx-color-primary-container: var(--nx-primary-90);
+  --nx-color-on-primary-container: var(--nx-primary-20);
+  --nx-color-secondary: var(--nx-secondary-40);
+  --nx-color-on-secondary: var(--nx-neutral-100);
+  --nx-color-secondary-container: var(--nx-secondary-90);
+  --nx-color-on-secondary-container: var(--nx-secondary-20);
+  --nx-color-tertiary: var(--nx-tertiary-40);
+  --nx-color-on-tertiary: var(--nx-neutral-100);
+  --nx-color-tertiary-container: var(--nx-tertiary-90);
+  --nx-color-on-tertiary-container: var(--nx-tertiary-20);
+  --nx-color-success: var(--nx-success-40);
+  --nx-color-on-success: var(--nx-neutral-100);
+  --nx-color-success-container: var(--nx-success-90);
+  --nx-color-on-success-container: var(--nx-success-20);
+  --nx-color-warning: var(--nx-warning-40);
+  --nx-color-on-warning: var(--nx-neutral-100);
+  --nx-color-warning-container: var(--nx-warning-90);
+  --nx-color-on-warning-container: var(--nx-warning-20);
+  --nx-color-danger: var(--nx-danger-40);
+  --nx-color-on-danger: var(--nx-neutral-100);
+  --nx-color-danger-container: var(--nx-danger-90);
+  --nx-color-on-danger-container: var(--nx-danger-20);
+  --nx-focus-ring: var(--nx-primary-40);
+  --nx-selection: var(--nx-primary-90);
+  --nx-scrim: rgb(0 0 0 / 0.40);
+}
+
+:root[data-nx-theme="dark"] {
+  color-scheme: dark;
+  --nx-color-canvas: var(--nx-neutral-5);
+  --nx-color-surface: var(--nx-neutral-10);
+  --nx-color-surface-dim: var(--nx-neutral-5);
+  --nx-color-surface-bright: var(--nx-neutral-25);
+  --nx-color-surface-container-lowest: var(--nx-neutral-5);
+  --nx-color-surface-container-low: var(--nx-neutral-10);
+  --nx-color-surface-container: var(--nx-neutral-15);
+  --nx-color-surface-container-high: var(--nx-neutral-20);
+  --nx-color-surface-container-highest: var(--nx-neutral-25);
+  --nx-color-on-surface: var(--nx-neutral-95);
+  --nx-color-on-surface-muted: var(--nx-neutral-80);
+  --nx-color-on-surface-subtle: var(--nx-neutral-70);
+  --nx-color-outline: var(--nx-neutral-60);
+  --nx-color-outline-variant: var(--nx-neutral-30);
+  --nx-color-inverse-surface: var(--nx-neutral-90);
+  --nx-color-inverse-on-surface: var(--nx-neutral-10);
+  --nx-color-inverse-primary: var(--nx-primary-40);
+  --nx-color-primary: var(--nx-primary-80);
+  --nx-color-on-primary: var(--nx-primary-20);
+  --nx-color-primary-hover: var(--nx-primary-70);
+  --nx-color-primary-container: var(--nx-primary-30);
+  --nx-color-on-primary-container: var(--nx-primary-90);
+  --nx-color-secondary: var(--nx-secondary-80);
+  --nx-color-on-secondary: var(--nx-secondary-20);
+  --nx-color-secondary-container: var(--nx-secondary-30);
+  --nx-color-on-secondary-container: var(--nx-secondary-90);
+  --nx-color-tertiary: var(--nx-tertiary-80);
+  --nx-color-on-tertiary: var(--nx-tertiary-20);
+  --nx-color-tertiary-container: var(--nx-tertiary-30);
+  --nx-color-on-tertiary-container: var(--nx-tertiary-90);
+  --nx-color-success: var(--nx-success-80);
+  --nx-color-on-success: var(--nx-success-20);
+  --nx-color-success-container: var(--nx-success-20);
+  --nx-color-on-success-container: var(--nx-success-90);
+  --nx-color-warning: var(--nx-warning-80);
+  --nx-color-on-warning: var(--nx-warning-20);
+  --nx-color-warning-container: var(--nx-warning-20);
+  --nx-color-on-warning-container: var(--nx-warning-90);
+  --nx-color-danger: var(--nx-danger-80);
+  --nx-color-on-danger: var(--nx-danger-20);
+  --nx-color-danger-container: var(--nx-danger-20);
+  --nx-color-on-danger-container: var(--nx-danger-90);
+  --nx-focus-ring: var(--nx-primary-80);
+  --nx-selection: var(--nx-primary-30);
+  --nx-scrim: rgb(0 0 0 / 0.62);
+}
+
+/* Explicit light wins. Keep this block equal to the explicit dark aliases. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-nx-theme="light"]) {
+    color-scheme: dark;
+    --nx-color-canvas: var(--nx-neutral-5);
+    --nx-color-surface: var(--nx-neutral-10);
+    --nx-color-surface-dim: var(--nx-neutral-5);
+    --nx-color-surface-bright: var(--nx-neutral-25);
+    --nx-color-surface-container-lowest: var(--nx-neutral-5);
+    --nx-color-surface-container-low: var(--nx-neutral-10);
+    --nx-color-surface-container: var(--nx-neutral-15);
+    --nx-color-surface-container-high: var(--nx-neutral-20);
+    --nx-color-surface-container-highest: var(--nx-neutral-25);
+    --nx-color-on-surface: var(--nx-neutral-95);
+    --nx-color-on-surface-muted: var(--nx-neutral-80);
+    --nx-color-on-surface-subtle: var(--nx-neutral-70);
+    --nx-color-outline: var(--nx-neutral-60);
+    --nx-color-outline-variant: var(--nx-neutral-30);
+    --nx-color-inverse-surface: var(--nx-neutral-90);
+    --nx-color-inverse-on-surface: var(--nx-neutral-10);
+    --nx-color-inverse-primary: var(--nx-primary-40);
+    --nx-color-primary: var(--nx-primary-80);
+    --nx-color-on-primary: var(--nx-primary-20);
+    --nx-color-primary-hover: var(--nx-primary-70);
+    --nx-color-primary-container: var(--nx-primary-30);
+    --nx-color-on-primary-container: var(--nx-primary-90);
+    --nx-color-secondary: var(--nx-secondary-80);
+    --nx-color-on-secondary: var(--nx-secondary-20);
+    --nx-color-secondary-container: var(--nx-secondary-30);
+    --nx-color-on-secondary-container: var(--nx-secondary-90);
+    --nx-color-tertiary: var(--nx-tertiary-80);
+    --nx-color-on-tertiary: var(--nx-tertiary-20);
+    --nx-color-tertiary-container: var(--nx-tertiary-30);
+    --nx-color-on-tertiary-container: var(--nx-tertiary-90);
+    --nx-color-success: var(--nx-success-80);
+    --nx-color-on-success: var(--nx-success-20);
+    --nx-color-success-container: var(--nx-success-20);
+    --nx-color-on-success-container: var(--nx-success-90);
+    --nx-color-warning: var(--nx-warning-80);
+    --nx-color-on-warning: var(--nx-warning-20);
+    --nx-color-warning-container: var(--nx-warning-20);
+    --nx-color-on-warning-container: var(--nx-warning-90);
+    --nx-color-danger: var(--nx-danger-80);
+    --nx-color-on-danger: var(--nx-danger-20);
+    --nx-color-danger-container: var(--nx-danger-20);
+    --nx-color-on-danger-container: var(--nx-danger-90);
+    --nx-focus-ring: var(--nx-primary-80);
+    --nx-selection: var(--nx-primary-30);
+    --nx-scrim: rgb(0 0 0 / 0.62);
+  }
+}
+
+/* Compatibility aliases; new recipes use the full container names. */
+:root {
+  --nx-color-surface-low: var(--nx-color-surface-container-low);
+  --nx-color-surface-high: var(--nx-color-surface-container-high);
+  --nx-color-surface-highest: var(--nx-color-surface-container-highest);
+  --nx-color-on-surface-variant: var(--nx-color-on-surface-muted);
+  --nx-color-error: var(--nx-color-danger);
+  --nx-color-on-error: var(--nx-color-on-danger);
+  --nx-color-error-container: var(--nx-color-danger-container);
+  --nx-color-on-error-container: var(--nx-color-on-danger-container);
+  --nx-glass-fill: color-mix(in oklab, var(--nx-color-surface) 88%, transparent);
+  --nx-glass-ambient: color-mix(in oklab, var(--nx-color-primary) 6%, transparent);
+  --nx-glass-border: color-mix(in oklab, var(--nx-color-on-surface) 24%, transparent);
+}
+
+:root[data-nx-font="roboto-flex"] {
+  --nx-font-sans: "Roboto Flex", system-ui, sans-serif;
+}

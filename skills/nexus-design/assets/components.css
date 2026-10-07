@@ -1,0 +1,114 @@
+/* Production recipe geometry. No content card uses glass by default. */
+.nx-shell { display: grid; grid-template-columns: var(--nx-shell-sidebar) minmax(0, 1fr); min-block-size: 100svh; }
+.nx-desktop-nav {
+  position: sticky;
+  inset-block-start: 0;
+  block-size: 100svh;
+  overflow-y: auto;
+  padding: var(--nx-space-4);
+  background: var(--nx-color-surface-container-low);
+  border-inline-end: 1px solid var(--nx-color-outline-variant);
+}
+.nx-nav { display: grid; gap: var(--nx-space-2); }
+.nx-nav a {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--nx-control-min);
+  padding: var(--nx-space-3) var(--nx-space-4);
+  border-radius: var(--nx-radius-pill);
+  color: var(--nx-color-on-surface);
+  text-decoration: none;
+}
+.nx-nav a[aria-current="page"] {
+  background: var(--nx-color-primary-container);
+  color: var(--nx-color-on-primary-container);
+  font-weight: 650;
+}
+.nx-workspace { min-inline-size: 0; }
+.nx-topbar { padding: var(--nx-space-4) var(--nx-content-gutter); display: flex; flex-wrap: wrap; gap: var(--nx-space-3); }
+.nx-main { max-inline-size: var(--nx-content-max); margin-inline: auto; padding: var(--nx-space-6) var(--nx-content-gutter); }
+.nx-main > :where(.nx-grid, .nx-stream, .nx-kanban-board) { margin-block-end: var(--nx-grid-gap); }
+.nx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--nx-grid-gap); }
+.nx-metric, .nx-stream, .nx-kanban-column {
+  min-inline-size: 0;
+  padding: clamp(0.75rem, 4vw, 1.5rem);
+  border: 1px solid var(--nx-color-outline-variant);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-color-surface-container);
+  color: var(--nx-color-on-surface);
+  box-shadow: none;
+}
+.nx-metric-value { margin-block-end: var(--nx-space-2); font-size: var(--nx-font-size-kpi); font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.nx-metric-meta { color: var(--nx-color-on-surface-muted); font-size: var(--nx-font-size-label); }
+[data-nx-tone="success"] { color: var(--nx-color-success); }
+[data-nx-tone="warning"] { color: var(--nx-color-warning); }
+[data-nx-tone="danger"] { color: var(--nx-color-danger); }
+.nx-section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--nx-space-3); }
+.nx-log-list {
+  max-block-size: 24rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: var(--nx-space-2);
+  list-style: none;
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-font-size-caption);
+}
+.nx-log-list li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: var(--nx-space-2); padding-block: var(--nx-space-2); border-block-end: 1px solid var(--nx-color-outline-variant); }
+.nx-log-list time { font-variant-numeric: tabular-nums; color: var(--nx-color-on-surface-muted); }
+.nx-log-message { white-space: pre-wrap; overflow-wrap: anywhere; }
+.nx-kanban-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--nx-grid-gap); }
+.nx-kanban-column { padding: var(--nx-space-4); background: var(--nx-color-surface-container-low); }
+.nx-kanban-list { display: grid; align-content: start; gap: var(--nx-space-3); list-style: none; padding: var(--nx-space-2); margin: 0; min-block-size: 6rem; }
+.nx-task { padding: var(--nx-space-4); background: var(--nx-color-surface-container-high); border: 1px solid var(--nx-color-outline-variant); border-radius: var(--nx-radius-md); }
+.nx-task label { display: grid; gap: var(--nx-space-2); margin-block-end: var(--nx-space-3); }
+.nx-task select { inline-size: 100%; color: var(--nx-color-on-surface); background: var(--nx-color-surface); border: 1px solid var(--nx-color-outline); border-radius: var(--nx-radius-sm); padding-inline: var(--nx-space-2); }
+.nx-board-status { grid-column: 1 / -1; margin: 0; }
+.nx-side-dialog {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  margin: 0;
+  padding: 0;
+  inline-size: min(28rem, 100%);
+  max-inline-size: 100%;
+  block-size: 100dvh;
+  max-block-size: 100dvh;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--nx-color-on-surface);
+}
+.nx-nav-dialog { inset-inline-start: 0; inset-inline-end: auto; inline-size: min(var(--nx-shell-sidebar), 100%); }
+.nx-side-dialog::backdrop { background: var(--nx-scrim); }
+.nx-dialog-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-4);
+  block-size: 100%;
+  padding: max(var(--nx-space-6), env(safe-area-inset-top)) max(var(--nx-space-6), env(safe-area-inset-right)) max(var(--nx-space-6), env(safe-area-inset-bottom)) max(var(--nx-space-6), env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 0;
+  background: var(--nx-color-surface-container-high);
+}
+.nx-dialog-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--nx-space-3); }
+.nx-dialog-footer { margin-block-start: auto; display: flex; flex-wrap: wrap; gap: var(--nx-space-3); }
+@media (max-width: 56rem) {
+  .nx-shell { display: block; }
+  .nx-desktop-nav { display: none; }
+}
+@media (max-width: 42rem) {
+  .nx-kanban-board { grid-template-columns: 1fr; }
+  .nx-kanban-column { padding: var(--nx-space-2); }
+  .nx-kanban-list { padding: var(--nx-space-1); }
+  .nx-task { padding: var(--nx-space-2); }
+  .nx-log-list li { grid-template-columns: auto minmax(0, 1fr); }
+  .nx-log-message { grid-column: 1 / -1; }
+}
+@media (forced-colors: active) {
+  .nx-metric, .nx-stream, .nx-task, .nx-kanban-column { border-color: CanvasText; }
+  .nx-nav a[aria-current="page"] { outline: 2px solid Highlight; }
+  .nx-side-dialog::backdrop { background: Canvas; opacity: 0.7; }
+}

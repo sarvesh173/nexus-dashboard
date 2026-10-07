@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-nx-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nexus design vault · synthetic component fixture</title>
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/foundation.css">
+  <link rel="stylesheet" href="../assets/components.css">
+  <link rel="stylesheet" href="../assets/glass.css">
+  <script type="module" src="./dashboard.mjs"></script>
+</head>
+<body>
+  <a href="#main-content" class="nx-skip-link">Skip to dashboard content</a>
+  <div class="nx-shell">
+    <aside id="desktop-navigation" class="nx-desktop-nav">
+      <nav id="workspace-navigation" class="nx-nav" aria-label="Workspace">
+        <a href="#main-content" aria-current="page">Overview</a>
+        <a href="#stream">Activity</a>
+        <a href="#board">Workflow</a>
+      </nav>
+    </aside>
+    <div class="nx-workspace">
+      <header class="nx-topbar">
+        <button id="nav-trigger" type="button" class="nx-button" hidden aria-haspopup="dialog" aria-controls="mobile-navigation" aria-expanded="false">Navigation</button>
+        <button id="theme-toggle" type="button" class="nx-button" aria-pressed="false">Dark theme</button>
+        <button id="solid-toggle" type="button" class="nx-button" aria-pressed="false">Opaque material</button>
+        <button id="motion-toggle" type="button" class="nx-button" aria-pressed="false">Reduce motion</button>
+        <button id="rtl-toggle" type="button" class="nx-button" aria-pressed="false">Right-to-left layout</button>
+      </header>
+      <main id="main-content" class="nx-main">
+        <h1>Nexus Dashboard</h1>
+        <p>Design-vault fixture · all values and events below are synthetic sample data, not a connected service.</p>
+        <p><button id="details-trigger" type="button" class="nx-button" data-variant="primary" aria-haspopup="dialog" aria-controls="details-drawer" aria-expanded="false">Open export details</button></p>
+        <div class="nx-grid">
+          <article id="throughput-card" class="nx-metric" aria-labelledby="throughput-title" data-state="loading" aria-busy="true">
+            <h2 id="throughput-title">Throughput</h2>
+            <p class="nx-metric-value" data-nx-value>—</p>
+            <p data-nx-comparison></p>
+            <time class="nx-metric-meta" data-nx-updated hidden></time>
+            <p class="nx-metric-meta" data-nx-message>Loading metric…</p>
+            <button class="nx-button" type="button" data-nx-retry hidden>Refresh throughput</button>
+          </article>
+          <section class="nx-metric" aria-labelledby="fixture-controls-title">
+            <h2 id="fixture-controls-title">Inspect sample states</h2>
+            <label for="metric-state">Metric state</label>
+            <select id="metric-state">
+              <option value="ready">Ready</option><option value="loading">Loading</option>
+              <option value="stale">Stale</option><option value="empty">Empty</option>
+              <option value="error">Error</option><option value="forbidden">Permission limited</option>
+            </select>
+            <p id="metric-status" role="status" aria-live="polite"></p>
+            <label><input id="fail-move" type="checkbox"> Simulate failed task move</label>
+          </section>
+        </div>
+        <section id="stream" class="nx-stream" aria-labelledby="stream-title">
+          <header class="nx-section-header">
+            <h2 id="stream-title">Activity stream</h2>
+            <button class="nx-button" type="button" data-nx-pause aria-pressed="false">Pause view</button>
+            <button id="append-event" class="nx-button" type="button">Add sample event</button>
+          </header>
+          <p class="nx-metric-meta" data-nx-log-status>Not connected</p>
+          <ol class="nx-log-list" data-nx-log-list tabindex="0" aria-label="Recent activity events"></ol>
+          <p class="nx-visually-hidden" data-nx-log-announcer role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
+        <section id="board" class="nx-kanban-board" aria-label="Workflow board">
+          <section class="nx-kanban-column" data-nx-column-id="queued" aria-labelledby="queued-title">
+            <header class="nx-section-header"><h2 id="queued-title">Queued</h2><span data-nx-column-count>1</span></header>
+            <ol class="nx-kanban-list" data-nx-kanban-list>
+              <li class="nx-task" data-nx-card-id="NX-104">
+                <h3>NX-104 · Review export</h3>
+                <p>Sample task · move requires synthetic persistence confirmation.</p>
+                <label>Move NX-104 to
+                  <select data-nx-move-target><option value="queued">Queued</option><option value="active">Active</option><option value="done">Done</option></select>
+                </label>
+                <button class="nx-button" type="button" data-nx-move-submit>Move NX-104</button>
+              </li>
+            </ol>
+          </section>
+          <section class="nx-kanban-column" data-nx-column-id="active" aria-labelledby="active-title">
+            <header class="nx-section-header"><h2 id="active-title">Active</h2><span data-nx-column-count>0</span></header>
+            <ol class="nx-kanban-list" data-nx-kanban-list></ol>
+          </section>
+          <section class="nx-kanban-column" data-nx-column-id="done" aria-labelledby="done-title">
+            <header class="nx-section-header"><h2 id="done-title">Done</h2><span data-nx-column-count>0</span></header>
+            <ol class="nx-kanban-list" data-nx-kanban-list></ol>
+          </section>
+          <p class="nx-board-status" data-nx-board-status role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
+      </main>
+    </div>
+  </div>
+  <dialog id="mobile-navigation" class="nx-side-dialog nx-nav-dialog" aria-labelledby="navigation-title">
+    <section class="nx-dialog-panel">
+      <header class="nx-dialog-header"><h2 id="navigation-title">Workspace navigation</h2><button class="nx-button" type="button" data-nx-close autofocus>Close navigation</button></header>
+      <div id="mobile-navigation-host"></div>
+    </section>
+  </dialog>
+  <dialog id="details-drawer" class="nx-side-dialog" aria-labelledby="details-title">
+    <section class="nx-dialog-panel nx-glass">
+      <header class="nx-dialog-header"><h2 id="details-title">Export details</h2><button class="nx-button" type="button" data-nx-close autofocus>Close details</button></header>
+      <p>This is one Nexus Glass foreground panel over solid dashboard content.</p>
+      <label for="export-name">Export name</label><input id="export-name" value="Sample workspace report">
+      <p>Opaque material, reduced motion, keyboard focus, RTL and Escape can be inspected here. This fixture does not submit exports.</p>
+      <footer class="nx-dialog-footer"><button class="nx-button" type="button" data-nx-close>Cancel</button></footer>
+    </section>
+  </dialog>
+</body>
+</html>
