@@ -1102,17 +1102,17 @@ export function OverviewFeature(props = {}) {
                       
                       <div className="my-1">
                         <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {hasRealTelemetry ? <>{smoothCpu}%</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
+                          {hasRealTelemetry ? <>{smoothCpu}</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs ">
                           <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 1</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}%</> : <span className="overview-pending">—</span>}</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}</> : <span className="overview-pending">—</span>}</span>
                           </div>
                           <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
                             <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 2</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}%</> : <span className="overview-pending">—</span>}</span>
+                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}</> : <span className="overview-pending">—</span>}</span>
                           </div>
                         </div>
                       </div>
