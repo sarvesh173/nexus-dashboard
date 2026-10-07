@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
   AnimatedCurrencyValue,
@@ -229,7 +229,6 @@ const OVERVIEW_MOTION_STYLES = `
 `;
 
 const EMPTY_HOVER = Object.freeze({ isActive: false });
-const HISTORY_SIZE = 24;
 const finiteNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 const percentage = (value) => Math.max(0, Math.min(100, finiteNumber(value)));
 
@@ -243,49 +242,6 @@ const StatusDot = ({ live }) => (
   <span className="overview-status-dot" data-live={Boolean(live)} aria-hidden="true" />
 );
 
-// Record actual samples only; never synthesize a trend or run an idle timer.
-function MetricSparkline({ value, enabled, ceiling }) {
-  const numeric = value == null ? NaN : Number(value);
-  const valid = enabled && Number.isFinite(numeric);
-  const [history, setHistory] = useState(() => ({ samples: valid ? [numeric] : [], revision: 0 }));
-  const lastSample = useRef({ value: valid ? numeric : null, time: 0 });
-  const { samples, revision } = history;
-
-  useEffect(() => {
-    if (!valid || lastSample.current.value === numeric) return;
-    const now = Date.now();
-    // Parent-supplied smooth metrics may update each frame. Sample at most 1Hz.
-    if (now - lastSample.current.time < 1000) return;
-    lastSample.current = { value: numeric, time: now };
-    setHistory((previous) => ({
-      samples: [...previous.samples.slice(-(HISTORY_SIZE - 1)), numeric],
-      revision: previous.revision + 1,
-    }));
-  }, [numeric, valid]);
-
-  const min = ceiling || !samples.length ? 0 : Math.min(...samples);
-  const max = ceiling || (samples.length ? Math.max(...samples) : 1);
-  const span = Math.max(0.001, max - min);
-  const points = samples.map((sample, index) => ({
-    x: 4 + ((HISTORY_SIZE - samples.length + index) / (HISTORY_SIZE - 1)) * 112,
-    y: max === min ? 14 : 24 - ((sample - min) / span) * 20,
-  }));
-  const latest = points.at(-1);
-  const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
-
-  return (
-    <svg className="overview-metric-trend" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <path d="M 4 24 H 116" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.12" />
-      {valid && latest && (
-        <>
-          <path d={path} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" opacity="0.7" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx={latest.x} cy={latest.y} r="2" fill="currentColor" />
-          <circle key={revision} className="overview-spark-pulse" cx={latest.x} cy={latest.y} r="3" fill="none" stroke="currentColor" strokeWidth="1" />
-        </>
-      )}
-    </svg>
-  );
-}
 const CostStaticIcon = ({ symbol = '$' }) => {
   const isMultiChar = symbol && symbol.length > 2;
   const isRupee = symbol === '₹';
@@ -1117,12 +1073,9 @@ export function OverviewFeature(props = {}) {
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <MetricSparkline value={totalCost} enabled={Boolean(isOverviewNavActive && hasCostTotal)} />
-                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                        <span className="flex items-center gap-1.5"><StatusDot live={costLoadState === 'ready'} />Auto-Scan</span>
-                        <span className="text-[var(--md-sys-color-primary)] font-medium">1h-24h cycle</span>
-                      </div>
+                    <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                      <span>Auto-Scan</span>
+                      <span className="text-[var(--md-sys-color-primary)] font-medium">1h-24h cycle</span>
                     </div>
                   </div>
                   </div>
@@ -1166,7 +1119,6 @@ export function OverviewFeature(props = {}) {
                     </div>
 
                     <div className="mt-3 pt-2">
-                      <MetricSparkline value={smoothCpu} enabled={Boolean(isOverviewNavActive && hasRealTelemetry)} ceiling={100} />
                       <div className="m3-linear-progress" aria-hidden={!hasRealTelemetry}>
                         <div className="m3-linear-track">
                           <div
@@ -1221,7 +1173,6 @@ export function OverviewFeature(props = {}) {
                     </div>
 
                     <div className="mt-3 pt-2">
-                      <MetricSparkline value={smoothRamPercent} enabled={Boolean(isOverviewNavActive && hasRealTelemetry)} ceiling={100} />
                       <div className="m3-linear-progress" aria-hidden={!hasRealTelemetry}>
                         <div className="m3-linear-track">
                           <div
@@ -1260,7 +1211,7 @@ export function OverviewFeature(props = {}) {
                         </div>
                       </div>
 
-                      <div className="my-2 flex items-baseline gap-6">
+                      <div className="my-4 flex items-baseline gap-8">
                         <div>
                           <div className="text-3xl sm:text-4xl font-bold font-mono text-[var(--md-sys-color-on-surface)]">
                             {providersList.length > 0 ? modelCount : <span className="overview-pending">—</span>}
@@ -1281,12 +1232,9 @@ export function OverviewFeature(props = {}) {
                       </div>
                     </div>
 
-                    <div>
-                      <MetricSparkline value={modelCount} enabled={Boolean(isOverviewNavActive && providersList.length)} />
-                      <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                        <span className="flex items-center gap-1.5"><StatusDot live={providersList.length > 0} />Live Catalog</span>
-                        <span className="text-[var(--md-sys-color-primary)] font-medium">Flagship & Free SLA</span>
-                      </div>
+                    <div className="pt-3 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
+                      <span>Live Catalog</span>
+                      <span className="text-[var(--md-sys-color-primary)] font-medium">Flagship & Free SLA</span>
                     </div>
                   </div>
                   </div>
