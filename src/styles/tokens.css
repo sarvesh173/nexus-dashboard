@@ -1,0 +1,296 @@
+/* Material 3 role registry. Existing Nexus palettes are preserved in OKLCH.
+   Color literals live ONLY in this theme definition layer; all UI paint uses
+   --md-sys-color-* roles. See design-skills/tokens.md for the complete contract. */
+:root, [data-theme="indigo-violet"] {
+  color-scheme: dark;
+  --md-sys-color-error: oklch(0.838304 0.089085 26.757);
+  --md-sys-color-on-error: oklch(0.327503 0.133592 27.320);
+  --md-sys-color-error-container: oklch(0.417061 0.170153 27.379);
+  --md-sys-color-on-error-container: oklch(0.918251 0.041771 25.226);
+  --md-sys-color-background: oklch(0.179081 0.026747 279.948);
+  --md-sys-color-surface: oklch(0.205360 0.028054 277.376);
+  --md-sys-color-surface-container: oklch(0.237532 0.036768 276.366);
+  --md-sys-color-surface-container-high: oklch(0.268074 0.043269 275.562);
+  --md-sys-color-surface-container-highest: oklch(0.306290 0.050971 275.267);
+  --md-sys-color-on-surface: oklch(0.916958 0.012279 296.337);
+  --md-sys-color-on-surface-variant: oklch(0.827995 0.014058 277.021);
+  --md-sys-color-outline: oklch(0.654574 0.013474 275.989);
+  --md-sys-color-outline-variant: oklch(0.342932 0.048232 266.309);
+  --md-sys-color-primary: oklch(0.834926 0.094575 298.018);
+  --md-sys-color-on-primary: oklch(0.325102 0.135285 291.152);
+  --md-sys-color-primary-container: oklch(0.410293 0.133690 292.706);
+  --md-sys-color-on-primary-container: oklch(0.918293 0.047703 302.828);
+}
+
+[data-theme="obsidian-emerald"] {
+  --md-sys-color-primary: oklch(0.799422 0.113979 166.232);
+  --md-sys-color-on-primary: oklch(0.301520 0.064595 163.621);
+  --md-sys-color-primary-container: oklch(0.384873 0.082671 163.432);
+  --md-sys-color-on-primary-container: oklch(0.886894 0.114051 165.675);
+  --md-sys-color-background: oklch(0.174101 0.011542 175.472);
+  --md-sys-color-surface: oklch(0.205625 0.017808 169.920);
+  --md-sys-color-surface-container: oklch(0.243750 0.024646 168.687);
+  --md-sys-color-surface-container-high: oklch(0.284524 0.030988 168.023);
+  --md-sys-color-surface-container-highest: oklch(0.331628 0.036920 167.713);
+  --md-sys-color-on-surface: oklch(0.913161 0.005770 128.531);
+  --md-sys-color-on-surface-variant: oklch(0.826137 0.014578 155.529);
+  --md-sys-color-outline: oklch(0.653271 0.014517 159.715);
+  --md-sys-color-outline-variant: oklch(0.360530 0.039261 167.356);
+}
+
+[data-theme="cyberpunk-neon"] {
+  --md-sys-color-error: oklch(0.759375 0.143514 26.078);
+  --md-sys-color-on-error: oklch(0.257802 0.104428 24.657);
+  --md-sys-color-error-container: oklch(0.374569 0.153705 29.234);
+  --md-sys-color-primary: oklch(0.765693 0.127601 358.964);
+  --md-sys-color-on-primary: oklch(0.292524 0.118048 2.287);
+  --md-sys-color-primary-container: oklch(0.376081 0.151665 2.663);
+  --md-sys-color-on-primary-container: oklch(0.919651 0.043758 2.029);
+  --md-sys-color-background: oklch(0.173897 0.024712 312.844);
+  --md-sys-color-surface: oklch(0.200698 0.030346 313.061);
+  --md-sys-color-surface-container: oklch(0.233341 0.039359 312.455);
+  --md-sys-color-surface-container-high: oklch(0.270840 0.049823 312.715);
+  --md-sys-color-surface-container-highest: oklch(0.311024 0.059644 312.887);
+  --md-sys-color-on-surface: oklch(0.918805 0.017662 334.198);
+  --md-sys-color-on-surface-variant: oklch(0.828509 0.020706 335.737);
+  --md-sys-color-outline: oklch(0.654651 0.021092 333.653);
+  --md-sys-color-outline-variant: oklch(0.361511 0.064751 312.246);
+}
+
+[data-theme="industrial-amber"] {
+  --md-sys-color-primary: oklch(0.832723 0.142916 74.076);
+  --md-sys-color-on-primary: oklch(0.313479 0.066550 73.659);
+  --md-sys-color-primary-container: oklch(0.399929 0.085224 72.909);
+  --md-sys-color-on-primary-container: oklch(0.915702 0.066422 72.715);
+  --md-sys-color-background: oklch(0.186916 0.012074 91.799);
+  --md-sys-color-surface: oklch(0.214420 0.013932 87.553);
+  --md-sys-color-surface-container: oklch(0.253391 0.017222 86.853);
+  --md-sys-color-surface-container-high: oklch(0.295814 0.022348 84.428);
+  --md-sys-color-surface-container-highest: oklch(0.340664 0.027181 82.989);
+  --md-sys-color-on-surface: oklch(0.914924 0.017356 67.609);
+  --md-sys-color-on-surface-variant: oklch(0.828251 0.019959 72.538);
+  --md-sys-color-outline: oklch(0.654375 0.020463 75.232);
+  --md-sys-color-outline-variant: oklch(0.391832 0.030371 80.773);
+}
+
+[data-theme="paper-light"] {
+  color-scheme: light;
+  --md-sys-color-error: oklch(0.506025 0.192652 27.702);
+  --md-sys-color-on-error: oklch(1 0 0);
+  --md-sys-color-error-container: oklch(0.918251 0.041771 25.226);
+  --md-sys-color-on-error-container: oklch(0.236025 0.096241 27.191);
+  --md-sys-color-primary: oklch(0.495521 0.130457 293.709);
+  --md-sys-color-on-primary: oklch(1 0 0);
+  --md-sys-color-primary-container: oklch(0.918293 0.047703 302.828);
+  --md-sys-color-on-primary-container: oklch(0.241998 0.140385 286.090);
+  --md-sys-color-background: oklch(0.982833 0.007296 312.303);
+  --md-sys-color-surface: oklch(0.964873 0.007330 312.302);
+  --md-sys-color-surface-container: oklch(0.941861 0.009041 314.780);
+  --md-sys-color-surface-container-high: oklch(0.923706 0.009085 314.779);
+  --md-sys-color-surface-container-highest: oklch(0.905463 0.009130 314.778);
+  --md-sys-color-on-surface: oklch(0.223848 0.007702 285.761);
+  --md-sys-color-on-surface-variant: oklch(0.397549 0.015020 285.697);
+  --md-sys-color-outline: oklch(0.570061 0.015238 290.505);
+  --md-sys-color-outline-variant: oklch(0.828342 0.015336 294.410);
+}
+
+/* Redefined on each theme scope, including preview swatches, so aliases resolve
+   against that scope rather than retaining their ancestor's computed colors. */
+:root, [data-theme] {
+  --md-sys-color-shadow: oklch(0 0 0);
+  --md-sys-color-scrim: var(--md-sys-color-shadow);
+  --md-sys-color-on-background: var(--md-sys-color-on-surface);
+  --md-sys-color-surface-tint: var(--md-sys-color-primary);
+  --md-sys-color-surface-variant: var(--md-sys-color-surface-container-highest);
+  --md-sys-color-surface-dim: var(--md-sys-color-background);
+  --md-sys-color-surface-bright: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 90%, var(--md-sys-color-on-surface));
+  --md-sys-color-surface-container-lowest: var(--md-sys-color-background);
+  --md-sys-color-surface-container-low: color-mix(in srgb, var(--md-sys-color-surface) 50%, var(--md-sys-color-surface-container));
+  --md-sys-color-secondary: color-mix(in srgb, var(--md-sys-color-primary) 65%, var(--md-sys-color-on-surface));
+  --md-sys-color-on-secondary: var(--md-sys-color-on-primary);
+  --md-sys-color-secondary-container: color-mix(in srgb, var(--md-sys-color-primary-container) 72%, var(--md-sys-color-surface-container));
+  --md-sys-color-on-secondary-container: var(--md-sys-color-on-primary-container);
+  --md-sys-color-tertiary: color-mix(in srgb, var(--md-sys-color-primary) 70%, var(--md-sys-color-error));
+  --md-sys-color-on-tertiary: var(--md-sys-color-on-primary);
+  --md-sys-color-tertiary-container: color-mix(in srgb, var(--md-sys-color-primary-container) 80%, var(--md-sys-color-error-container));
+  --md-sys-color-on-tertiary-container: var(--md-sys-color-on-primary-container);
+  --md-sys-color-inverse-surface: var(--md-sys-color-on-surface);
+  --md-sys-color-inverse-on-surface: var(--md-sys-color-surface);
+  --md-sys-color-inverse-primary: var(--md-sys-color-primary-container);
+  --md-sys-color-primary-fixed: var(--md-sys-color-on-primary-container);
+  --md-sys-color-primary-fixed-dim: var(--md-sys-color-primary);
+  --md-sys-color-on-primary-fixed: var(--md-sys-color-on-primary);
+  --md-sys-color-on-primary-fixed-variant: var(--md-sys-color-primary-container);
+  --md-sys-color-secondary-fixed: var(--md-sys-color-on-secondary-container);
+  --md-sys-color-secondary-fixed-dim: var(--md-sys-color-secondary);
+  --md-sys-color-on-secondary-fixed: var(--md-sys-color-on-secondary);
+  --md-sys-color-on-secondary-fixed-variant: var(--md-sys-color-secondary-container);
+  --md-sys-color-tertiary-fixed: var(--md-sys-color-on-tertiary-container);
+  --md-sys-color-tertiary-fixed-dim: var(--md-sys-color-tertiary);
+  --md-sys-color-on-tertiary-fixed: var(--md-sys-color-on-tertiary);
+  --md-sys-color-on-tertiary-fixed-variant: var(--md-sys-color-tertiary-container);
+  --md-sys-color-success: var(--md-sys-color-secondary);
+  --md-sys-color-on-success: var(--md-sys-color-on-secondary);
+  --md-sys-color-success-container: var(--md-sys-color-secondary-container);
+  --md-sys-color-on-success-container: var(--md-sys-color-on-secondary-container);
+  --md-sys-color-warning: var(--md-sys-color-tertiary);
+  --md-sys-color-on-warning: var(--md-sys-color-on-tertiary);
+  --md-sys-color-warning-container: var(--md-sys-color-tertiary-container);
+  --md-sys-color-on-warning-container: var(--md-sys-color-on-tertiary-container);
+  --md-sys-color-info: var(--md-sys-color-primary);
+  --md-sys-color-on-info: var(--md-sys-color-on-primary);
+  --md-sys-color-info-container: var(--md-sys-color-primary-container);
+  --md-sys-color-on-info-container: var(--md-sys-color-on-primary-container);
+  --md-sys-color-terminal: var(--md-sys-color-surface-container-lowest);
+  --md-sys-color-on-terminal: var(--md-sys-color-on-surface);
+  --md-sys-color-terminal-outline: var(--md-sys-color-outline-variant);
+  --md-sys-color-specular: var(--md-sys-color-on-surface);
+  --md-sys-color-specular-strong: color-mix(in srgb, var(--md-sys-color-on-surface) 92%, var(--md-sys-color-primary));
+  --md-sys-color-glass-outline: color-mix(in srgb, var(--md-sys-color-outline) 30%, transparent);
+  --md-sys-color-logo-light: oklch(0.98 0.005 290);
+  --md-sys-color-logo-dark: color-mix(in srgb, var(--md-sys-color-shadow) 88%, var(--md-sys-color-surface));
+}
+
+/* The fixed family stays tonal-light even in the light theme. */
+[data-theme="paper-light"] {
+  --md-sys-color-primary-fixed: var(--md-sys-color-primary-container);
+  --md-sys-color-primary-fixed-dim: color-mix(in srgb, var(--md-sys-color-primary-container) 82%, var(--md-sys-color-primary));
+  --md-sys-color-on-primary-fixed: var(--md-sys-color-on-primary-container);
+  --md-sys-color-on-primary-fixed-variant: var(--md-sys-color-primary);
+  --md-sys-color-secondary-fixed: var(--md-sys-color-secondary-container);
+  --md-sys-color-secondary-fixed-dim: color-mix(in srgb, var(--md-sys-color-secondary-container) 82%, var(--md-sys-color-secondary));
+  --md-sys-color-on-secondary-fixed: var(--md-sys-color-on-secondary-container);
+  --md-sys-color-on-secondary-fixed-variant: var(--md-sys-color-secondary);
+  --md-sys-color-tertiary-fixed: var(--md-sys-color-tertiary-container);
+  --md-sys-color-tertiary-fixed-dim: color-mix(in srgb, var(--md-sys-color-tertiary-container) 82%, var(--md-sys-color-tertiary));
+  --md-sys-color-on-tertiary-fixed: var(--md-sys-color-on-tertiary-container);
+  --md-sys-color-on-tertiary-fixed-variant: var(--md-sys-color-tertiary);
+  --md-sys-color-surface-bright: var(--md-sys-color-background);
+  --md-sys-color-surface-dim: var(--md-sys-color-surface-container-highest);
+  --md-sys-color-inverse-primary: var(--md-sys-color-primary-fixed-dim);
+}
+
+:root {
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+  --md-sys-state-hover-state-layer-opacity: 0.08;
+  --md-sys-state-focus-state-layer-opacity: 0.10;
+  --md-sys-state-pressed-state-layer-opacity: 0.10;
+  --md-sys-state-dragged-state-layer-opacity: 0.16;
+  --md-sys-typescale-font: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --md-sys-typescale-mono-font: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --md-sys-typescale-display-large-size: 3.5625rem;
+  --md-sys-typescale-display-large-line-height: 4rem;
+  --md-sys-typescale-display-large-weight: 400;
+  --md-sys-typescale-display-large-tracking: -0.015625rem;
+  --md-sys-typescale-display-medium-size: 2.8125rem;
+  --md-sys-typescale-display-medium-line-height: 3.25rem;
+  --md-sys-typescale-display-medium-weight: 400;
+  --md-sys-typescale-display-medium-tracking: 0;
+  --md-sys-typescale-display-small-size: 2.25rem;
+  --md-sys-typescale-display-small-line-height: 2.75rem;
+  --md-sys-typescale-display-small-weight: 400;
+  --md-sys-typescale-display-small-tracking: 0;
+  --md-sys-typescale-headline-large-size: 2rem;
+  --md-sys-typescale-headline-large-line-height: 2.5rem;
+  --md-sys-typescale-headline-large-weight: 400;
+  --md-sys-typescale-headline-large-tracking: 0;
+  --md-sys-typescale-headline-medium-size: 1.75rem;
+  --md-sys-typescale-headline-medium-line-height: 2.25rem;
+  --md-sys-typescale-headline-medium-weight: 400;
+  --md-sys-typescale-headline-medium-tracking: 0;
+  --md-sys-typescale-headline-small-size: 1.5rem;
+  --md-sys-typescale-headline-small-line-height: 2rem;
+  --md-sys-typescale-headline-small-weight: 400;
+  --md-sys-typescale-headline-small-tracking: 0;
+  --md-sys-typescale-title-large-size: 1.375rem;
+  --md-sys-typescale-title-large-line-height: 1.75rem;
+  --md-sys-typescale-title-large-weight: 400;
+  --md-sys-typescale-title-large-tracking: 0;
+  --md-sys-typescale-title-medium-size: 1rem;
+  --md-sys-typescale-title-medium-line-height: 1.5rem;
+  --md-sys-typescale-title-medium-weight: 500;
+  --md-sys-typescale-title-medium-tracking: 0.009375rem;
+  --md-sys-typescale-title-small-size: 0.875rem;
+  --md-sys-typescale-title-small-line-height: 1.25rem;
+  --md-sys-typescale-title-small-weight: 500;
+  --md-sys-typescale-title-small-tracking: 0.00625rem;
+  --md-sys-typescale-body-large-size: 1rem;
+  --md-sys-typescale-body-large-line-height: 1.5rem;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-large-tracking: 0.03125rem;
+  --md-sys-typescale-body-medium-size: 0.875rem;
+  --md-sys-typescale-body-medium-line-height: 1.25rem;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-medium-tracking: 0.015625rem;
+  --md-sys-typescale-body-small-size: 0.75rem;
+  --md-sys-typescale-body-small-line-height: 1rem;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-body-small-tracking: 0.025rem;
+  --md-sys-typescale-label-large-size: 0.875rem;
+  --md-sys-typescale-label-large-line-height: 1.25rem;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-large-tracking: 0.00625rem;
+  --md-sys-typescale-label-medium-size: 0.75rem;
+  --md-sys-typescale-label-medium-line-height: 1rem;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-medium-tracking: 0.03125rem;
+  --md-sys-typescale-label-small-size: 0.6875rem;
+  --md-sys-typescale-label-small-line-height: 1rem;
+  --md-sys-typescale-label-small-weight: 500;
+  --md-sys-typescale-label-small-tracking: 0.03125rem;
+}
+
+:root, [data-theme] {
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1: 0 1px 3px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent), 0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow) 15%, transparent);
+  --md-sys-elevation-level2: 0 2px 6px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent), 0 2px 4px color-mix(in srgb, var(--md-sys-color-shadow) 15%, transparent);
+  --md-sys-elevation-level3: 0 4px 8px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent), 0 3px 6px color-mix(in srgb, var(--md-sys-color-shadow) 15%, transparent);
+  --md-sys-elevation-level4: 0 6px 12px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent), 0 4px 8px color-mix(in srgb, var(--md-sys-color-shadow) 15%, transparent);
+  --md-sys-elevation-level5: 0 8px 16px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent), 0 6px 12px color-mix(in srgb, var(--md-sys-color-shadow) 15%, transparent);
+}
+
+/* Tailwind defaults now reference the same type, shape, elevation and motion
+   registry as handwritten component CSS. */
+@theme inline {
+  --font-sans: var(--md-sys-typescale-font);
+  --font-mono: var(--md-sys-typescale-mono-font);
+  --text-xs: var(--md-sys-typescale-body-small-size);
+  --text-xs--line-height: var(--md-sys-typescale-body-small-line-height);
+  --text-sm: var(--md-sys-typescale-body-medium-size);
+  --text-sm--line-height: var(--md-sys-typescale-body-medium-line-height);
+  --text-base: var(--md-sys-typescale-body-large-size);
+  --text-base--line-height: var(--md-sys-typescale-body-large-line-height);
+  --text-lg: var(--md-sys-typescale-title-large-size);
+  --text-lg--line-height: var(--md-sys-typescale-title-large-line-height);
+  --text-xl: var(--md-sys-typescale-title-large-size);
+  --text-xl--line-height: var(--md-sys-typescale-title-large-line-height);
+  --text-2xl: var(--md-sys-typescale-headline-small-size);
+  --text-2xl--line-height: var(--md-sys-typescale-headline-small-line-height);
+  --text-3xl: var(--md-sys-typescale-display-small-size);
+  --text-3xl--line-height: var(--md-sys-typescale-display-small-line-height);
+  --text-4xl: var(--md-sys-typescale-display-small-size);
+  --text-4xl--line-height: var(--md-sys-typescale-display-small-line-height);
+  --radius-xs: var(--md-sys-shape-corner-extra-small);
+  --radius-sm: var(--md-sys-shape-corner-extra-small);
+  --radius-md: var(--md-sys-shape-corner-small);
+  --radius-lg: var(--md-sys-shape-corner-small);
+  --radius-xl: var(--md-sys-shape-corner-medium);
+  --radius-2xl: var(--md-sys-shape-corner-large);
+  --radius-3xl: var(--md-sys-shape-corner-extra-large);
+  --shadow-2xs: var(--md-sys-elevation-level1);
+  --shadow-xs: var(--md-sys-elevation-level1);
+  --shadow-sm: var(--md-sys-elevation-level1);
+  --shadow-md: var(--md-sys-elevation-level2);
+  --shadow-lg: var(--md-sys-elevation-level3);
+  --shadow-xl: var(--md-sys-elevation-level4);
+  --shadow-2xl: var(--md-sys-elevation-level5);
+  --inset-shadow-sm: inset 0 1px 3px color-mix(in srgb, var(--md-sys-color-shadow) 20%, transparent);
+  --default-transition-duration: var(--m3-duration-short4);
+  --default-transition-timing-function: var(--m3-easing-standard);
+}
