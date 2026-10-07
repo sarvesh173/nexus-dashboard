@@ -1,0 +1,244 @@
+.nx-glass {
+  --nx-glass-line: var(--md-sys-color-outline-variant, var(--nx-outline, #c9c7d4));
+  --nx-glass-muted: var(--md-sys-color-on-surface-variant, var(--nx-muted, #565466));
+  color: var(--md-sys-color-on-surface, var(--nx-text, #20212c));
+  min-inline-size: 0;
+  container: nx-glass / inline-size;
+}
+
+.nx-glass *, .nx-glass *::before, .nx-glass *::after { box-sizing: border-box; }
+
+.nx-glass-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-block-end: 18px;
+}
+
+.nx-glass-intro p { margin: 0; font-size: 14px; font-weight: 550; }
+
+.nx-glass-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--nx-glass-line);
+  border-radius: 999px;
+  color: var(--nx-glass-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .035em;
+}
+
+.nx-glass-live-badge > span {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary, #6650a4);
+}
+
+.nx-glass-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+.nx-glass-tile {
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--nx-glass-line);
+  border-radius: 18px;
+  background: var(--md-sys-color-surface-container-low, var(--nx-raised, #f8f7fc));
+}
+
+.nx-glass-caption { block-size: 89px; padding: 16px 15px; }
+.nx-glass-era { display: flex; align-items: center; gap: 7px; color: var(--nx-glass-muted); font-size: 10px; font-weight: 600; letter-spacing: .055em; text-transform: uppercase; }
+.nx-glass-index { inline-size: 2ch; font-variant-numeric: tabular-nums; }
+.nx-glass-caption h3 { margin: 10px 0 0; font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: -.025em; }
+.nx-glass-tile--liquid .nx-glass-caption h3 { color: var(--md-sys-color-primary, var(--nx-primary, #6650a4)); }
+
+/* Identical, unmoving scenery makes differences between the four surfaces legible. */
+.nx-glass-stage {
+  position: relative;
+  isolation: isolate;
+  block-size: 246px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 10% 88%, #86e1cf, transparent 65%),
+    radial-gradient(ellipse at 92% 8%, #b0beff, transparent 65%),
+    linear-gradient(135deg, #f2b7d0, #e9dffc 52%, #c5dcff);
+}
+
+.nx-glass-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#ffffffb3 1px, transparent 1px);
+  background-size: 13px 13px;
+}
+
+.nx-glass-orbit {
+  position: absolute;
+  inline-size: 245px;
+  block-size: 142px;
+  inset-block-start: 93px;
+  inset-inline-start: -64px;
+  border: 19px solid #ffe0a0;
+  border-radius: 50%;
+  transform: rotate(-34deg);
+  box-shadow: 0 4px 0 #ffffff80, inset 0 3px 0 #ffffff80;
+}
+
+.nx-glass-beam {
+  position: absolute;
+  inline-size: 56px;
+  block-size: 330px;
+  inset-block-start: -47px;
+  inset-inline-end: 30px;
+  border-inline: 1px solid #ffffffb3;
+  background: linear-gradient(90deg, #9082ed, #b1a4f7 55%, #b9caff);
+  transform: rotate(35deg);
+}
+
+.nx-glass-surface {
+  --nx-glass-ink: var(--md-sys-color-on-surface, #20212c);
+  --nx-glass-icon-fill: var(--md-sys-color-surface-container-high, #e9e7f0);
+  position: absolute;
+  inset-block-start: 32px;
+  inset-inline: max(16px, calc((100% - 260px) / 2));
+  block-size: 182px;
+  padding: 16px;
+  color: var(--nx-glass-ink);
+  background: var(--md-sys-color-surface, #fffbfe);
+}
+
+.nx-glass-surface-top, .nx-glass-surface-bottom { display: flex; align-items: center; }
+.nx-glass-surface-top { gap: 9px; margin-block-end: 16px; }
+.nx-glass-symbol { display: grid; place-items: center; flex: 0 0 30px; block-size: 30px; background: var(--nx-glass-icon-fill); border-radius: inherit; }
+.nx-glass-symbol svg { inline-size: 21px; block-size: 21px; }
+.nx-glass-workspace { font-size: 9px; font-weight: 650; letter-spacing: .055em; text-transform: uppercase; }
+.nx-glass-surface-title { display: block; font-size: 17px; line-height: 1.25; letter-spacing: -.035em; }
+.nx-glass-surface-subtitle { display: block; margin-block-start: 5px; font-size: 11px; line-height: 1.4; }
+.nx-glass-surface-bottom { position: absolute; inset-inline: 16px; inset-block-end: 16px; gap: 7px; font-size: 9px; font-weight: 550; }
+.nx-glass-avatars { display: flex; padding-inline-end: 3px; }
+.nx-glass-avatars i { display: grid; place-items: center; inline-size: 21px; block-size: 21px; margin-inline-start: -4px; border: 2px solid var(--nx-glass-ink); border-radius: 50%; background: var(--nx-glass-icon-fill); font-size: 7px; font-style: normal; }
+.nx-glass-avatars i:first-child { margin-inline-start: 0; }
+.nx-glass-arrow { margin-inline-start: auto; font-size: 19px; line-height: 1; }
+
+/* Static generations deliberately differ in pigment, outline, and corner geometry. */
+.nx-glass-tile--m1 .nx-glass-surface {
+  --nx-glass-ink: var(--md-sys-color-on-primary, #ffffff);
+  --nx-glass-icon-fill: #ffffff24;
+  background: var(--md-sys-color-primary, #6650a4);
+  border-radius: 0;
+}
+
+.nx-glass-tile--m2 .nx-glass-surface {
+  border: 1px solid var(--md-sys-color-outline, #79747e);
+  border-radius: 12px;
+}
+
+.nx-glass-tile--m3 .nx-glass-surface {
+  --nx-glass-ink: var(--md-sys-color-on-primary-container, #21005d);
+  --nx-glass-icon-fill: var(--md-sys-color-primary-container, #eaddff);
+  background: var(--md-sys-color-primary-container, #eaddff);
+  border-radius: 24px;
+}
+
+.nx-glass-tile--m3 .nx-glass-symbol { outline: 1px solid currentColor; border-radius: 10px; }
+
+/* The base is the fallback: readable and opaque without backdrop-filter support. */
+.nx-glass-tile--liquid .nx-glass-surface {
+  --nx-glass-ink: #1d2844;
+  --nx-glass-icon-fill: #ffffffa6;
+  background: #e8edff;
+  border: 1px solid rgba(255, 255, 255, var(--nx-glass-rim, .72));
+  border-radius: 28px;
+  box-shadow: 0 10px 24px #34385824,
+    inset 0 2px 1px rgba(255, 255, 255, var(--nx-glass-rim, .72));
+}
+
+.nx-glass-tile--liquid .nx-glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--nx-glass-rim, .72);
+  box-shadow: inset 1px 0 0 #ffffffd9, inset -1px -1px 0 #ffffff70;
+  background: radial-gradient(ellipse at 0 0, #ffffff80, transparent 58%);
+}
+
+.nx-glass-tile--liquid .nx-glass-surface > * { position: relative; }
+.nx-glass-tile--liquid .nx-glass-surface > .nx-glass-surface-bottom { position: absolute; }
+.nx-glass-tile--liquid .nx-glass-symbol { border-radius: 10px; box-shadow: inset 0 1px 0 #ffffff; }
+
+.nx-glass-detail {
+  display: flex;
+  align-items: center;
+  block-size: 55px;
+  padding: 10px 15px;
+  color: var(--nx-glass-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.nx-glass-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-block-start: 20px;
+  padding: 17px;
+  border: 1px solid var(--nx-glass-line);
+  border-radius: 16px;
+  background: var(--md-sys-color-surface-container, var(--nx-raised, #f3f1f8));
+}
+
+.nx-glass-controls > * { min-inline-size: 0; }
+.nx-glass-controls output { display: inline-block; flex-shrink: 0; inline-size: 7ch; text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nx-glass-controls input[type='range'] { inline-size: 100%; min-block-size: 24px; accent-color: var(--md-sys-color-primary, var(--nx-primary, #6650a4)); cursor: pointer; }
+.nx-glass-controls input[type='range']:focus-visible { outline: 2px solid var(--md-sys-color-primary, var(--nx-primary, #6650a4)); outline-offset: 4px; border-radius: 5px; }
+
+.nx-glass-note { margin: 12px 0 0; color: var(--nx-glass-muted); font-size: 11px; line-height: 1.6; }
+.nx-glass-supported { display: none; }
+.nx-glass-study { display: block; margin-block-start: 3px; }
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nx-glass-tile--liquid .nx-glass-surface {
+    background: linear-gradient(135deg, #ffffffb3, #ffffff80);
+    -webkit-backdrop-filter: blur(var(--nx-glass-blur, 18px)) saturate(var(--nx-glass-saturation, 160%));
+    backdrop-filter: blur(var(--nx-glass-blur, 18px)) saturate(var(--nx-glass-saturation, 160%));
+  }
+  .nx-glass-supported { display: inline; }
+  .nx-glass-fallback { display: none; }
+}
+
+@media (max-width: 1080px) {
+  .nx-glass-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .nx-glass-controls { grid-template-columns: 1fr; gap: 20px; }
+}
+
+@media (max-width: 520px) {
+  .nx-glass-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Also respond to a narrow app pane, even on a wide desktop viewport. */
+@container nx-glass (max-width: 920px) {
+  .nx-glass-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container nx-glass (max-width: 720px) {
+  .nx-glass-controls { grid-template-columns: 1fr; gap: 20px; }
+}
+
+@container nx-glass (max-width: 520px) {
+  .nx-glass-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (forced-colors: active) {
+  .nx-glass-tile .nx-glass-surface { --nx-glass-ink: CanvasText; --nx-glass-icon-fill: Canvas; color: CanvasText; background: Canvas; border: 1px solid CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .nx-glass-tile--liquid .nx-glass-surface::before { display: none; }
+  .nx-glass-supported { display: none; }
+  .nx-glass-fallback { display: inline; }
+}

@@ -1819,6 +1819,11 @@ function resolve9RouterContext(modelId, rawUpstream) {
 
 
 export const SUGGESTED_MODELS = {
+  omnirush: [
+    { id: 'gpt-6.1-sol', name: 'GPT 6.1 Sol (Stealth Frontier)', category: 'text', context_length: 400000, tier: 'free', reasoning: true },
+    { id: 'gpt-6-sol', name: 'GPT 6 Sol (Stealth Reasoning)', category: 'text', context_length: 400000, tier: 'free', reasoning: true },
+    { id: 'gpt-6-astra', name: 'GPT 6 Astra (Stealth Workhorse)', category: 'text', context_length: 400000, tier: 'free', reasoning: true },
+  ],
   nvidia: [
     { id: 'meta/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', category: 'text', context_length: 128000, tier: 'free' },
     { id: 'nvidia/llama-3.1-nemotron-70b-instruct', name: 'Nemotron 70B Instruct', category: 'text', context_length: 128000, tier: 'free' },

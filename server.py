@@ -62,6 +62,9 @@ PROVIDER_CACHE_TTL = 60.0  # 60s cache for provider model sync
 _COST_LEDGER_FILE = os.path.join(CURRENT_DIR, '.nexus-cost-usage.json')
 _DEFAULT_RATE_CARD = (0.15, 0.60)  # published USD per 1M tokens fallback
 _MODEL_RATE_CARDS = (
+    ('gpt-6.1-sol', (0.00, 0.00)),
+    ('gpt-6-sol', (0.00, 0.00)),
+    ('gpt-6-astra', (0.00, 0.00)),
     ('gpt-4o', (2.50, 10.00)),
     ('claude-3-5', (3.00, 15.00)),
     ('claude-3', (3.00, 15.00)),
@@ -1832,7 +1835,11 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
             if not res_context and model_id:
                 s = model_id.lower()
-                if 'gemini-2' in s or 'gemini-1.5' in s or '1m' in s:
+                if 'gpt-6' in s or 'sol' in s or 'astra' in s:
+                    res_context = 400000
+                    res_output = 128000
+                    source = 'stealth-frontier'
+                elif 'gemini-2' in s or 'gemini-1.5' in s or '1m' in s:
                     res_context = 1048576
                     res_output = 65536
                     source = 'estimated'
@@ -1957,7 +1964,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'logs': [],
                     'count': 0,
                 }, code=500)
-        elif self.path.startswith('/api/omniroute/call-logs'):
+        elif self.path.startswith('/api/omniroute/call-logs') or self.path.startswith('/api/omniroute/logs'):
             # startswith: self.path carries '?limit=&offset='.
             import urllib.parse
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
