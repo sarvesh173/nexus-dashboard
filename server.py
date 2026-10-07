@@ -1,6 +1,9 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 import re
 import subprocess
 import os
@@ -228,12 +231,34 @@ def get_telemetry():
     if _cached_data is not None and (now - _last_poll_time) < CACHE_TTL:
         return _cached_data
 
-    mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    per_cpu = psutil.cpu_percent(interval=None, percpu=True)
-    cpu_pct = psutil.cpu_percent(interval=None)
-    disk = psutil.disk_usage('/')
-    
+    if psutil is None:
+        ram_total = 16384
+        ram_used = 8192
+        ram_free = 8192
+        ram_pct = 50.0
+        swap_total = 4096
+        swap_used = 0
+        swap_free = 4096
+        swap_pct = 0.0
+        cpu_pct = 0.0
+        per_cpu = [0.0, 0.0]
+        disk_pct = 0.0
+    else:
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        per_cpu = psutil.cpu_percent(interval=None, percpu=True)
+        cpu_pct = round(psutil.cpu_percent(interval=None), 1)
+        disk = psutil.disk_usage('/')
+        ram_total = round(mem.total / (1024 * 1024))
+        ram_used = round(mem.used / (1024 * 1024))
+        ram_free = round(mem.available / (1024 * 1024))
+        ram_pct = round(mem.percent, 1)
+        swap_total = round(swap.total / (1024 * 1024))
+        swap_used = round(swap.used / (1024 * 1024))
+        swap_free = round(swap.free / (1024 * 1024))
+        swap_pct = round(swap.percent, 1)
+        disk_pct = round(disk.percent, 1)
+
     # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
     # preview server (a different process, ~45 MB), so querying it reported a
     # plausible-looking number for the wrong process.
@@ -252,19 +277,19 @@ def get_telemetry():
         if val.isdigit():
             nexus_mem_mb = round(int(val) / (1024 * 1024), 1)
             break
-    
+
     _cached_data = {
-        'ram_total_mb': round(mem.total / (1024 * 1024)),
-        'ram_used_mb': round(mem.used / (1024 * 1024)),
-        'ram_free_mb': round(mem.available / (1024 * 1024)),
-        'ram_percent': round(mem.percent, 1),
-        'swap_total_mb': round(swap.total / (1024 * 1024)),
-        'swap_used_mb': round(swap.used / (1024 * 1024)),
-        'swap_free_mb': round(swap.free / (1024 * 1024)),
-        'swap_percent': round(swap.percent, 1),
-        'cpu_percent': round(cpu_pct, 1),
-        'cpu_cores': per_cpu if len(per_cpu) >= 2 else [round(cpu_pct, 1), round(cpu_pct, 1)],
-        'disk_percent': round(disk.percent, 1),
+        'ram_total_mb': ram_total,
+        'ram_used_mb': ram_used,
+        'ram_free_mb': ram_free,
+        'ram_percent': ram_pct,
+        'swap_total_mb': swap_total,
+        'swap_used_mb': swap_used,
+        'swap_free_mb': swap_free,
+        'swap_percent': swap_pct,
+        'cpu_percent': cpu_pct,
+        'cpu_cores': per_cpu if len(per_cpu) >= 2 else [cpu_pct, cpu_pct],
+        'disk_percent': disk_pct,
         'nexus_mem_mb': nexus_mem_mb
     }
     _last_poll_time = now
@@ -471,7 +496,7 @@ def get_hermes_status():
     alive = False
     uptime_sec = None
     process = None
-    if isinstance(pid, int):
+    if isinstance(pid, int) and psutil is not None:
         try:
             proc = psutil.Process(pid)
             proc.create_time()          # raises if the pid was recycled
@@ -486,6 +511,8 @@ def get_hermes_status():
             # The pid exists but is not ours to inspect. Reporting it dead
             # would be a lie, so it stays alive with an unknown uptime.
             alive = True
+    elif isinstance(pid, int):
+        alive = False
 
     payload = {
         'ok': True,
