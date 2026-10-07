@@ -1339,7 +1339,6 @@ _PROVIDER_ALIASES = {
     'deepseek': (['nvidia', 'qwen-cloud', 'deepseek'], 'deepseek'),
     # curated VIEWS over the mixed OpenRouter catalog, not single brands
     'openai-codex': (['openrouter'], ''),
-    'opencode-zen': (['openrouter'], ''),
     'openai': (['openrouter'], 'gpt'),
     'zai': (['nvidia', 'zhipu'], 'glm'),
     'zhipu': (['zhipu', 'nvidia'], 'glm'),

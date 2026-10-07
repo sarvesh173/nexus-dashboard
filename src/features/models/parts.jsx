@@ -1747,8 +1747,10 @@ const PROVIDER_LOGOS = {
   cf: '/provider-logos/cloudflare-ai.svg',
   'kilo-gateway': '/provider-logos/kilocode.svg',
   kg: '/provider-logos/kilocode.svg',
-  'opencode-zen': '/provider-logos/openrouter.svg',
-  'openagentic': '/provider-logos/openrouter.svg',
+  'opencode-zen': '/provider-logos/opencode-zen.svg',
+  opencodezen: '/provider-logos/opencode-zen.svg',
+  opencode: '/provider-logos/opencode.svg',
+  openagentic: '/provider-logos/openrouter.svg',
   // Tier 32 Verified Provider & Ecosystem Logos:
   fireworks: '/provider-logos/fireworks.svg',
   sambanova: '/provider-logos/sambanova.svg',
