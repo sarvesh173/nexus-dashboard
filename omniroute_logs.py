@@ -62,11 +62,22 @@ CALLS_MAX_LIMIT = 300
 # column is a backwards index walk: the newest page costs the same as any other.
 _ORDER = 'ORDER BY timestamp DESC, id DESC'
 
-# The eleven columns the traffic table renders. Chosen as scalars only - pulling
-# any of the *_body / pipeline columns here would be what makes this route slow.
+# The columns the ported table renders. All scalars — pulling any of the
+# *_body / pipeline columns here is what makes this route slow.
+#
+# These are named by the ported table's own column set (account, api key,
+# combo, cache source, ttft, session) rather than a hand-picked subset: the
+# ledger records all of them, so leaving any out would show an empty cell for
+# data that exists.
 _LIST_COLUMNS = (
     'id', 'timestamp', 'model', 'requested_model', 'provider', 'duration',
     'tokens_in', 'tokens_out', 'tokens_reasoning', 'request_summary', 'status',
+    # Below: added for the ported table's wider column set. Still all scalars.
+    'account', 'api_key_id', 'api_key_name', 'correlation_id', 'combo_name',
+    'cache_source', 'source_format', 'target_format', 'session_tag',
+    'ttft_ms', 'added_wait_ms', 'added_wait_cause', 'model_pinned',
+    'resilience_actions', 'tokens_cache_read', 'reasoning_effort_requested',
+    'error_type', 'error_summary', 'detail_state',
 )
 
 # `method` and `path` are not in _LIST_COLUMNS (they are not rendered) but they
@@ -165,6 +176,27 @@ def _as_int(value, default=0):
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _as_str_list(value):
+    """Coerce a stored column to a list of strings.
+
+    The proxy stores `resilience_actions` as JSON text when it has any. On this
+    ledger the column is NULL on every row, so an unparseable or empty value is
+    normal and returns an empty list rather than raising — an empty cell in the
+    table is the honest rendering of "nothing was recorded".
+    """
+    if not value:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(v) for v in value]
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return [str(value)]
+    if isinstance(parsed, list):
+        return [str(v) for v in parsed]
+    return [str(parsed)]
 
 
 def _clamp_limit(value):
@@ -280,9 +312,18 @@ def _shape_call(row):
     between "no summary recorded" and "summary is the empty string" - hence the
     explicit `has_summary` flag rather than a truthiness check the UI has to
     reimplement per call site.
+
+    The row is unpacked by position against _LIST_COLUMNS + _FALLBACK_COLUMNS,
+    so those two tuples and this destructuring must stay in the same order.
     """
     (cid, ts, model, requested, provider, duration,
-     tin, tout, treason, summary, status, method, path) = row
+     tin, tout, treason, summary, status,
+     account, api_key_id, api_key_name, correlation_id, combo_name,
+     cache_source, source_format, target_format, session_tag,
+     ttft_ms, added_wait_ms, added_wait_cause, model_pinned,
+     resilience_actions, cache_read, effort_requested,
+     error_type, error_summary, detail_state,
+     method, path) = row
 
     summary_text = summary if isinstance(summary, str) else ''
     method_text = method if isinstance(method, str) else ''
@@ -300,6 +341,7 @@ def _shape_call(row):
             'input': _as_int(tin),
             'output': _as_int(tout),
             'reasoning': _as_int(treason) if treason is not None else None,
+            'cache_read': _as_int(cache_read) if cache_read is not None else None,
         },
         'request_summary': summary_text,
         'has_summary': bool(summary_text.strip()),
@@ -308,6 +350,25 @@ def _shape_call(row):
         # path are what it is actually known to be.
         'method': method_text,
         'path': path or '',
+        # The wider column set, recorded values only.
+        'account': account or '',
+        'api_key_id': api_key_id or '',
+        'api_key_name': api_key_name or '',
+        'correlation_id': correlation_id or '',
+        'combo_name': combo_name or '',
+        'cache_source': cache_source or '',
+        'source_format': source_format or '',
+        'target_format': target_format or '',
+        'session_tag': session_tag or '',
+        'ttft_ms': _as_int(ttft_ms) if ttft_ms is not None else None,
+        'added_wait_ms': _as_int(added_wait_ms) if added_wait_ms is not None else None,
+        'added_wait_cause': added_wait_cause or '',
+        'model_pinned': bool(model_pinned),
+        'resilience_actions': _as_str_list(resilience_actions),
+        'reasoning_effort_requested': effort_requested or '',
+        'error_type': error_type or '',
+        'error_summary': error_summary or '',
+        'detail_state': detail_state or '',
     }
 
 
@@ -537,47 +598,78 @@ def _shape_pipeline(pipeline):
     stages.sort(key=lambda stage: stage['stage'])
     return stages
 
+
+def classify_agent(call):
+    """Which client made this call.
+
+    The ledger has no agent column — nothing in `call_logs` names the process
+    that issued the request, and the per-call artifacts do not retain request
+    headers either (checked: no user-agent is stored). So this is an inference
+    from what *is* recorded, and it says only what the evidence supports:
+
+      'claude-protocol'  the caller spoke the Anthropic /v1/messages protocol,
+                         which on this host is Claude Code.
+      'auto-router'      the proxy made a routing decision (`combo_name` set),
+                         meaning the caller asked for automatic selection
+                         rather than naming a model.
+      'unknown'          none of the above. Deliberately not a guess.
+
+    Returning 'unknown' is a real answer. Labelling every unmarked row with a
+    guessed agent name would put a confident-looking lie in a column the user is
+    meant to trust.
+    """
+    if (call.get('path') or '') == '/v1/messages':
+        return 'claude-protocol'
+    if call.get('combo_name'):
+        return 'auto-router'
+    return 'unknown'
+
+
 def _to_logger_row(call):
     """Ledger record -> the ported request logger's row shape.
 
-    Pure renaming plus what the ledger actually recorded. Fields the ledger
-    does not hold (comboName, resilienceActions, apiKeyName, ...) are left out
-    rather than filled with invented values, so the table renders them empty
-    instead of showing a plausible-looking lie.
+    A rename plus what the ledger actually recorded. Where a field has no
+    recorded value it is emitted empty rather than filled with an invented one,
+    so an empty cell always means "not recorded" and never a plausible-looking
+    fabrication.
+
+    `agent` is the one derived value, and it is a documented inference rather
+    than a recorded field — see `classify_agent`.
     """
     toks = call.get('tokens') or {}
-    dur = call.get('duration_ms')
-    status = call.get('status')
     return {
         'id': call.get('id'),
         'timestamp': call.get('at'),
         'model': call.get('model') or '',
         'requestedModel': call.get('requested_model') or '',
         'provider': call.get('provider') or '',
-        'account': '',
-        'apiKeyId': '',
-        'apiKeyName': '',
-        'correlationId': '',
-        'status': status,
-        'duration': dur,
-        'ttft': None,
-        'addedWaitMs': None,
-        'addedWaitCause': '',
+        'account': call.get('account') or '',
+        'apiKeyId': call.get('api_key_id') or '',
+        'apiKeyName': call.get('api_key_name') or '',
+        'correlationId': call.get('correlation_id') or '',
+        'status': call.get('status'),
+        'duration': call.get('duration_ms'),
+        'ttft': call.get('ttft_ms'),
+        'addedWaitMs': call.get('added_wait_ms'),
+        'addedWaitCause': call.get('added_wait_cause') or '',
         'isRetry': False,
         'tokens': {
             'input': _as_int(toks.get('input')),
             'output': _as_int(toks.get('output')),
-            'reasoning': _as_int(toks.get('reasoning')),
+            'reasoning': toks.get('reasoning'),
+            'cacheRead': toks.get('cache_read'),
         },
-        'cacheSource': '',
-        'sourceFormat': 'openai',
-        'modelPinned': False,
-        'sessionTag': '',
-        'comboName': '',
-        'groupSize': None,
-        'groupStatus': '',
-        'resilienceActions': [],
-        'active': [],
+        'cacheSource': call.get('cache_source') or '',
+        'sourceFormat': call.get('source_format') or '',
+        'targetFormat': call.get('target_format') or '',
+        'modelPinned': bool(call.get('model_pinned')),
+        'sessionTag': call.get('session_tag') or '',
+        'comboName': call.get('combo_name') or '',
+        'reasoningEffort': call.get('reasoning_effort_requested') or '',
+        'errorType': call.get('error_type') or '',
+        'errorSummary': call.get('error_summary') or '',
+        'detailState': call.get('detail_state') or '',
+        'agent': classify_agent(call),
         'requestSummary': call.get('request_summary') or '',
         'hasSummary': bool(call.get('has_summary')),
         'method': call.get('method') or '',
@@ -606,6 +698,7 @@ def read_call_logs_page(qs):
     provider = first('provider')
     account = first('account')
     status = first('status')
+    agent = first('agent')
     search = first('search').lower()
 
     rows = [_to_logger_row(c) for c in calls]
@@ -620,6 +713,8 @@ def read_call_logs_page(qs):
         rows = [r for r in rows if r['status'] != 200]
     elif status == 'ok':
         rows = [r for r in rows if r['status'] == 200]
+    if agent:
+        rows = [r for r in rows if r['agent'] == agent]
     if search:
         rows = [r for r in rows if search in json.dumps(r).lower()]
 
@@ -639,14 +734,19 @@ def read_call_log_filters():
     """
     payload = read_call_logs(_clamp_limit('500'), 0)
     calls = payload.get('calls') or []
-    models, providers, accounts = {}, {}, {}
+    models, providers, accounts, agents = {}, {}, {}, {}
     for c in calls:
         m = (c.get('model') or '').strip()
         p = (c.get('provider') or '').strip()
+        a = (c.get('account') or '').strip()
+        g = classify_agent(c)
         if m:
             models[m] = models.get(m, 0) + 1
         if p:
             providers[p] = providers.get(p, 0) + 1
+        if a:
+            accounts[a] = accounts.get(a, 0) + 1
+        agents[g] = agents.get(g, 0) + 1
 
     def opts(d):
         return [{'value': k, 'count': v} for k, v in sorted(d.items())]
@@ -655,8 +755,11 @@ def read_call_log_filters():
         'models': opts(models),
         'providers': opts(providers),
         'accounts': opts(accounts),
+        # Accounts map to API keys on the proxy side; the ledger only holds the
+        # one name, so the key dropdown stays empty rather than duplicating it.
         'apiKeys': [],
         'statuses': [],
+        'agents': opts(agents),
     }
 
 

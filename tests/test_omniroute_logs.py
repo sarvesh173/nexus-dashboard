@@ -65,22 +65,30 @@ def _build_storage(path, rows):
         ' status INTEGER, model TEXT, requested_model TEXT, provider TEXT,'
         ' duration INTEGER DEFAULT 0, tokens_in INTEGER DEFAULT 0,'
         ' tokens_out INTEGER DEFAULT 0, tokens_reasoning INTEGER DEFAULT NULL,'
-        ' request_summary TEXT, error_summary TEXT, detail_state TEXT,'
+        ' request_summary TEXT, error_summary TEXT, error_type TEXT,'
+        ' detail_state TEXT,'
         ' artifact_relpath TEXT, artifact_size_bytes INTEGER,'
         ' has_request_body INTEGER, has_response_body INTEGER,'
-        ' has_pipeline_details INTEGER)'
+        ' has_pipeline_details INTEGER,'
+        # The wider column set the logger table renders. Kept in this fixture
+        # so a row read here exercises the same destructuring as a real ledger
+        # row — a fixture narrower than production silently stops testing the
+        # unpack order.
+        ' account TEXT, api_key_id TEXT, api_key_name TEXT, correlation_id TEXT,'
+        ' combo_name TEXT, cache_source TEXT, source_format TEXT,'
+        ' target_format TEXT, session_tag TEXT, ttft_ms INTEGER,'
+        ' added_wait_ms INTEGER, added_wait_cause TEXT, model_pinned INTEGER,'
+        ' resilience_actions TEXT, tokens_cache_read INTEGER,'
+        ' reasoning_effort_requested TEXT)'
     )
+    # Column list for the INSERT is derived from the table's own columns, so a
+    # fixture can never drift from its schema: a new column in CREATE TABLE is
+    # picked up here without a second edit that can be forgotten.
+    insert_cols = [r[1] for r in conn.execute('PRAGMA table_info(call_logs)')]
+    placeholders = ', '.join(':' + name for name in insert_cols)
     conn.executemany(
-        'INSERT INTO call_logs (id, timestamp, method, path, status, model,'
-        ' requested_model, provider, duration, tokens_in, tokens_out,'
-        ' tokens_reasoning, request_summary, error_summary, detail_state,'
-        ' artifact_relpath, artifact_size_bytes, has_request_body,'
-        ' has_response_body, has_pipeline_details)'
-        ' VALUES (:id, :timestamp, :method, :path, :status, :model,'
-        ' :requested_model, :provider, :duration, :tokens_in, :tokens_out,'
-        ' :tokens_reasoning, :request_summary, :error_summary, :detail_state,'
-        ' :artifact_relpath, :artifact_size_bytes, :has_request_body,'
-        ' :has_response_body, :has_pipeline_details)',
+        'INSERT INTO call_logs (%s) VALUES (%s)'
+        % (', '.join(insert_cols), placeholders),
         rows,
     )
     conn.commit()
@@ -130,27 +138,45 @@ def _build_fixtures():
     columns = [
         'id', 'timestamp', 'method', 'path', 'status', 'model',
         'requested_model', 'provider', 'duration', 'tokens_in', 'tokens_out',
-        'tokens_reasoning', 'request_summary', 'error_summary', 'detail_state',
+        'tokens_reasoning', 'request_summary', 'error_summary', 'error_type',
+        'detail_state',
         'artifact_relpath', 'artifact_size_bytes', 'has_request_body',
         'has_response_body', 'has_pipeline_details',
+        # The wider column set the logger table renders.
+        'account', 'api_key_id', 'api_key_name', 'correlation_id',
+        'combo_name', 'cache_source', 'source_format', 'target_format',
+        'session_tag', 'ttft_ms', 'added_wait_ms', 'added_wait_cause',
+        'model_pinned', 'resilience_actions', 'tokens_cache_read',
+        'reasoning_effort_requested',
+    ]
+    # Values the reader must surface for the wider columns. Kept beside the
+    # rows so a change to _LIST_COLUMNS that drops one of these shows up as a
+    # failing assertion rather than as a silently empty cell.
+    wide = [
+        'acct-a', 'env-key', 'Environment Key', 'corr-1',
+        'auto/best-coding', 'upstream', 'openai', 'openai',
+        'conv_test', 250, 40, 'retry_backoff', 1, None, 400, 'high',
     ]
     ledger = [
         # A healthy call, with an artifact and no recorded summary.
         dict(zip(columns, [
             CALL_ID, '2026-10-06T00:00:00.000Z', 'POST', '/v1/chat/completions',
             200, 'model-a', 'prov/model-a', 'prov', 1200, 500, 50, 20,
-            None, None, 'ready', ARTIFACT_RELPATH, size, 1, 1, 1])),
+            None, None, None, 'ready', ARTIFACT_RELPATH, size, 1, 1, 1,
+        ] + wide)),
         # A failed call: reasoning tokens never reported, no artifact.
         dict(zip(columns, [
             FAILED_CALL_ID, '2026-10-06T00:00:01.000Z', 'POST', '/v1/messages',
             429, 'model-b', 'prov/model-b', 'prov2', 900, 10, 0, None,
-            None, 'rate limited', 'ready', None, None, 0, 0, 0])),
+            None, 'rate limited', 'rate_limit', 'ready', None, None, 0, 0, 0,
+        ] + [None] * len(wide))),
         # A call that did record a summary but captured no artifact.
         dict(zip(columns, [
             NO_ARTIFACT_CALL_ID, '2026-10-06T00:00:02.000Z', 'POST',
             '/v1/chat/completions', 200, 'model-c', 'prov/model-c', 'prov',
-            80, 1, 1, 1, 'asked about the weather', None, 'none', None, None,
-            0, 0, 0])),
+            80, 1, 1, 1, 'asked about the weather', None, None, 'none',
+            None, None, 0, 0, 0,
+        ] + [None] * len(wide))),
     ]
     _build_storage(os.path.join(_OMNI_HOME, 'storage.sqlite'), ledger)
 
@@ -162,6 +188,42 @@ def _reset_reader_caches():
     """Drop the reader's TTL caches so the fixture, not a stale read, answers."""
     o._list_cache['payload'] = None
     o._detail_cache['payload'] = None
+
+
+# Positional order _shape_call unpacks: _LIST_COLUMNS + _FALLBACK_COLUMNS.
+_ROW_COLUMNS = list(o._LIST_COLUMNS) + ['method', 'path']
+
+
+def _row(reasoning_tokens, all_null=False, overrides=None):
+    """A ledger row tuple in _shape_call's exact positional order.
+
+    Built from the reader's own column list rather than a hand-written literal:
+    a literal silently falls out of step when a column is added, and the failure
+    shows up as an unrelated unpack error rather than as a stale fixture.
+
+    `all_null` produces the sparse-row case (every column NULL). `overrides`
+    sets named columns, overriding the defaults.
+    """
+    defaults = {
+        'id': 'id',
+        'timestamp': '2026-01-01T00:00:00.000Z',
+        'model': 'm',
+        'requested_model': 'r',
+        'provider': 'p',
+        'duration': 5,
+        'tokens_in': 1,
+        'tokens_out': 1,
+        'tokens_reasoning': reasoning_tokens,
+        'request_summary': None,
+        'status': 200,
+        'method': 'POST',
+        'path': '/p',
+    }
+    if all_null:
+        defaults = {name: None for name in _ROW_COLUMNS}
+    else:
+        defaults.update(overrides or {})
+    return tuple(defaults.get(name) for name in _ROW_COLUMNS)
 
 
 class TestClamp(unittest.TestCase):
@@ -266,24 +328,64 @@ class TestReadCallLogs(unittest.TestCase):
         # tokens_reasoning is nullable. NULL means "not reported" and must stay
         # distinguishable from a genuine 0-token reasoning turn, because the
         # metric-tile contract renders a missing value as '--' and never as '0'.
-        null_row = o._shape_call(('id', '2026-01-01T00:00:00.000Z', 'm', 'r', 'p',
-                                  5, 1, 1, None, None, 200, 'POST', '/p'))
+        null_row = o._shape_call(_row(None))
         self.assertIsNone(null_row['tokens']['reasoning'])
 
-        zero_row = o._shape_call(('id', '2026-01-01T00:00:00.000Z', 'm', 'r', 'p',
-                                  5, 1, 1, 0, None, 200, 'POST', '/p'))
+        zero_row = o._shape_call(_row(0))
         self.assertEqual(zero_row['tokens']['reasoning'], 0)
 
     def test_a_row_shapes_without_raising_on_any_null_column(self):
         # Old rows are sparse. Every one of these columns is nullable in the real
         # schema, so a row must render rather than raise.
-        row = o._shape_call((None, None, None, None, None, None, None, None,
-                             None, None, None, None, None))
+        row = o._shape_call(_row(None, all_null=True))
         self.assertEqual(row['status'], 0)
         self.assertEqual(row['duration_ms'], 0)
-        self.assertEqual(row['tokens'], {'input': 0, 'output': 0, 'reasoning': None})
+        self.assertEqual(row['tokens']['input'], 0)
+        self.assertEqual(row['tokens']['output'], 0)
+        self.assertIsNone(row['tokens']['reasoning'])
         self.assertEqual(row['model'], '')
         self.assertFalse(row['has_summary'])
+
+    def test_the_wider_columns_are_read_from_the_ledger_row(self):
+        # The logger table renders account, api key, combo, session, ttft and
+        # the rest. These come off the same single query as the other columns,
+        # so a value recorded in the ledger must reach the row.
+        row = o._shape_call(_row(
+            None, overrides={
+                'account': 'acct-a', 'api_key_name': 'Environment Key',
+                'correlation_id': 'corr-1', 'combo_name': 'auto/best-coding',
+                'cache_source': 'upstream', 'source_format': 'openai',
+                'session_tag': 'conv_test', 'ttft_ms': 250,
+                'added_wait_ms': 40, 'model_pinned': 1,
+                'tokens_cache_read': 400, 'reasoning_effort_requested': 'high',
+                'error_type': 'rate_limit',
+            }))
+
+        self.assertEqual(row['account'], 'acct-a')
+        self.assertEqual(row['api_key_name'], 'Environment Key')
+        self.assertEqual(row['correlation_id'], 'corr-1')
+        self.assertEqual(row['combo_name'], 'auto/best-coding')
+        self.assertEqual(row['cache_source'], 'upstream')
+        self.assertEqual(row['session_tag'], 'conv_test')
+        self.assertEqual(row['ttft_ms'], 250)
+        self.assertEqual(row['added_wait_ms'], 40)
+        self.assertTrue(row['model_pinned'])
+        self.assertEqual(row['tokens']['cache_read'], 400)
+        self.assertEqual(row['reasoning_effort_requested'], 'high')
+        self.assertEqual(row['error_type'], 'rate_limit')
+
+    def test_agent_is_inferred_only_from_recorded_evidence(self):
+        # The ledger has no agent column. Two signals are recorded and real:
+        # the Anthropic protocol path, and a proxy routing decision. Anything
+        # else stays 'unknown' rather than being guessed.
+        claude = o._shape_call(_row(None, overrides={'path': '/v1/messages'}))
+        self.assertEqual(o.classify_agent(claude), 'claude-protocol')
+
+        routed = o._shape_call(_row(None, overrides={'combo_name': 'auto/smart'}))
+        self.assertEqual(o.classify_agent(routed), 'auto-router')
+
+        plain = o._shape_call(_row(None))
+        self.assertEqual(o.classify_agent(plain), 'unknown')
 
 
 class TestReadDetail(unittest.TestCase):
