@@ -24,7 +24,7 @@ BUTTONS = [
     "nav-settings-button",
 ]
 
-HIDDEN_SELECTOR = '[data-nav-hidden="true"]'
+HIDDEN_ATTR = "data-nav-hidden"
 
 # The generic rule that flattened everything before the recovery.
 GENERIC = "matrix(1.15, 0, 0, 1.15, 0, 0)"
@@ -53,18 +53,26 @@ async def check():
                 # for code that does not exist on this tree.
                 print(f"  skip {btn_cls}: not present on this branch")
                 continue
-            # A collapsed tab must stay genuinely unreachable: invisible, no
-            # pointer events, out of the a11y tree and out of tab order.
-            if await btn.locator(f":scope{HIDDEN_SELECTOR}").count() > 0 or await btn.get_attribute("data-nav-hidden") == "true":
+            # A collapsed tab must stay genuinely unreachable. `display:none` is
+            # the canonical mechanism (an `invisible` pill would still reserve
+            # width and leave a dead gap in the row), so assert that first and
+            # accept the older transparent mechanism as a valid fallback.
+            if await btn.get_attribute(HIDDEN_ATTR) == "true":
                 state = await btn.evaluate(
                     "el => { const s = getComputedStyle(el);"
-                    " return { vis: s.visibility, pe: s.pointerEvents, op: s.opacity, tab: el.tabIndex }; }"
+                    " return { display: s.display, vis: s.visibility, pe: s.pointerEvents, tab: el.tabIndex }; }"
                 )
                 hidden_tabs.append(btn_cls)
-                if state["vis"] != "hidden" or state["pe"] != "none" or state["tab"] != -1:
+                display_none = state["display"] == "none"
+                unreachable = (
+                    display_none
+                    or (state["vis"] == "hidden" and state["pe"] == "none")
+                )
+                if not unreachable or state["tab"] != -1:
                     fails.append(f"{btn_cls}: marked hidden but still reachable {state}")
                 else:
-                    print(f"  hidden {btn_cls}: ok (visibility/pointer-events/tabIndex)")
+                    how = "display:none" if display_none else "invisible+pointer-events"
+                    print(f"  hidden {btn_cls}: ok ({how}, tabIndex=-1)")
                 continue
             icon = btn.locator('[class*="-icon"]').first
             seen_tabs.append(btn_cls)

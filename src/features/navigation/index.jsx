@@ -1,12 +1,31 @@
 import React from 'react';
 import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, Settings, Terminal } from 'lucide-react';
 import { NavDrawer } from './NavDrawer.jsx';
-import { SHOW_PLAYGROUND_IN_TOP_NAV, SHOW_SETTINGS_IN_TOP_NAV } from './navFlags.js';
+import {
+  SHOW_PLAYGROUND_IN_TOP_NAV,
+  SHOW_COST_IN_TOP_NAV,
+  SHOW_SETTINGS_IN_TOP_NAV,
+} from './navFlags.js';
 
-// A hidden tab keeps its button, its icon animation and its route. It only
-// collapses out of the flex row, so flipping a flag in navFlags.js restores it
-// exactly as it was — no markup to re-add, no import to restore.
-const HIDDEN_NAV_TAB = 'invisible pointer-events-none opacity-0 scale-90';
+// A hidden tab keeps its button, its icon animation and its route. It leaves
+// the flex row completely (`display:none`) rather than going transparent — an
+// `invisible` pill still reserves its width and leaves a dead gap in the row,
+// which is exactly what breaks the centring. Flipping the flag restores it.
+const HIDDEN_NAV_TAB = 'hidden';
+
+/**
+ * A11y + reachability attributes for one top-nav pill. The visual class is
+ * composed into the button's own className instead, because an explicit
+ * `className` later in JSX always wins over a spread one.
+ */
+const navVisibility = (visible) => ({
+  'aria-hidden': visible ? undefined : true,
+  tabIndex: visible ? undefined : -1,
+  'data-nav-hidden': visible ? undefined : 'true',
+});
+
+/** The hidden class itself, or an empty string when the pill is showing. */
+const navHiddenClass = (visible) => (visible ? '' : HIDDEN_NAV_TAB);
 
 const NAV_HOVER_STAGE_COUNT = 36;
 const NAV_ICON_STYLE_COUNT = 10;
@@ -1758,7 +1777,7 @@ export function NavigationFeature(props) {
         </div>
 
         {/* Center: M3 Segmented Navigation with Metallic UI Fluid Micro-Interactions */}
-        <nav aria-label="Primary navigation" className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-start gap-1.5 bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-xl p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]/60 shadow-[0_4px_20px_color-mix(in_srgb,var(--md-sys-color-surface)_85%,transparent),inset_0_1px_0_color-mix(in_srgb,var(--md-sys-color-primary)_8%,transparent)] overflow-x-auto nav-scroll-fade">
+        <nav aria-label="Primary navigation" className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-start sm:justify-center gap-1.5 bg-[var(--md-sys-color-surface-container)]/80 backdrop-blur-xl p-1.5 rounded-full border border-[var(--md-sys-color-outline-variant)]/60 shadow-[0_4px_20px_color-mix(in_srgb,var(--md-sys-color-surface)_85%,transparent),inset_0_1px_0_color-mix(in_srgb,var(--md-sys-color-primary)_8%,transparent)] overflow-x-auto nav-scroll-fade">
           
           <button
             type="button"
@@ -1810,13 +1829,9 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/playground')}
             {...motionProps('playground')}
+            {...navVisibility(SHOW_PLAYGROUND_IN_TOP_NAV)}
             aria-current={isPlaygroundNavActive ? 'page' : undefined}
-            aria-hidden={!SHOW_PLAYGROUND_IN_TOP_NAV}
-            tabIndex={SHOW_PLAYGROUND_IN_TOP_NAV ? undefined : -1}
-            data-nav-hidden={SHOW_PLAYGROUND_IN_TOP_NAV ? undefined : 'true'}
-            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${
-              !SHOW_PLAYGROUND_IN_TOP_NAV ? HIDDEN_NAV_TAB : ''
-            } ${
+            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${navHiddenClass(SHOW_PLAYGROUND_IN_TOP_NAV)} ${
               isPlaygroundNavActive
                 ? 'nav-playground-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
@@ -1830,8 +1845,9 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/cost')}
             {...motionProps('cost')}
+            {...navVisibility(SHOW_COST_IN_TOP_NAV)}
             aria-current={location.pathname === '/cost' ? 'page' : undefined}
-            className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
+            className={`nav-tab nav-cost-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${navHiddenClass(SHOW_COST_IN_TOP_NAV)} ${
               location.pathname === '/cost'
                 ? 'nav-cost-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
@@ -1845,13 +1861,9 @@ export function NavigationFeature(props) {
             type="button"
             onClick={() => navigate('/settings')}
             {...motionProps('settings')}
+            {...navVisibility(SHOW_SETTINGS_IN_TOP_NAV)}
             aria-current={location.pathname === '/settings' ? 'page' : undefined}
-            aria-hidden={!SHOW_SETTINGS_IN_TOP_NAV}
-            tabIndex={SHOW_SETTINGS_IN_TOP_NAV ? undefined : -1}
-            data-nav-hidden={SHOW_SETTINGS_IN_TOP_NAV ? undefined : 'true'}
-            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${
-              !SHOW_SETTINGS_IN_TOP_NAV ? HIDDEN_NAV_TAB : ''
-            } ${
+            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${navHiddenClass(SHOW_SETTINGS_IN_TOP_NAV)} ${
               location.pathname === '/settings'
                 ? 'nav-settings-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'

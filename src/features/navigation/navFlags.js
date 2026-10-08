@@ -4,13 +4,17 @@
  * Flip any value to `true` to bring that button back. Nothing else to edit:
  * both the top segmented nav and the hamburger drawer read these flags, so a
  * hidden tab keeps its route, its icon animation and its markup — it just
- * collapses out of the flex row with a transition instead of vanishing.
+ * drops out of the flex row with `display:none`, leaving no invisible gap
+ * behind, and returns the moment you flip the flag.
  *
  *   SHOW_PLAYGROUND_IN_TOP_NAV   -> the "Playground" pill in the header row
- *   SHOW_SETTINGS_IN_TOP_NAV     -> the "Settings" pill in the header row
- *   NAV_PILL_TRANSITION_MS       -> collapse/expand duration in ms
+ *   SHOW_COST_IN_TOP_NAV        -> the "Cost" pill in the header row
+ *   SHOW_SETTINGS_IN_TOP_NAV    -> the "Settings" pill in the header row
+ *
+ * Everything switched off here still lives in the three-line drawer below.
  */
 export const SHOW_PLAYGROUND_IN_TOP_NAV = false;
+export const SHOW_COST_IN_TOP_NAV = false;
 export const SHOW_SETTINGS_IN_TOP_NAV = false;
 
 /** Which destinations live inside the hamburger (three-line) drawer. */
