@@ -19,11 +19,12 @@ anything, because a cold start looks identical to a dead endpoint.
 
 import json
 import os
+import socket
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from paths import hermes_config_path, hermes_env_path, omniroute_env_path
-
-import requests
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'
@@ -54,10 +55,14 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
     ids = set()
     if key:
         try:
-            r = requests.get(base.rstrip('/') + '/models', timeout=15,
-                             headers={'Authorization': 'Bearer {key}'.format(key=key)})
-            if r.status_code == 200:
-                ids = {m.get('id') for m in r.json().get('data', []) if m.get('id')}
+            req = urllib.request.Request(
+                base.rstrip('/') + '/models',
+                headers={'Authorization': 'Bearer {key}'.format(key=key)}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if resp.status == 200:
+                    payload = json.loads(resp.read().decode('utf-8', errors='replace'))
+                    ids = {m.get('id') for m in payload.get('data', []) if m.get('id')}
         except Exception:
             pass
     _catalog_cache.update({'ids': ids, 'at': time.time()})
@@ -161,25 +166,39 @@ def _probe(base, key, mid, route):
                 'messages': [{'role': 'user', 'content': 'hi'}],
                 'max_tokens': 1}
     try:
-        r = requests.post(url, json=body, timeout=PROBE_TIMEOUT,
-                          headers={'Authorization': 'Bearer {key}'.format(key=key),
-                                   'Content-Type': 'application/json'})
-    except requests.Timeout:
+        req_data = json.dumps(body).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=req_data,
+            headers={'Authorization': 'Bearer {key}'.format(key=key),
+                     'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as resp:
+            code = resp.status
+            text = resp.read().decode('utf-8', errors='replace')
+    except urllib.error.HTTPError as exc:
+        code = exc.code
+        text = exc.read().decode('utf-8', errors='replace')
+    except (TimeoutError, socket.timeout):
         return 'UNREACHABLE', 'timeout'
+    except urllib.error.URLError as exc:
+        if isinstance(exc.reason, (TimeoutError, socket.timeout)) or 'timed out' in str(exc.reason).lower():
+            return 'UNREACHABLE', 'timeout'
+        return 'UNREACHABLE', type(exc.reason).__name__ if exc.reason else 'URLError'
     except Exception as exc:                      # connection reset, DNS, ...
         return 'UNREACHABLE', type(exc).__name__
 
-    code = r.status_code
     if code == 200:
         return 'ALIVE', 'ok'
     if code == 410:
-        return 'RETIRED', r.text[:180]
+        return 'RETIRED', text[:180]
     if code == 404:
         # "Function '<uuid>' Not Found" == retired NIM deployment
-        if 'Function' in r.text or 'not found' in r.text.lower():
-            if "'" in r.text and 'Not Found' in r.text:
-                return 'RETIRED', r.text[:180]
-        return 'WRONG_EP', r.text[:120]
+        if 'Function' in text or 'not found' in text.lower():
+            if "'" in text and 'Not Found' in text:
+                return 'RETIRED', text[:180]
+        return 'WRONG_EP', text[:120]
     if code in (500, 502, 503):
         # reached the model but it errored server-side -> not dead
         return 'ALIVE', 'http_{}'.format(code)
