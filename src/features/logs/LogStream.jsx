@@ -12,11 +12,21 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fromCalls, fromHermes, levelRank, matches, merge } from './logRows.js';
+import { CallDetail } from './CallDetail.jsx';
 
 const HERMES_POLL_MS = 4000;
 const CALLS_POLL_MS = 12000;
 const HERMES_LIMIT = 100;
 const CALLS_LIMIT = 100;
+/** Rows per timeline step. The ledger holds ~19k calls; one page is a window. */
+const PAGE_SIZE = 200;
+/**
+ * Rows are keyed by call id, but the gateway reader mints ids from line
+ * content. Two identical lines would collide, and a key collision inside a
+ * double click remounts the row between the two events — so the browser never
+ * sees a dblclick and the tap silently does nothing.
+ */
+const rowKey = (row) => `${row.id}::${row.time ?? 'x'}::${row.message.length}::${row.message.slice(0, 24)}`;
 
 /** Progressive filter: "Warn+" shows warn AND anything worse. */
 const SEVERITIES = [
@@ -64,16 +74,23 @@ export function LogStream({ isLogsNavActive = true }) {
   const [updatedAt, setUpdatedAt] = useState(null);
   /** Highlighted row for arrow-key navigation. Not a focus trap per row. */
   const [cursor, setCursor] = useState(0);
+  /** Open call detail. Read-only: the panel only fetches. */
+  const [openId, setOpenId] = useState(null);
+  const [page, setPage] = useState(0);
+  const [totalCalls, setTotalCalls] = useState(0);
 
   const scrollRef = useRef(null);
   const copyTimer = useRef(null);
 
   const pull = useCallback(async () => {
     // Both readers, fetched together so a slow one cannot blank the view.
+    // Older pages come from the call ledger only — the gateway reader has no
+    // history beyond its own buffer, so page 0 is the only page it appears in.
+    const offset = Math.max(0, page) * CALLS_LIMIT;
     const [h, c] = await Promise.all([
-      fetch(`/api/hermes/logs?limit=${HERMES_LIMIT}`, { headers: { Accept: 'application/json' } })
+      (offset === 0 ? fetch(`/api/hermes/logs?limit=${HERMES_LIMIT}`, { headers: { Accept: 'application/json' } }) : Promise.resolve(null))
         .then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(`/api/omniroute/call-logs?limit=${CALLS_LIMIT}`, { headers: { Accept: 'application/json' } })
+      fetch(`/api/omniroute/call-logs?limit=${CALLS_LIMIT}&offset=${offset}`, { headers: { Accept: 'application/json' } })
         .then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
 
@@ -84,10 +101,11 @@ export function LogStream({ isLogsNavActive = true }) {
       // An endpoint answering {ok:false} is a failure of that reader, not of the
       // whole view — keep whatever the other stream gave us.
       setRows(merge(fromHermes(h), fromCalls(c)));
+      if (c?.total) setTotalCalls(c.total);
       setUpdatedAt(new Date());
     }
     setLoading(false);
-  }, []);
+  }, [page]);
 
   // Poll only while this route is actually on screen. The shell mounts every
   // feature at once, so an ungated poller would run forever behind a hidden pane.
@@ -131,6 +149,34 @@ export function LogStream({ isLogsNavActive = true }) {
     }
   };
 
+  const tapRef = useRef({ id: null, at: 0 });
+
+  /**
+   * Single tap selects, double tap opens the artifact.
+   *
+   * Timing is measured here rather than delegated to the browser's `dblclick`.
+   * React re-renders rows on every poll, and a remount between the two taps
+   * means the browser never emits `dblclick` at all — measured in the browser,
+   * a double tap produced two clicks, zero dblclicks, and no panel. Tracking
+   * the tap ourselves survives the remount because the counter lives in a ref,
+   * not in the row.
+   *
+   * 450ms is the upper end of a human double tap and comfortably above the
+   * ~200ms a fast single tap needs.
+   */
+  const onRowActivate = (row) => {
+    setCursor(shown.indexOf(row));
+    if (!row.inspectable) return;
+    const now = Date.now();
+    const t = tapRef.current;
+    if (t.id === row.id && now - t.at < 450) {
+      tapRef.current = { id: null, at: 0 };
+      setOpenId(row.id);
+    } else {
+      tapRef.current = { id: row.id, at: now };
+    }
+  };
+
   /**
    * One keyboard route to copy, instead of a copy button on every row.
    *
@@ -151,11 +197,16 @@ export function LogStream({ isLogsNavActive = true }) {
     } else if (e.key === 'c' || e.key === 'C') {
       const row = shown[cursor];
       if (row) { e.preventDefault(); void onCopy(row); }
+    } else if (e.key === 'Enter') {
+      const row = shown[cursor];
+      // Keyboard equivalent of the double tap.
+      if (row?.inspectable) { e.preventDefault(); setOpenId(row.id); }
     }
   };
 
   return (
-    <div className="flex flex-col gap-3 p-4 h-full min-h-0" data-testid="logs-stream">
+    <div className="flex h-full min-h-0" data-testid="logs-stream">
+      <div className="flex flex-1 flex-col gap-3 p-4 min-h-0">
       {/* Toolbar — four controls, then a passive status line. */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] px-4 py-2.5">
         <select
@@ -201,11 +252,43 @@ export function LogStream({ isLogsNavActive = true }) {
 
         <div className="ml-auto flex items-center gap-2 text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
           <span className={`inline-block w-1.5 h-1.5 rounded-full ${error ? 'bg-rose-400' : 'bg-emerald-400'}`} />
-          <span>{shown.length} entries</span>
+          <span>{shown.length} shown</span>
+          {totalCalls > 0 && <span>· {(page * CALLS_LIMIT + shown.length).toLocaleString()} of {totalCalls.toLocaleString()}</span>}
           {updatedAt && <span>· {clock(updatedAt.getTime())}</span>}
           {copied && <span className="text-emerald-400">· copied</span>}
           {!atBottom && <span className="text-amber-300">· scrolled back</span>}
         </div>
+      </div>
+
+      {/* Timeline — step through the ledger instead of scrolling forever. */}
+      <div className="flex items-center gap-2 px-1">
+        <button
+          type="button"
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+          aria-label="Newer"
+          className="px-2 py-0.5 rounded border border-[var(--md-sys-color-outline-variant)] text-[11px] text-[var(--md-sys-color-on-surface-variant)] disabled:opacity-30 hover:border-[var(--md-sys-color-primary)] transition-colors duration-150"
+        >
+          ‹ newer
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={Math.max(1, Math.ceil(totalCalls / CALLS_LIMIT))}
+          value={page}
+          onChange={(e) => setPage(Number(e.target.value))}
+          aria-label="Timeline position"
+          className="flex-1 accent-[var(--md-sys-color-primary)]"
+        />
+        <button
+          type="button"
+          onClick={() => setPage((p) => Math.min(Math.ceil(totalCalls / CALLS_LIMIT), p + 1))}
+          disabled={page >= Math.ceil(totalCalls / CALLS_LIMIT)}
+          aria-label="Older"
+          className="px-2 py-0.5 rounded border border-[var(--md-sys-color-outline-variant)] text-[11px] text-[var(--md-sys-color-on-surface-variant)] disabled:opacity-30 hover:border-[var(--md-sys-color-primary)] transition-colors duration-150"
+        >
+          older ›
+        </button>
       </div>
 
       {error && (
@@ -244,12 +327,14 @@ export function LogStream({ isLogsNavActive = true }) {
 
           {shown.map((row, i) => (
             <div
-              key={row.id}
+              key={rowKey(row)}
               data-log-row={row.id}
-              onClick={() => setCursor(i)}
-              className={`group flex items-start gap-2 px-2 py-1 rounded transition-colors duration-150 cursor-default ${
+              onClick={() => onRowActivate(row)}
+              className={`group flex items-start gap-2 px-2 py-1 rounded transition-colors duration-150 cursor-pointer ${
                 i === cursor ? 'bg-white/[0.07]' : 'hover:bg-white/5'
-              } ${row.level === 'error' || row.level === 'fatal' || row.level === 'critical' ? 'bg-rose-500/[0.06]' : ''}`}
+              } ${row.level === 'error' || row.level === 'fatal' || row.level === 'critical' ? 'bg-rose-500/[0.06]' : ''} ${
+                row.inspectable ? 'hover:bg-white/[0.08]' : ''
+              }`}
             >
               <span className="text-[#484f58] whitespace-nowrap shrink-0 select-none tabular-nums">
                 {clock(row.time)}
@@ -275,6 +360,9 @@ export function LogStream({ isLogsNavActive = true }) {
           ))}
         </div>
       </div>
+      </div>
+
+      {openId && <CallDetail callId={openId} onClose={() => setOpenId(null)} />}
     </div>
   );
 }

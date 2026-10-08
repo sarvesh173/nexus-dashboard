@@ -66,9 +66,10 @@ async def check():
     for k, v in got.items():
         print(f"  {k}: {v}")
 
-    # Four controls is the ceiling: severity, search, follow, refresh.
-    if got["controls"] > 6:
-        fails.append(f"{got['controls']} interactive controls; the ceiling is 4")
+    # Four log controls (severity, search, follow, refresh) plus the three
+    # timeline steppers. Nothing earns a place beyond that.
+    if got["controls"] > 7:
+        fails.append(f"{got['controls']} interactive controls; the ceiling is 7")
     if got["rowIsButton"]:
         fails.append("rows are <button> again — one tab stop was the fix")
     if not got["hasList"] or got["logTabIndex"] != 0:

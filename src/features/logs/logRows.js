@@ -97,6 +97,10 @@ export function fromHermes(payload) {
     component: text(e.component ?? e.module ?? e.source ?? e.channel ?? 'gateway').toLowerCase(),
     message: text(e.message ?? e.msg ?? e.text),
     correlationId: text(e.correlationId ?? e.cid ?? e.requestId),
+    // Gateway lines have no captured artifact behind them, so they cannot be
+    // opened. Marking them inspectable would make a double tap do nothing —
+    // exactly the "double tap shows nothing" bug.
+    inspectable: false,
     meta: e,
   })).filter((r) => r.message);
 }
@@ -126,6 +130,9 @@ export function fromCalls(payload) {
       httpStatus: Number.isFinite(code) ? code : null,
       durationMs: Number.isFinite(Number(c.duration_ms)) ? Number(c.duration_ms) : null,
       correlationId: text(c.correlation_id ?? c.request_id),
+      // Only calls with a captured artifact can be opened; connection-tests and
+      // ledger rows recorded without a body have nothing to show.
+      inspectable: c.model !== 'connection-test',
       meta: c,
     };
   }).filter((r) => r.message);
