@@ -18,7 +18,12 @@ import {
   getProviderDisplayName, getProviderLogoUrl, SUGGESTED_MODELS, EMPTY_MODELS,
   PlaygroundFeature, LiveAgentsFeature, SettingsFeature,
 } from './features/index.js';
-import { LogsFeature } from './features/logs/index.jsx';
+import { LogsFeature as LogsFeatureV2 } from './features/logs/LogStreamView.jsx';
+// Old implementation is kept on disk, one flag away from being reachable.
+import { LogsFeature as LogsFeatureLegacy } from './features/logs/index.jsx';
+import { LOGS_USE_V3 } from './features/logs/logFlags.js';
+
+const LogsFeature = LOGS_USE_V3 ? LogsFeatureV2 : LogsFeatureLegacy;
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
 import {
   topCores as topCoresFor, coreCount, swapReadout,
