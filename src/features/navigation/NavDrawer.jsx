@@ -41,38 +41,45 @@ const DRAWER_STYLES = `
 .hamburger-icon { overflow: visible; }
 .hamburger-icon .ham-line {
   transform-box: fill-box;
-  transform-origin: left center;
-  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.52, 1);
+  /* Pivot on the rail's own centre, not its left edge. Left-anchored rotation
+     drags each rail sideways as it tips, so the three bars never settle into a
+     clean symmetric fan — they drift out of register. */
+  transform-origin: center;
+  transition: transform 320ms cubic-bezier(0.22, 0.68, 0.24, 1);
 }
-/* One shared spring, one 45ms stagger: the bars travel together instead of
-   arriving at three unrelated moments. */
+/* No delay stagger: the three rails were only 1.9px tall and ~3.4px apart, so a
+   45ms offset made the group tear apart mid-flight and land out of register.
+   They now travel as one rigid body. */
 .hamburger-shell .ham-line-top { transition-delay: 0ms; }
-.hamburger-shell .ham-line-mid { transition-delay: 45ms; }
-.hamburger-shell .ham-line-bot { transition-delay: 90ms; }
+.hamburger-shell .ham-line-mid { transition-delay: 0ms; }
+.hamburger-shell .ham-line-bot { transition-delay: 0ms; }
 
+/* The rails open outward and stay clear of each other. Each rail is only 1.9px
+   tall in a 20px box, so the travel has to be small but the spacing has to
+   open up: tilting in place just squashed the stack. */
 .hamburger-shell:hover .ham-line-top,
 .hamburger-shell:focus-visible .ham-line-top {
-  transform: translateY(-0.5px) rotate(-12deg);
+  transform: translateY(-1.55px) rotate(-9deg);
 }
 .hamburger-shell:hover .ham-line-bot,
 .hamburger-shell:focus-visible .ham-line-bot {
-  transform: translateY(0.5px) rotate(12deg);
+  transform: translateY(1.55px) rotate(9deg);
 }
 .hamburger-shell:hover .ham-line-mid,
 .hamburger-shell:focus-visible .ham-line-mid {
-  transform: translateX(-1.4px);
+  transform: scaleX(0.78);
 }
 
 /* Press: the fan collapses back into a single stack. Deliberately fast and
    undelayed — this is direct manipulation and must feel 1:1 with the finger. */
 .hamburger-shell:active .ham-line,
 .hamburger-shell:focus-visible:active .ham-line {
-  transition-duration: 130ms;
+  transition-duration: 110ms;
   transition-delay: 0ms;
 }
-.hamburger-shell:active .ham-line-top { transform: translateY(2.4px) rotate(0deg); }
-.hamburger-shell:active .ham-line-bot { transform: translateY(-2.4px) rotate(0deg); }
-.hamburger-shell:active .ham-line-mid { transform: translateX(0); }
+.hamburger-shell:active .ham-line-top { transform: translateY(0.95px) rotate(0deg); }
+.hamburger-shell:active .ham-line-bot { transform: translateY(-0.95px) rotate(0deg); }
+.hamburger-shell:active .ham-line-mid { transform: scaleX(1); }
 
 /* Drawer rows: a real entrance. The old markup set an animationDelay but no
    animation, so the stagger never actually played. */
