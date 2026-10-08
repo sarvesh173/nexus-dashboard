@@ -161,9 +161,10 @@ describe('normalizeHermesLogs (parseHermesLine via public API)', () => {
     assert.equal(rows.length, 1);
     const row = rows[0];
     assert.equal(row.level, 'info');
-    // BUG: source preserves case from log line ('GATEWAY') instead of normalizing to lowercase
-    // Per requirements, source should be 'gateway'. Current behavior: 'GATEWAY'
-    assert.equal(row.source, 'GATEWAY');
+    // Source is a filter facet, so it must be one canonical casing. The log
+    // lines write GATEWAY/PLUGIN in caps; leaving that raw meant the source
+    // dropdown listed "GATEWAY" and "gateway" as two different sources.
+    assert.equal(row.source, 'gateway');
     assert.equal(row.message, 'something happened');
     assert.ok(row.time !== null, 'time should be parsed');
     assert.ok(row.id.startsWith('h-'));
@@ -231,83 +232,70 @@ describe('normalizeHermesLogs (parseHermesLine via public API)', () => {
     assert.equal(rows[0].profile, 'alya');
   });
 
-  it('string entries do not receive profile from options (current behavior)', () => {
-    // BUG: string entries processed via parseHermesLine don't get the profile from options
+  it('string entries DO receive the profile from options', () => {
+    // Regression: string-form lines used to drop the profile, so selecting a
+    // profile in the UI filtered out every line the Hermes reader returns as a
+    // bare string — the facet looked broken with no explanation.
     const rows = normalizeHermesLogs(['INFO test'], { profile: 'alya', source: 'custom' });
     assert.equal(rows.length, 1);
-    // Current behavior: profile is undefined for string entries
-    assert.equal(rows[0].profile, undefined);
-    // source from line takes precedence over default
+    assert.equal(rows[0].profile, 'alya');
     assert.equal(rows[0].source, 'gateway');
   });
 });
 
 describe('normalizeCallLogs', () => {
-  it('status "ok" -> level "info"', () => {
-    const rows = normalizeCallLogs([{ status: 'ok', provider: 'p', model: 'm' }]);
+  // The live ledger sends `status` as a NUMBER and carries an `ok` boolean, so
+  // these cases use the real wire shape rather than invented string statuses.
+  it('status 200 -> level "info"', () => {
+    const rows = normalizeCallLogs([{ status: 200, ok: true, provider: 'p', model: 'm' }]);
     assert.equal(rows[0].level, 'info');
   });
 
-  it('status "success" -> level "info"', () => {
-    const rows = normalizeCallLogs([{ status: 'success' }]);
-    assert.equal(rows[0].level, 'info');
+  it('status 429 -> level "warn" (rate limited, not a failure)', () => {
+    const rows = normalizeCallLogs([{ status: 429, ok: false }]);
+    assert.equal(rows[0].level, 'warn');
   });
 
-  it('status "completed" -> level "info"', () => {
-    const rows = normalizeCallLogs([{ status: 'completed' }]);
-    assert.equal(rows[0].level, 'info');
-  });
-
-  it('status "error" -> level "error"', () => {
-    const rows = normalizeCallLogs([{ status: 'error' }]);
-    assert.equal(rows[0].level, 'error');
-  });
-
-  it('status "failed" -> level "error"', () => {
-    const rows = normalizeCallLogs([{ status: 'failed' }]);
+  it('ok:false without a code -> level "error"', () => {
+    const rows = normalizeCallLogs([{ ok: false }]);
     assert.equal(rows[0].level, 'error');
   });
 
   it('5xx status -> level "error"', () => {
-    const rows = normalizeCallLogs([{ status: '500' }]);
-    assert.equal(rows[0].level, 'error');
-    const rows502 = normalizeCallLogs([{ status: '502' }]);
-    assert.equal(rows502[0].level, 'error');
-    const rows599 = normalizeCallLogs([{ status: '599' }]);
-    assert.equal(rows599[0].level, 'error');
+    for (const code of [500, 502, 599]) {
+      const rows = normalizeCallLogs([{ status: code, ok: false }]);
+      assert.equal(rows[0].level, 'error', `status ${code}`);
+    }
   });
 
-  it('4xx status -> level "warn"', () => {
-    const rows = normalizeCallLogs([{ status: '400' }]);
-    assert.equal(rows[0].level, 'warn');
-    const rows404 = normalizeCallLogs([{ status: '404' }]);
-    assert.equal(rows404[0].level, 'warn');
-    const rows499 = normalizeCallLogs([{ status: '499' }]);
-    assert.equal(rows499[0].level, 'warn');
+  it('4xx status -> level "error" (client failures are still failures)', () => {
+    for (const code of [400, 404]) {
+      const rows = normalizeCallLogs([{ status: code, ok: false }]);
+      assert.equal(rows[0].level, 'error', `status ${code}`);
+    }
   });
 
   it('message is "provider · model" joined', () => {
-    const rows = normalizeCallLogs([{ provider: 'openai', model: 'gpt-4', status: 'ok' }]);
+    const rows = normalizeCallLogs([{ provider: 'openai', model: 'gpt-4', status: 200 }]);
     assert.equal(rows[0].message, 'openai · gpt-4');
   });
 
-  it('message is "omniroute" when both provider and model missing (current behavior)', () => {
-    // BUG: provider defaults to 'omniroute' via ?? fallback, so message becomes 'omniroute'
-    // Per requirements, should be 'call' when both are missing
-    const rows = normalizeCallLogs([{ status: 'ok' }]);
-    assert.equal(rows[0].message, 'omniroute');
+  it('message is "call" when both provider and model missing', () => {
+    // Regression: provider used to default to 'omniroute', so every log row
+    // with no provider read "omniroute" — which is already the source column,
+    // and a row whose message says nothing about what happened.
+    const rows = normalizeCallLogs([{ status: 200 }]);
+    assert.equal(rows[0].message, 'call');
   });
 
   it('message is just provider when model missing', () => {
-    const rows = normalizeCallLogs([{ provider: 'anthropic', status: 'ok' }]);
+    const rows = normalizeCallLogs([{ provider: 'anthropic', status: 200 }]);
     assert.equal(rows[0].message, 'anthropic');
   });
 
-  it('message includes omniroute prefix when only model provided (current behavior)', () => {
-    // BUG: provider defaults to 'omniroute', so message becomes 'omniroute · claude-3'
-    // Per requirements, should be just 'claude-3' when provider missing
-    const rows = normalizeCallLogs([{ model: 'claude-3', status: 'ok' }]);
-    assert.equal(rows[0].message, 'omniroute · claude-3');
+  it('message is just model when provider missing (no invented provider)', () => {
+    const rows = normalizeCallLogs([{ model: 'claude-3', status: 200 }]);
+    assert.equal(rows[0].message, 'claude-3');
   });
 
   it('source is always "omniroute"', () => {

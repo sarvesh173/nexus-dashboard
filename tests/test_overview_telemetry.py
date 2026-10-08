@@ -111,7 +111,21 @@ async def check():
 
             await page.route("**/api/stats", handler)
             await page.goto("http://localhost:5173/", wait_until="load", timeout=15000)
-            await page.wait_for_timeout(1600)
+            # Wait for the mocked row to actually paint. A fixed sleep races the
+            # render: on a loaded machine 1600ms was sometimes not enough, the
+            # probe ran against an empty card, and the run reported a spurious
+            # failure that had nothing to do with the code under test.
+            await page.wait_for_function(
+                """() => {
+                    const cards = Array.from(document.querySelectorAll('.overview-card'));
+                    const cpu = cards.find((c) => /cpu load/i.test(c.innerText));
+                    return Boolean(
+                        cpu && cpu.querySelector('span.block')
+                        && /\\d/.test(cpu.innerText),
+                    );
+                }""",
+                timeout=10000,
+            )
 
             got = await read_cards(page)
             print(f"  {name}")

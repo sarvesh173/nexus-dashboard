@@ -112,43 +112,66 @@ export function normalizeHermesLogs(payload, { profile = 'default', source = 'ga
   const rows = Array.isArray(payload) ? payload : (payload?.logs ?? []);
   return rows
     .map((entry, i) => {
-      if (typeof entry === 'string') return parseHermesLine(entry, i);
-      return {
-        id: entry.id ?? `h-${i}`,
-        time: normalizeTime(entry.ts ?? entry.time ?? entry.timestamp),
-        level: normalizeLevel(entry.level ?? entry.severity),
-        source: entry.source ?? entry.channel ?? source,
-        message: String(entry.message ?? entry.msg ?? entry.text ?? ''),
-        raw: entry,
-        profile: entry.profile ?? profile,
-      };
+      // Both shapes must carry the profile, otherwise the profile facet
+      // silently drops every string-form line and the filter looks broken.
+      const row = typeof entry === 'string'
+        ? { ...parseHermesLine(entry, i), profile }
+        : {
+          id: entry.id ?? `h-${i}`,
+          time: normalizeTime(entry.ts ?? entry.time ?? entry.timestamp),
+          level: normalizeLevel(entry.level ?? entry.severity),
+          source: entry.source ?? entry.channel ?? source,
+          message: String(entry.message ?? entry.msg ?? entry.text ?? ''),
+          raw: entry,
+          profile: entry.profile ?? profile,
+        };
+      // Source is a filter facet, so it must be one canonical casing; the log
+      // lines themselves write GATEWAY/PLUGIN in caps.
+      return { ...row, source: String(row.source ?? source).toLowerCase() };
     })
     .filter((r) => r.message);
 }
 
-/** OmniRoute call ledger rows are already structured. */
+/**
+ * OmniRoute call ledger rows.
+ *
+ * Field names verified against a live /api/omniroute/call-logs response:
+ *   { id, at, model, provider, status: <number>, ok: <bool>, duration_ms,
+ *     tokens: {input, output}, method, path }
+ *
+ * Two traps this has to survive:
+ *  - the timestamp is `at`, not `ts`/`created_at`/`timestamp`
+ *  - `status` is a NUMBER (200/429/500), not a string like "ok", so a naive
+ *    /^(4|5)/ test on the stringified form would classify a 500 as info
+ */
 export function normalizeCallLogs(payload) {
   const calls = Array.isArray(payload) ? payload : (payload?.calls ?? []);
   return calls.map((c, i) => {
-    const status = String(c.status ?? '').toLowerCase();
-    // Map transport status onto our level vocabulary so one filter works for
-    // both streams: a failed HTTP call is an error row, a 4xx is a warning.
-    const level = status === 'ok' || status === 'success' || status === 'completed'
-      ? 'info'
-      : /^5/.test(status) || status === 'error' || status === 'failed'
-        ? 'error'
-        : /^4/.test(status)
-          ? 'warn'
+    // Prefer the explicit boolean when present; otherwise read the code.
+    const code = Number(c.status);
+    // 429 is checked first and wins even over ok:false: being rate limited is
+    // a distinct condition from a failed call, and collapsing it into "error"
+    // hides quota exhaustion behind a generic failure badge.
+    const level = code === 429
+      ? 'warn'
+      : typeof c.ok === 'boolean'
+        ? (c.ok ? 'info' : 'error')
+        : Number.isFinite(code)
+          ? (code >= 400 ? 'error' : 'info')
           : normalizeLevel(c.level);
-    const provider = c.provider ?? c.vendor ?? 'omniroute';
+
+    const provider = c.provider ?? c.vendor ?? null;
     const model = c.model ?? '';
     return {
       id: c.id ?? `c-${i}`,
-      time: normalizeTime(c.ts ?? c.created_at ?? c.timestamp),
+      time: normalizeTime(c.at ?? c.ts ?? c.created_at ?? c.timestamp),
       level,
       source: 'omniroute',
       message: [provider, model].filter(Boolean).join(' · ') || 'call',
-      durationMs: Number.isFinite(Number(c.latency_ms)) ? Number(c.latency_ms) : null,
+      durationMs: Number.isFinite(Number(c.duration_ms ?? c.latency_ms))
+        ? Number(c.duration_ms ?? c.latency_ms)
+        : null,
+      httpStatus: Number.isFinite(code) ? code : null,
       raw: c,
     };
   });
