@@ -121,6 +121,46 @@ const OVERVIEW_MOTION_STYLES = `
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum' 1;
   }
+  /* The digits stay monospaced so the counter never jitters as values change.
+       The unit is deliberately set smaller than the digits: at the same size a
+       '%' glyph reads as a second number competing with the one it belongs to,
+       and the eye splits the headline into two figures. Scaling it down and
+       letting it sit on the baseline keeps "34.6" as the single number and the
+       '%' as its unit, which is how the glyph is meant to be read. */
+    .overview-motion-root .overview-telemetry-figure .overview-unit {
+      font-family: inherit;
+      font-size: 0.62em;
+      line-height: 1;
+      margin-left: 0.06em;
+      font-variant-numeric: normal;
+      font-feature-settings: normal;
+      font-weight: 600;
+      /* Baseline-aligning a shrunken glyph against a full-size one leaves it
+         riding ~3px high, because the smaller em box bottoms out above the
+         digits' own descender. Nudging down by a fraction of an em puts the
+         unit's foot on the same line as the digits' baseline. */
+      position: relative;
+      top: 0.09em;
+    }
+    /* Swap gets its own slim gauge rather than borrowing the RAM bar: the two
+       areas fill independently, so a single shared bar would misreport one of
+       them. */
+    .overview-motion-root .overview-swap-gauge {
+      position: relative;
+      height: 4px;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 2px;
+      background: var(--md-sys-color-surface-container-highest);
+    }
+    .overview-motion-root .overview-swap-gauge > i {
+      position: absolute;
+      inset: 0 auto 0 0;
+      display: block;
+      border-radius: inherit;
+      background: var(--md-sys-color-tertiary, var(--md-sys-color-primary));
+      transition: width 220ms cubic-bezier(0.2, 0, 0, 1);
+    }
   .overview-motion-root .m3-linear-track {
     position: relative;
     flex: 1;
@@ -1118,7 +1158,7 @@ export function OverviewFeature(props = {}) {
                       
                       <div className="my-1">
                         <div className="overview-telemetry-figure text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {hasRealTelemetry ? <>{smoothCpu}%</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
+                          {hasRealTelemetry ? <>{smoothCpu}<span className="overview-unit">%</span></> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
                         </div>
                         
                         <div
@@ -1178,7 +1218,7 @@ export function OverviewFeature(props = {}) {
 
                       <div className="my-1">
                         <div className="overview-telemetry-figure text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {hasRealTelemetry ? <>{smoothRamPercent}%</> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
+                          {hasRealTelemetry ? <>{smoothRamPercent}<span className="overview-unit">%</span></> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
                         </div>
                         <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
                           {hasRealTelemetry ? <>{finiteNumber(smoothRamUsed)}M / {finiteNumber(telemetry?.ram_total_mb)}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}
@@ -1187,12 +1227,24 @@ export function OverviewFeature(props = {}) {
                             area. A box with swap disabled shows RAM alone, and
                             the header drops its "& Swap" accordingly. */}
                         {swap && (
-                          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
-                            <span className="inline-flex h-[16px] items-center px-1 rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-high)] text-[9px] font-bold uppercase tracking-wider align-middle">
-                              Swap
-                            </span>
-                            {swap.percent !== null ? <>{smoothSwapPercent}%</> : <span className="overview-pending">—</span>}
-                            <span className="text-[var(--md-sys-color-primary)]"> ({swap.used} / {swap.total})</span>
+                          <div className="mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)]">
+                            <div className="flex items-center justify-between text-[10px] mb-1">
+                              <span className="text-[var(--md-sys-color-on-surface-variant)]">Swap</span>
+                              <span className="text-[var(--md-sys-color-primary)] font-bold">
+                                {swap.percent !== null ? <>{smoothSwapPercent}%</> : <span className="overview-pending">—</span>}
+                                <span className="font-normal text-[var(--md-sys-color-on-surface-variant)]"> ({swap.used} / {swap.total})</span>
+                              </span>
+                            </div>
+                            <div
+                              className="overview-swap-gauge"
+                              role="progressbar"
+                              aria-label="Swap memory used"
+                              aria-valuenow={swap.percent ?? undefined}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                            >
+                              <i style={{ width: `${swap.percent ?? 0}%` }} />
+                            </div>
                           </div>
                         )}
                       </div>
