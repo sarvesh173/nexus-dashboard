@@ -896,7 +896,7 @@ export function OverviewFeature(props = {}) {
     memoryHover: memoryHoverProp, modelsHover: modelsHoverProp,
     navigate, costOverview: costOverviewProp, costHasUsage, costLoadState,
     smoothCpu: cpuValue, smoothCore0: core0Value, smoothCore1: core1Value,
-    smoothRamPercent: ramValue, smoothRamUsed, smoothSwapPercent: swapValue,
+    smoothRamPercent: ramValue, smoothRamUsed,
     hasRealTelemetry: telemetryReady, telemetry, providersList: providersProp,
   } = props;
   const reducedMotion = usePrefersReducedMotion();
@@ -920,7 +920,6 @@ export function OverviewFeature(props = {}) {
   const smoothCore0 = percentage(core0Value);
   const smoothCore1 = percentage(core1Value);
   const smoothRamPercent = percentage(ramValue);
-  const smoothSwapPercent = percentage(swapValue);
   const totalCost = parseFloat(String(costOverview.total_accrued ?? '').split('/')[0]);
   const hasCostTotal = Boolean(costHasUsage) && Number.isFinite(totalCost) && totalCost >= 0;
   const hasInputRate = costLoadState === 'ready'

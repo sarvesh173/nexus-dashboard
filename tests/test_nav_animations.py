@@ -1,7 +1,12 @@
-"""Each nav tab must have its OWN animation, not one shared scale(1.15).
+"""Each VISIBLE nav tab must have its OWN animation, not one shared scale(1.15).
 
 Computed transforms always resolve to matrix()/matrix3d() form, so the
 meaningful assertion is distinctness — not string matching on 'scale'/'rotate'.
+
+Tabs deliberately collapsed via navFlags.js (SHOW_PLAYGROUND_IN_TOP_NAV /
+SHOW_SETTINGS_IN_TOP_NAV = false) are not hoverable, so they are asserted
+hidden instead of animated. Flip a flag to true and the tab returns to the
+animated set automatically.
 
 Run: python3 tests/test_nav_animations.py   -> exit 0 pass, 1 fail
 """
@@ -18,6 +23,8 @@ BUTTONS = [
     "nav-cost-button",
     "nav-settings-button",
 ]
+
+HIDDEN_SELECTOR = '[data-nav-hidden="true"]'
 
 # The generic rule that flattened everything before the recovery.
 GENERIC = "matrix(1.15, 0, 0, 1.15, 0, 0)"
@@ -37,6 +44,7 @@ async def check():
 
         seen = {}
         seen_tabs = []
+        hidden_tabs = []
         for btn_cls in BUTTONS:
             btn = page.locator(f".{btn_cls}")
             if await btn.count() == 0:
@@ -44,6 +52,19 @@ async def check():
                 # feature branch). Nothing to assert here — do not fail the build
                 # for code that does not exist on this tree.
                 print(f"  skip {btn_cls}: not present on this branch")
+                continue
+            # A collapsed tab must stay genuinely unreachable: invisible, no
+            # pointer events, out of the a11y tree and out of tab order.
+            if await btn.locator(f":scope{HIDDEN_SELECTOR}").count() > 0 or await btn.get_attribute("data-nav-hidden") == "true":
+                state = await btn.evaluate(
+                    "el => { const s = getComputedStyle(el);"
+                    " return { vis: s.visibility, pe: s.pointerEvents, op: s.opacity, tab: el.tabIndex }; }"
+                )
+                hidden_tabs.append(btn_cls)
+                if state["vis"] != "hidden" or state["pe"] != "none" or state["tab"] != -1:
+                    fails.append(f"{btn_cls}: marked hidden but still reachable {state}")
+                else:
+                    print(f"  hidden {btn_cls}: ok (visibility/pointer-events/tabIndex)")
                 continue
             icon = btn.locator('[class*="-icon"]').first
             seen_tabs.append(btn_cls)
@@ -62,6 +83,8 @@ async def check():
             )
 
         await browser.close()
+    if hidden_tabs:
+        print(f"  ({len(hidden_tabs)} tab(s) hidden by navFlags: {hidden_tabs})")
     return fails
 
 

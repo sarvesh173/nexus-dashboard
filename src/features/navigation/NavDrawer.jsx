@@ -4,13 +4,17 @@ import {
   Activity, Boxes, Brain, Coins, Play, ScrollText, Sliders, X,
 } from 'lucide-react';
 import { useHermesStatus } from '../../hooks/useHermes.js';
+import { DRAWER_ITEMS } from './navFlags.js';
+
+const DRAWER_ICONS = { Activity, Boxes, Brain, Play, Coins, ScrollText, Sliders };
 
 /**
  * NavDrawer - Material 3 Navigation Drawer with Hamburger trigger.
  * Features:
  * - Hamburger toggle button with M3 tactile spring
- * - Smooth scrollable primary views (Overview, Models, Agents, Playground, Cost, Logs)
- * - Pinned Bottom Settings button (zero scroll bottleneck)
+ * - Smooth scrollable primary views (Overview, Models, Agents, Playground, Cost, Logs, Settings)
+ * - Settings lives in the same scroll list as every other destination, so one
+ *   hidden tab never leaves a stray pinned button glued to the drawer bottom
  * - Live gateway badge on the Logs destination (enabled only while open)
  * - Staggered entrance animations and SVG hover microgeometry
  */
@@ -35,17 +39,10 @@ export function NavDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const navItems = [
-    { label: 'Overview', path: '/', icon: Activity },
-    { label: 'Models', path: '/model', icon: Boxes },
-    { label: 'Agents', path: '/agents', icon: Brain },
-    { label: 'Playground', path: '/playground', icon: Play },
-    { label: 'Cost', path: '/cost', icon: Coins },
-    // `live` marks the one destination that has a live feed behind it, so the
-    // badge below is not hardcoded to one label and cannot drift out of sync
-    // with the item it annotates.
-    { label: 'Logs', path: '/logs', icon: ScrollText, live: true },
-  ];
+  const navItems = DRAWER_ITEMS.map((item) => ({
+    ...item,
+    icon: DRAWER_ICONS[item.icon],
+  }));
 
   const handleSelect = (path) => {
     setIsOpen(false);
@@ -225,7 +222,7 @@ export function NavDrawer({
                     title={loadState === 'loading'
                       ? 'Checking Hermes gateway…'
                       : alive ? 'Hermes gateway is streaming' : 'Hermes gateway is not running'}
-                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
+                    className={`inline-flex h-[16px] items-center gap-1 px-1.5 rounded-md font-mono text-[9px] leading-none font-bold uppercase tracking-wider border shrink-0 ${
                       isActive
                         ? 'border-current text-[var(--md-sys-color-on-primary)]'
                         : gatewayTone
@@ -242,24 +239,10 @@ export function NavDrawer({
           })}
         </div>
 
-        {/* Pinned Bottom Settings (No Scroll Required) */}
-        <div className="mt-auto border-t border-[var(--md-sys-color-outline-variant)]/40 p-3 bg-[var(--md-sys-color-surface-container)]">
-          <button
-            type="button"
-            onClick={() => handleSelect('/settings')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer active:scale-95 group ${
-              currentPath === '/settings'
-                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs'
-                : 'text-[var(--md-sys-color-on-surface)] bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)]'
-            }`}
-          >
-            <Sliders size={16} className="transition-colors duration-200" />
-            <span>Settings</span>
-            <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)]">
-              Core
-            </span>
-          </button>
-        </div>
+        {/* Every destination — Settings included — scrolls in the same list
+            above. A dedicated pinned footer button used to sit below the list
+            and stay glued to the drawer bottom; that is what made the Settings
+            row look misaligned against the top-nav row it was mirroring. */}
       </div>
         </>,
         document.body,

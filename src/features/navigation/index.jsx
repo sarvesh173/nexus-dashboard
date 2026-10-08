@@ -1,6 +1,12 @@
 import React from 'react';
-import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, ScrollText, Settings, Terminal } from 'lucide-react';
+import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, Settings, Terminal } from 'lucide-react';
 import { NavDrawer } from './NavDrawer.jsx';
+import { SHOW_PLAYGROUND_IN_TOP_NAV, SHOW_SETTINGS_IN_TOP_NAV } from './navFlags.js';
+
+// A hidden tab keeps its button, its icon animation and its route. It only
+// collapses out of the flex row, so flipping a flag in navFlags.js restores it
+// exactly as it was — no markup to re-add, no import to restore.
+const HIDDEN_NAV_TAB = 'invisible pointer-events-none opacity-0 scale-90';
 
 const NAV_HOVER_STAGE_COUNT = 36;
 const NAV_ICON_STYLE_COUNT = 10;
@@ -1805,7 +1811,12 @@ export function NavigationFeature(props) {
             onClick={() => navigate('/playground')}
             {...motionProps('playground')}
             aria-current={isPlaygroundNavActive ? 'page' : undefined}
-            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
+            aria-hidden={!SHOW_PLAYGROUND_IN_TOP_NAV}
+            tabIndex={SHOW_PLAYGROUND_IN_TOP_NAV ? undefined : -1}
+            data-nav-hidden={SHOW_PLAYGROUND_IN_TOP_NAV ? undefined : 'true'}
+            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${
+              !SHOW_PLAYGROUND_IN_TOP_NAV ? HIDDEN_NAV_TAB : ''
+            } ${
               isPlaygroundNavActive
                 ? 'nav-playground-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
@@ -1835,7 +1846,12 @@ export function NavigationFeature(props) {
             onClick={() => navigate('/settings')}
             {...motionProps('settings')}
             aria-current={location.pathname === '/settings' ? 'page' : undefined}
-            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
+            aria-hidden={!SHOW_SETTINGS_IN_TOP_NAV}
+            tabIndex={SHOW_SETTINGS_IN_TOP_NAV ? undefined : -1}
+            data-nav-hidden={SHOW_SETTINGS_IN_TOP_NAV ? undefined : 'true'}
+            className={`nav-tab nav-settings-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${
+              !SHOW_SETTINGS_IN_TOP_NAV ? HIDDEN_NAV_TAB : ''
+            } ${
               location.pathname === '/settings'
                 ? 'nav-settings-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
