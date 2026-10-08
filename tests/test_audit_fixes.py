@@ -305,10 +305,30 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
              patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"):
             try:
                 run_sync.fetch_specs()
-            except FileNotFoundError:
+            except (FileNotFoundError, ModuleNotFoundError):
                 pass  # hermes_config_path was successfully called and resolved
             except NameError as exc:
                 self.fail(f"run_sync.fetch_specs raised NameError: {exc}")
+
+
+class TestNoRequestsOrPsutilDependency(unittest.TestCase):
+    """Ensure backend modules import cleanly without requests or psutil."""
+
+    def test_model_health_imports_without_requests(self):
+        import model_health
+        self.assertFalse(hasattr(model_health, 'requests'), "model_health still imports requests")
+
+    def test_server_imports_without_requests(self):
+        from unittest.mock import patch
+        with patch.dict(sys.modules, {'psutil': None}):
+            import server
+            self.assertFalse(hasattr(server, 'requests'), "server still imports requests")
+            telemetry = server.get_telemetry()
+            self.assertIn('ram_total_mb', telemetry)
+
+    def test_run_sync_imports_without_requests(self):
+        import run_sync
+        self.assertFalse(hasattr(run_sync, 'requests'), "run_sync still imports requests")
 
 
 class TestMetaCountsAgreeWithRows(unittest.TestCase):

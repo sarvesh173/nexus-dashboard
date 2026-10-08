@@ -24,8 +24,8 @@ BASE = 'https://integrate.api.nvidia.com/v1'
 
 def fetch_specs():
     """(model_id, category) straight from the live NVIDIA catalog."""
+    import urllib.request
     import yaml
-    import requests
 
     key = model_health._api_key()
     if not key:
@@ -56,9 +56,16 @@ def fetch_specs():
               'categorisation'.format(type(exc).__name__))
 
     if not specs:
-        r = requests.get(base.rstrip('/') + '/models', timeout=20,
-                         headers={'Authorization': 'Bearer {key}'.format(key=key)})
-        for m in r.json().get('data', []):
+        req = urllib.request.Request(
+            base.rstrip('/') + '/models',
+            headers={'Authorization': 'Bearer {key}'.format(key=key)}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = json.loads(resp.read().decode('utf-8', errors='replace'))
+        except Exception:
+            data = {}
+        for m in data.get('data', []):
             mid = m.get('id', '').lower()
             cat = 'text'
             if any(k in mid for k in ('embed', 'retriever')):
