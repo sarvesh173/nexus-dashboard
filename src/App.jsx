@@ -18,7 +18,9 @@ import {
   getProviderDisplayName, getProviderLogoUrl, SUGGESTED_MODELS, EMPTY_MODELS,
   PlaygroundFeature, LiveAgentsFeature, SettingsFeature,
 } from './features/index.js';
-import ConsoleLogViewer from "./features/logs/ConsoleLogViewer.tsx";
+// Ported verbatim from the reference checkout: the full request logger, with
+// its table, filters, grouping and detail modal.
+import RequestLoggerV2 from "@/shared/components/RequestLoggerV2";
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
 import {
   topCores as topCoresFor, coreCount, swapReadout,
@@ -1251,7 +1253,7 @@ export default function App() {
           onSelectAgent={handleSelectAgent}
           onCloseAgent={() => navigate('/agents')}
         />
-        {isLogsNavActive && <ConsoleLogViewer />}
+        {isLogsNavActive && <RequestLoggerV2 />}
         <SettingsFeature
           isSettingsNavActive={isSettingsNavActive}
           activeCurrency={activeCurrency}

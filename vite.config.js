@@ -13,6 +13,11 @@ export default defineConfig({
     cssMinify: true,
     chunkSizeWarningLimit: 600,
   },
+  resolve: {
+    alias: {
+      "@": new URL("./src", import.meta.url).pathname,
+    },
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

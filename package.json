@@ -39,7 +39,9 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
-    "tailwind-merge": "^3.7.0"
+    "react18-json-view": "^0.2.10",
+    "tailwind-merge": "^3.7.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -2038,6 +2038,53 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'count': 0,
                     'calls': [],
                 }, code=500)
+        elif self.path.startswith('/api/provider-nodes'):
+            # Display labels for the ported logger's provider column. The ledger
+            # records a provider name per call, so the distinct set is the
+            # whole answer; there is no separate node registry to read.
+            try:
+                import urllib.parse
+                qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                if omniroute_logs is None:
+                    return self.send_json({'nodes': []})
+                return self.send_json(omniroute_logs.read_provider_nodes())
+            except Exception as exc:  # noqa: BLE001
+                print(f'[provider-nodes] failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({'nodes': []})
+        elif self.path.startswith('/api/usage/call-logs/filters'):
+            # Filter options for the ported request logger. Upstream builds its
+            # dropdowns from the whole call_logs table plus configured keys, not
+            # the loaded page, so a value with no visible row is still pickable.
+            # Read-only over the same ledger.
+            try:
+                return self.send_json(omniroute_logs.read_call_log_filters()
+                                      if omniroute_logs is not None else {})
+            except Exception as exc:  # noqa: BLE001
+                print(f'[usage] filters failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({})
+        elif self.path.startswith('/api/usage/call-logs'):
+            # Page of call logs in the ported logger's row shape.
+            try:
+                import urllib.parse
+                qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                if omniroute_logs is None:
+                    return self.send_json([])
+                return self.send_json(omniroute_logs.read_call_logs_page(qs))
+            except Exception as exc:  # noqa: BLE001
+                print(f'[usage] call-logs failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json([])
+        elif self.path.startswith('/api/logs/detail'):
+            # Latest call's full artifact, for the detail modal.
+            try:
+                if omniroute_logs is None:
+                    return self.send_json({'ok': False, 'error': 'reader unavailable'})
+                import urllib.parse
+                qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                cid = (qs.get('id', [''])[0] or '').strip()
+                return self.send_json(omniroute_logs.read_call_log_detail(cid))
+            except Exception as exc:  # noqa: BLE001
+                print(f'[logs] detail failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json({'ok': False, 'error': str(exc)[:200]})
         elif self.path.startswith('/api/logs/console'):
             # Serves the ported console log viewer, which asks for
             # /api/logs/console?limit=500&level=<floor> and expects a bare JSON

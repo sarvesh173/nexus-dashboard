@@ -1,5 +1,5 @@
 /**
- * Copy text to clipboard with automatic HTTPS/HTTP fallback.
+ * Clipboard utility with HTTP/HTTPS fallback.
  * navigator.clipboard.writeText() requires HTTPS (secure context).
  * For HTTP deployments, falls back to execCommand('copy').
  */
@@ -10,7 +10,7 @@
  * @param text - Text to copy to clipboard
  * @returns true if copy succeeded, false otherwise
  */
-export async function copyToClipboard(text) {
+export async function copyToClipboard(text: string): Promise<boolean> {
   // Method 1: Clipboard API
   // Works on HTTPS, localhost (treated as secure context), and some browsers
   // even on HTTP. Try unconditionally — the catch handles failures.
@@ -39,7 +39,9 @@ export async function copyToClipboard(text) {
     } catch {
       return false;
     } finally {
-      if (appended) document.body.removeChild(textArea);
+      if (appended && document.body.contains(textArea)) {
+        document.body.removeChild(textArea);
+      }
     }
   }
 

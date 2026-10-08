@@ -536,3 +536,141 @@ def _shape_pipeline(pipeline):
         stages.append({'stage': name, 'bytes': size})
     stages.sort(key=lambda stage: stage['stage'])
     return stages
+
+def _to_logger_row(call):
+    """Ledger record -> the ported request logger's row shape.
+
+    Pure renaming plus what the ledger actually recorded. Fields the ledger
+    does not hold (comboName, resilienceActions, apiKeyName, ...) are left out
+    rather than filled with invented values, so the table renders them empty
+    instead of showing a plausible-looking lie.
+    """
+    toks = call.get('tokens') or {}
+    dur = call.get('duration_ms')
+    status = call.get('status')
+    return {
+        'id': call.get('id'),
+        'timestamp': call.get('at'),
+        'model': call.get('model') or '',
+        'requestedModel': call.get('requested_model') or '',
+        'provider': call.get('provider') or '',
+        'account': '',
+        'apiKeyId': '',
+        'apiKeyName': '',
+        'correlationId': '',
+        'status': status,
+        'duration': dur,
+        'ttft': None,
+        'addedWaitMs': None,
+        'addedWaitCause': '',
+        'isRetry': False,
+        'tokens': {
+            'input': _as_int(toks.get('input')),
+            'output': _as_int(toks.get('output')),
+            'reasoning': _as_int(toks.get('reasoning')),
+        },
+        'cacheSource': '',
+        'sourceFormat': 'openai',
+        'modelPinned': False,
+        'sessionTag': '',
+        'comboName': '',
+        'groupSize': None,
+        'groupStatus': '',
+        'resilienceActions': [],
+        'active': [],
+        'requestSummary': call.get('request_summary') or '',
+        'hasSummary': bool(call.get('has_summary')),
+        'method': call.get('method') or '',
+        'path': call.get('path') or '',
+    }
+
+
+def read_call_logs_page(qs):
+    """One page for the ported logger, honouring its query parameters.
+
+    Read-only. Unknown filters are ignored rather than silently returning an
+    unfiltered page, so a filter the ledger cannot honour is visible as
+    'no rows' instead of masquerading as a filter that worked.
+    """
+    def first(name, default=''):
+        v = qs.get(name)
+        return (v[0] if v else default)
+
+    limit = _clamp_limit(first('limit', '50'))
+    offset = _clamp_offset(first('offset', '0'))
+
+    payload = read_call_logs(limit, offset)
+    calls = payload.get('calls') or []
+
+    model = first('model')
+    provider = first('provider')
+    account = first('account')
+    status = first('status')
+    search = first('search').lower()
+
+    rows = [_to_logger_row(c) for c in calls]
+
+    if model:
+        rows = [r for r in rows if r['model'] == model or r['requestedModel'] == model]
+    if provider:
+        rows = [r for r in rows if r['provider'] == provider]
+    if account:
+        rows = [r for r in rows if r['account'] == account]
+    if status == 'error':
+        rows = [r for r in rows if r['status'] != 200]
+    elif status == 'ok':
+        rows = [r for r in rows if r['status'] == 200]
+    if search:
+        rows = [r for r in rows if search in json.dumps(r).lower()]
+
+    # A bare array, not an envelope: the ported component does
+    # `setLogs(await res.json())` and reads `data.length`. Returning
+    # {'logs': [...]} here rendered the full table with "0 Total" and no rows,
+    # because an object has no length.
+    return rows
+
+
+def read_call_log_filters():
+    """Distinct filter values across the ledger, for the logger's dropdowns.
+
+    Scans a bounded window rather than the whole table: a full scan of ~19k rows
+    per dropdown load costs more than it is worth, and the newest window is the
+    one a user is actually choosing from.
+    """
+    payload = read_call_logs(_clamp_limit('500'), 0)
+    calls = payload.get('calls') or []
+    models, providers, accounts = {}, {}, {}
+    for c in calls:
+        m = (c.get('model') or '').strip()
+        p = (c.get('provider') or '').strip()
+        if m:
+            models[m] = models.get(m, 0) + 1
+        if p:
+            providers[p] = providers.get(p, 0) + 1
+
+    def opts(d):
+        return [{'value': k, 'count': v} for k, v in sorted(d.items())]
+
+    return {
+        'models': opts(models),
+        'providers': opts(providers),
+        'accounts': opts(accounts),
+        'apiKeys': [],
+        'statuses': [],
+    }
+
+
+def read_provider_nodes():
+    """Distinct provider names in the ledger, as the logger's node list.
+
+    The ported table looks a provider up here to get a display label. Only the
+    recorded name exists in this store, so each node carries that name and an
+    empty label set rather than an invented one.
+    """
+    payload = read_call_logs(_clamp_limit('500'), 0)
+    names = {}
+    for c in (payload.get('calls') or []):
+        p = (c.get('provider') or '').strip()
+        if p:
+            names[p] = names.get(p, 0) + 1
+    return {'nodes': [{'id': k, 'name': k, 'count': v} for k, v in sorted(names.items())]}
