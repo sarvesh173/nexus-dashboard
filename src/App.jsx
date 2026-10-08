@@ -18,12 +18,9 @@ import {
   getProviderDisplayName, getProviderLogoUrl, SUGGESTED_MODELS, EMPTY_MODELS,
   PlaygroundFeature, LiveAgentsFeature, SettingsFeature,
 } from './features/index.js';
-import { LogsFeature as LogsFeatureV2 } from './features/logs/LogStreamView.jsx';
-// Old implementation is kept on disk, one flag away from being reachable.
-import { LogsFeature as LogsFeatureLegacy } from './features/logs/index.jsx';
-import { LOGS_USE_V3 } from './features/logs/logFlags.js';
-
-const LogsFeature = LOGS_USE_V3 ? LogsFeatureV2 : LogsFeatureLegacy;
+// Ported log viewer. The previous chunked rewrite and the original are both
+// still on disk; this flag picks which one the shell mounts.
+import { LogStream as LogsStreamFeature } from './features/logs/LogStream.jsx';
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
 import {
   topCores as topCoresFor, coreCount, swapReadout,
@@ -1256,9 +1253,8 @@ export default function App() {
           onSelectAgent={handleSelectAgent}
           onCloseAgent={() => navigate('/agents')}
         />
-        <LogsFeature
+        <LogsStreamFeature
           isLogsNavActive={isLogsNavActive}
-          nexusLog={nexusLog}
         />
         <SettingsFeature
           isSettingsNavActive={isSettingsNavActive}
