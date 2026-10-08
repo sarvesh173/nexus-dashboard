@@ -9,6 +9,93 @@ import { DRAWER_ITEMS } from './navFlags.js';
 const DRAWER_ICONS = { Activity, Boxes, Brain, Play, Coins, ScrollText, Sliders };
 
 /**
+ * Three-line trigger + drawer row motion.
+ *
+ * The previous icon drove three <line> endpoints from React state with three
+ * different easings — one of them a back-out spring — so the bars landed at
+ * different times and the whole thing read as jitter rather than motion. Here
+ * every bar shares one spring and one stagger and pivots from its left anchor,
+ * so the group fans open as a single mechanism.
+ */
+const DRAWER_STYLES = `
+.hamburger-shell {
+  --ham-metal-top: var(--md-sys-color-on-surface-variant);
+  --ham-metal-mid: var(--md-sys-color-on-surface);
+  --ham-metal-bot: var(--md-sys-color-on-surface-variant);
+  /* Milled recess so the button reads as machined hardware, not a flat chip.
+     Matches the RAM/swap gauge groove treatment in the Overview cards. */
+  box-shadow:
+    inset 0 1px 2px color-mix(in srgb, var(--md-sys-color-on-surface) 14%, transparent),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.35);
+}
+.hamburger-shell:hover,
+.hamburger-shell:focus-visible {
+  --ham-metal-top: var(--md-sys-color-primary);
+  --ham-metal-mid: var(--md-sys-color-primary);
+  --ham-metal-bot: var(--md-sys-color-primary);
+}
+.hamburger-shell .ham-metal-top { stop-color: var(--ham-metal-top); }
+.hamburger-shell .ham-metal-mid { stop-color: var(--ham-metal-mid); }
+.hamburger-shell .ham-metal-bot { stop-color: var(--ham-metal-bot); }
+
+.hamburger-icon { overflow: visible; }
+.hamburger-icon .ham-line {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.52, 1);
+}
+/* One shared spring, one 45ms stagger: the bars travel together instead of
+   arriving at three unrelated moments. */
+.hamburger-shell .ham-line-top { transition-delay: 0ms; }
+.hamburger-shell .ham-line-mid { transition-delay: 45ms; }
+.hamburger-shell .ham-line-bot { transition-delay: 90ms; }
+
+.hamburger-shell:hover .ham-line-top,
+.hamburger-shell:focus-visible .ham-line-top {
+  transform: translateY(-0.5px) rotate(-12deg);
+}
+.hamburger-shell:hover .ham-line-bot,
+.hamburger-shell:focus-visible .ham-line-bot {
+  transform: translateY(0.5px) rotate(12deg);
+}
+.hamburger-shell:hover .ham-line-mid,
+.hamburger-shell:focus-visible .ham-line-mid {
+  transform: translateX(-1.4px);
+}
+
+/* Press: the fan collapses back into a single stack. Deliberately fast and
+   undelayed — this is direct manipulation and must feel 1:1 with the finger. */
+.hamburger-shell:active .ham-line,
+.hamburger-shell:focus-visible:active .ham-line {
+  transition-duration: 130ms;
+  transition-delay: 0ms;
+}
+.hamburger-shell:active .ham-line-top { transform: translateY(2.4px) rotate(0deg); }
+.hamburger-shell:active .ham-line-bot { transform: translateY(-2.4px) rotate(0deg); }
+.hamburger-shell:active .ham-line-mid { transform: translateX(0); }
+
+/* Drawer rows: a real entrance. The old markup set an animationDelay but no
+   animation, so the stagger never actually played. */
+@keyframes drawer-row-in {
+  from { opacity: 0; transform: translateX(-16px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.drawer-row {
+  animation: drawer-row-in 380ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hamburger-shell .ham-line,
+  .drawer-row {
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+`;
+
+/**
  * NavDrawer - Material 3 Navigation Drawer with Hamburger trigger.
  * Features:
  * - Hamburger toggle button with M3 tactile spring
@@ -23,7 +110,6 @@ export function NavDrawer({
   onNavigate,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isHamburgerHovered, setIsHamburgerHovered] = useState(false);
 
   // Backs the LIVE badge on the Logs item. Gated on `isOpen` so a closed
   // drawer costs no requests at all; when closed the badge simply reads its
@@ -64,60 +150,49 @@ export function NavDrawer({
 
   return (
     <>
+      <style>{DRAWER_STYLES}</style>
       {/* 3-Lines Hamburger Trigger Button with Theme-Aware Morphing */}
       <button
         type="button"
         aria-label="Open Navigation Drawer"
         onClick={() => setIsOpen(true)}
-        onMouseEnter={() => setIsHamburgerHovered(true)}
-        onMouseLeave={() => setIsHamburgerHovered(false)}
-        className="group/hamburger relative p-2 rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer shadow-xs overflow-hidden flex items-center justify-center w-9 h-9"
-      >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 18 18"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]"
-        >
-          {/* Top Line: Staggered stretch */}
-          <line
-            x1={isHamburgerHovered ? "2" : "3"}
-            y1="4.5"
-            x2={isHamburgerHovered ? "16" : "15"}
-            y2="4.5"
-            stroke={isHamburgerHovered ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface-variant)"}
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            className="transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]"
-          />
-          {/* Middle Line: Elastic center expand */}
-          <line
-            x1={isHamburgerHovered ? "2" : "5.5"}
-            y1="9"
-            x2={isHamburgerHovered ? "16" : "12.5"}
-            y2="9"
-            stroke={isHamburgerHovered ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface)"}
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            className="transition-all duration-250 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-          />
-          {/* Bottom Line: Stepped tail anchor */}
-          <line
-            x1={isHamburgerHovered ? "2" : "3"}
-            y1="13.5"
-            x2={isHamburgerHovered ? "14" : "9.5"}
-            y2="13.5"
-            stroke={isHamburgerHovered ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface-variant)"}
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            className="transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)]"
-          />
-        </svg>
-      </button>
+        className="hamburger-shell group relative rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center w-9 h-9"
+              >
+                {/* Custom three-line mark. The lines are full-width rails rather than
+                    three centred dashes of different lengths: a real hamburger reads as
+                    a stack of rails, and equal lengths keep the fan symmetric when the
+                    group rotates on hover. Each rail is a thin gradient so it picks up
+                    a top light edge, matching the milled hardware elsewhere in the app. */}
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                  className="hamburger-icon"
+                >
+                  <defs>
+                    <linearGradient id="ham-rail-top" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" className="ham-metal-top" />
+                      <stop offset="100%" className="ham-metal-top" stopOpacity="0.72" />
+                    </linearGradient>
+                    <linearGradient id="ham-rail-mid" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" className="ham-metal-mid" />
+                      <stop offset="100%" className="ham-metal-mid" stopOpacity="0.72" />
+                    </linearGradient>
+                    <linearGradient id="ham-rail-bot" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" className="ham-metal-bot" />
+                      <stop offset="100%" className="ham-metal-bot" stopOpacity="0.72" />
+                    </linearGradient>
+                  </defs>
+                  <rect className="ham-line ham-line-top" x="3" y="5.6" width="14" height="1.9" rx="0.95" fill="url(#ham-rail-top)" />
+                  <rect className="ham-line ham-line-mid" x="3" y="9.05" width="14" height="1.9" rx="0.95" fill="url(#ham-rail-mid)" />
+                  <rect className="ham-line ham-line-bot" x="3" y="12.5" width="14" height="1.9" rx="0.95" fill="url(#ham-rail-bot)" />
+                </svg>
+              </button>
 
-      {/* Backdrop + panel are portalled to <body>.
+                    {/* Backdrop + panel are portalled to <body>.
           The trigger above stays in the header's flow, but the drawer itself
           must NOT: the header sets `backdrop-blur-md`, and a backdrop-filter
           (like transform/filter/will-change) establishes a containing block
@@ -203,7 +278,7 @@ export function NavDrawer({
                 style={{ animationDelay: `${idx * 45}ms` }}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={item.live ? `${item.label}, Hermes gateway live feed` : item.label}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer active:scale-95 group relative overflow-hidden ${
+                className={`drawer-row w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer active:scale-95 group relative overflow-hidden ${
                   isActive
                     ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-semibold shadow-xs'
                     : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
