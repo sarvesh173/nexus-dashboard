@@ -47,6 +47,8 @@ PROBE = """
   const gauge = mem?.querySelector('.overview-swap-gauge');
   const gBox = gauge?.getBoundingClientRect();
   const fill = gauge?.querySelector('i');
+  const gcs = gauge ? getComputedStyle(gauge) : null;
+  const fcs = fill ? getComputedStyle(fill) : null;
 
   return {
     digitW: Math.round(dBox.width),
@@ -61,6 +63,11 @@ PROBE = """
     gaugeRole: gauge?.getAttribute('role') ?? null,
     gaugeLabel: gauge?.getAttribute('aria-label') ?? null,
     gaugeValueNow: gauge?.getAttribute('aria-valuenow') ?? null,
+    // Depth audit
+    gaugeGroove: Boolean(gcs?.boxShadow && gcs.boxShadow !== 'none'),
+    gaugeFillGradient: Boolean(fcs?.backgroundImage && fcs.backgroundImage.includes('gradient')),
+    gaugeShine: gauge?.querySelector(':scope > *:not(i)')?.className ?? null,
+    gaugeRadius: gcs?.borderTopLeftRadius ?? null,
     memText: mem ? mem.innerText.replace(/\\s+/g, ' ').trim() : '',
   };
 }
@@ -111,8 +118,17 @@ async def check():
         fails.append(f"swap gauge fill {got['gaugeFill']!r} != {want_fill!r}")
     if got["gaugeValueNow"] != str(STATS["swap_percent"]):
         fails.append(f"aria-valuenow {got['gaugeValueNow']!r} != {STATS['swap_percent']}")
-    if got["gaugeH"] is None or not (2 <= got["gaugeH"] <= 6):
-        fails.append(f"swap gauge height {got['gaugeH']} not a slim 2-6px rule")
+    if got["gaugeH"] is None or not (5 <= got["gaugeH"] <= 7):
+        fails.append(f"swap gauge height {got['gaugeH']} not the 6px rule")
+
+    # Depth comes from the milled groove + extruded fill, NOT a white shine.
+    # The RAM gauge has a sweeping specular ::after; this one must not.
+    if got["gaugeShine"] is not None:
+        fails.append(f"swap gauge has a shine element ({got['gaugeShine']})")
+    if not got["gaugeGroove"]:
+        fails.append("swap gauge lost its inset groove (no depth)")
+    if not got["gaugeFillGradient"]:
+        fails.append("swap gauge fill is flat, expected a metal ramp")
 
     return fails
 

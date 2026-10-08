@@ -144,22 +144,37 @@ const OVERVIEW_MOTION_STYLES = `
     }
     /* Swap gets its own slim gauge rather than borrowing the RAM bar: the two
        areas fill independently, so a single shared bar would misreport one of
-       them. */
+       them. Geometry mirrors the RAM bar's milled-groove treatment so the two
+       read as one family, but it stays quiet: the RAM gauge carries the
+       specular glint, this one only gets the groove and a soft top rim. */
     .overview-motion-root .overview-swap-gauge {
       position: relative;
-      height: 4px;
+      height: 6px;
       width: 100%;
       overflow: hidden;
-      border-radius: 2px;
-      background: var(--md-sys-color-surface-container-highest);
+      border-radius: var(--md-sys-shape-corner-full, 999px);
+      background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 85%, black);
+      box-shadow:
+        inset 0 1.5px 3px rgba(0, 0, 0, 0.6),
+        0 1px 0 color-mix(in srgb, var(--md-sys-color-outline-variant) 34%, transparent);
     }
     .overview-motion-root .overview-swap-gauge > i {
       position: absolute;
       inset: 0 auto 0 0;
       display: block;
       border-radius: inherit;
-      background: var(--md-sys-color-tertiary, var(--md-sys-color-primary));
-      transition: width 220ms cubic-bezier(0.2, 0, 0, 1);
+      /* The fill carries the same 180deg extruded-metal ramp as the RAM gauge,
+         tinted toward tertiary so the two memory areas stay distinguishable. */
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--md-sys-color-tertiary) 85%, white) 0%,
+        var(--md-sys-color-tertiary) 55%,
+        color-mix(in srgb, var(--md-sys-color-tertiary) 80%, black) 100%
+      );
+      /* No white sweeping shine here: on a 6px rule that reads as a rendering
+         artefact rather than a highlight, and the swap value is secondary. */
+      box-shadow: inset 0 1px 0.5px rgb(255 255 255 / 0.28);
+      transition: width var(--m3-duration-medium2, 280ms) var(--m3-easing-emphasized, cubic-bezier(0.2, 0, 0, 1));
     }
   .overview-motion-root .m3-linear-track {
     position: relative;
