@@ -20,6 +20,9 @@ import {
 } from './features/index.js';
 import { LogsFeature } from './features/logs/index.jsx';
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
+import {
+  topCores as topCoresFor, coreCount, swapReadout,
+} from './features/overview/cores.js';
 
 export default function App() {
   const syncedModelsResource = useSyncedModels();
@@ -710,11 +713,17 @@ export default function App() {
   // legible on both the headline figure and the small sub-cells.
   const TELEMETRY_RAMP_MS = 1500;
   const smoothCpu        = useSmoothCounter(telemetry?.cpu_percent ?? 0, TELEMETRY_RAMP_MS);
-  const smoothCore0      = useSmoothCounter(telemetry?.cpu_cores?.[0] ?? 0, TELEMETRY_RAMP_MS);
-  const smoothCore1      = useSmoothCounter(telemetry?.cpu_cores?.[1] ?? 0, TELEMETRY_RAMP_MS);
   const smoothRamPercent = useSmoothCounter(telemetry?.ram_percent ?? 0, TELEMETRY_RAMP_MS);
   const smoothRamUsed    = useSmoothCounter(telemetry?.ram_used_mb ?? 0, TELEMETRY_RAMP_MS);
   const smoothSwapPercent = useSmoothCounter(telemetry?.swap_percent ?? 0, TELEMETRY_RAMP_MS);
+  // The Overview card ranks whatever cores the host actually has instead of
+  // assuming two, and only shows a swap row when a swap area is really on.
+  const topCores = useMemo(
+    () => topCoresFor(telemetry?.cpu_cores),
+    [telemetry?.cpu_cores],
+  );
+  const swap = useMemo(() => swapReadout(telemetry), [telemetry]);
+  const coreTotal = coreCount(telemetry?.cpu_cores);
 
   // 5-second graceful hover cooldown timers for Overview card animations (only runs on Overview view)
   const costHover = useHoverGraceTimer(isOverviewNavActive ? 5000 : 0);
@@ -1126,11 +1135,12 @@ export default function App() {
           costHasUsage={costHasUsage}
           costLoadState={costLoadState}
           smoothCpu={smoothCpu}
-          smoothCore0={smoothCore0}
-          smoothCore1={smoothCore1}
           smoothRamPercent={smoothRamPercent}
           smoothRamUsed={smoothRamUsed}
           smoothSwapPercent={smoothSwapPercent}
+          topCores={topCores}
+          coreTotal={coreTotal}
+          swap={swap}
           hasRealTelemetry={hasRealTelemetry}
           telemetry={telemetry}
           providersList={providersList}

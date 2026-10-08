@@ -112,6 +112,15 @@ const OVERVIEW_MOTION_STYLES = `
     gap: 4px;
     height: 8px;
   }
+  /* The CPU card showed a bare "88" above its bar while the memory card showed
+     "78.2%", so the two headlines did not read as the same kind of number and
+     the bar looked detached from the figure it belongs to. Percent units are
+     back on every headline; this only keeps the bar's optical centre aligned
+     with the digits above it. */
+  .overview-motion-root .overview-telemetry-figure {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
   .overview-motion-root .m3-linear-track {
     position: relative;
     flex: 1;
@@ -895,10 +904,12 @@ export function OverviewFeature(props = {}) {
     onRefreshStats, isRefreshing, costHover: costHoverProp, cpuHover: cpuHoverProp,
     memoryHover: memoryHoverProp, modelsHover: modelsHoverProp,
     navigate, costOverview: costOverviewProp, costHasUsage, costLoadState,
-    smoothCpu: cpuValue, smoothCore0: core0Value, smoothCore1: core1Value,
-    smoothRamPercent: ramValue, smoothRamUsed,
-    hasRealTelemetry: telemetryReady, telemetry, providersList: providersProp,
+    smoothCpu: cpuValue, topCores: coresProp, coreTotal: totalCores,
+    smoothRamPercent: ramValue, smoothRamUsed, smoothSwapPercent: swapValue,
+    swap: swapProp,
+    hasRealTelemetry: telemetryReady, telemetry: telemetryProp, providersList: providersProp,
   } = props;
+  const telemetry = telemetryProp;
   const reducedMotion = usePrefersReducedMotion();
   const motionEnabled = Boolean(isOverviewNavActive) && !reducedMotion;
   const currency = CURRENCY_OPTIONS.find((option) => option.id === currencyProp?.id) ?? CURRENCY_OPTIONS[0];
@@ -917,9 +928,13 @@ export function OverviewFeature(props = {}) {
   const modelCount = providersList.reduce((total, provider) => total + Math.max(0, finiteNumber(provider.total_models)), 0);
   const hasRealTelemetry = Boolean(telemetryReady && telemetry);
   const smoothCpu = percentage(cpuValue);
-  const smoothCore0 = percentage(core0Value);
-  const smoothCore1 = percentage(core1Value);
   const smoothRamPercent = percentage(ramValue);
+  const smoothSwapPercent = percentage(swapValue);
+  // Ranked host cores: on a 2-core box these are simply both cores, on a 7-core
+  // box they are the two busiest, and on a 1-core box it degrades to one box.
+  const topCores = (coresProp ?? []).slice(0, 2);
+  // Swap only appears when the host really has one. swapProp is null otherwise.
+  const swap = swapProp;
   const totalCost = parseFloat(String(costOverview.total_accrued ?? '').split('/')[0]);
   const hasCostTotal = Boolean(costHasUsage) && Number.isFinite(totalCost) && totalCost >= 0;
   const hasInputRate = costLoadState === 'ready'
@@ -1089,7 +1104,9 @@ export function OverviewFeature(props = {}) {
                     <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider">CPU Load (2 Cores)</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider">
+                          CPU Load{totalCores > 0 ? ` (Top ${Math.min(2, totalCores)} of ${totalCores})` : ''}
+                        </span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {motionEnabled && cpuHover.isActive ? (
                             <CpuActiveIcon load={smoothCpu} />
@@ -1100,20 +1117,24 @@ export function OverviewFeature(props = {}) {
                       </div>
                       
                       <div className="my-1">
-                        <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {hasRealTelemetry ? <>{smoothCpu}</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
+                        <div className="overview-telemetry-figure text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
+                          {hasRealTelemetry ? <>{smoothCpu}%</> : <span className="overview-pending" aria-label="Waiting for live CPU reading">—</span>}
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs ">
-                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
-                            <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 1</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore0}%</> : <span className="overview-pending">—</span>}</span>
-                          </div>
-                          <div className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
-                            <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">Core 2</span>
-                            <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">{hasRealTelemetry ? <>{smoothCore1}%</> : <span className="overview-pending">—</span>}</span>
-                          </div>
-                        </div>
+                        <div
+                                                  className={`grid gap-2 mt-2 pt-2 border-t border-[var(--md-sys-color-outline-variant)] text-xs ${
+                                                    topCores.length > 1 ? 'grid-cols-2' : 'grid-cols-1'
+                                                  }`}
+                                                >
+                                                  {topCores.map((core, i) => (
+                                                    <div key={`${core.index}-${i}`} className="bg-[var(--md-sys-color-surface-container-high)] p-2 rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                                                      <span className="text-[var(--md-sys-color-on-surface-variant)] block text-[10px]">{core.label}</span>
+                                                      <span className="text-[var(--md-sys-color-primary)] font-bold text-sm">
+                                                        {hasRealTelemetry ? <>{core.value}%</> : <span className="overview-pending">—</span>}
+                                                      </span>
+                                                    </div>
+                                                  ))}
+                                                </div>
                       </div>
                     </div>
 
@@ -1143,7 +1164,9 @@ export function OverviewFeature(props = {}) {
                     <CardSpecularSheen />
                     <div>
                       <div className="flex items-center justify-between text-[var(--md-sys-color-on-surface-variant)] mb-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider">Memory (RAM)</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider">
+                          Memory (RAM{swap ? ' & Swap' : ''})
+                        </span>
                         <div className="overview-card-icon-shell w-10 h-10 rounded-xl bg-[var(--md-sys-color-surface-container-high)] flex items-center justify-center text-[var(--md-sys-color-primary)] shadow-xs">
                           {motionEnabled && memoryHover.isActive ? (
                             <MemoryActiveIcon load={telemetry?.ram_percent ?? 0} />
@@ -1154,12 +1177,24 @@ export function OverviewFeature(props = {}) {
                       </div>
 
                       <div className="my-1">
-                        <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
+                        <div className="overview-telemetry-figure text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
                           {hasRealTelemetry ? <>{smoothRamPercent}%</> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
                         </div>
                         <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
                           {hasRealTelemetry ? <>{finiteNumber(smoothRamUsed)}M / {finiteNumber(telemetry?.ram_total_mb)}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}
                         </div>
+                        {/* Swap row only renders when the host reports a real swap
+                            area. A box with swap disabled shows RAM alone, and
+                            the header drops its "& Swap" accordingly. */}
+                        {swap && (
+                          <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
+                            <span className="inline-flex h-[16px] items-center px-1 rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-high)] text-[9px] font-bold uppercase tracking-wider align-middle">
+                              Swap
+                            </span>
+                            {swap.percent !== null ? <>{smoothSwapPercent}%</> : <span className="overview-pending">—</span>}
+                            <span className="text-[var(--md-sys-color-primary)]"> ({swap.used} / {swap.total})</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
