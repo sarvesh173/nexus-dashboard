@@ -294,3 +294,16 @@
   --default-transition-duration: var(--m3-duration-short4);
   --default-transition-timing-function: var(--m3-easing-standard);
 }
+
+/* Console log viewer tokens — carried over verbatim from the reference
+   theme so the ported component renders with its own palette instead of
+   being recoloured to match the dashboard. */
+:root {
+  --color-bg: #0d1117;
+  --color-bg-alt: #161b22;
+  --color-surface: #161b22;
+  --color-border: #30363d;
+  --color-text-main: #c9d1d9;
+  --color-text-muted: #8b949e;
+  --color-accent: #58a6ff;
+}

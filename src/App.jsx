@@ -18,9 +18,7 @@ import {
   getProviderDisplayName, getProviderLogoUrl, SUGGESTED_MODELS, EMPTY_MODELS,
   PlaygroundFeature, LiveAgentsFeature, SettingsFeature,
 } from './features/index.js';
-// Ported log viewer. The previous chunked rewrite and the original are both
-// still on disk; this flag picks which one the shell mounts.
-import { LogStream as LogsStreamFeature } from './features/logs/LogStream.jsx';
+import ConsoleLogViewer from "./features/logs/ConsoleLogViewer.tsx";
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
 import {
   topCores as topCoresFor, coreCount, swapReadout,
@@ -1253,9 +1251,7 @@ export default function App() {
           onSelectAgent={handleSelectAgent}
           onCloseAgent={() => navigate('/agents')}
         />
-        <LogsStreamFeature
-          isLogsNavActive={isLogsNavActive}
-        />
+        {isLogsNavActive && <ConsoleLogViewer />}
         <SettingsFeature
           isSettingsNavActive={isSettingsNavActive}
           activeCurrency={activeCurrency}

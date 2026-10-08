@@ -512,6 +512,90 @@ def get_hermes_status():
     return payload
 
 
+def build_console_log_entries(limit='500', level='all'):
+    """Flatten both read paths into the console viewer's entry shape.
+
+    The ported viewer expects a bare JSON array of
+    {timestamp, level, component, message} — no envelope, no wrapper object.
+    Both inputs are existing read-only readers: the Hermes log tail and the
+    call ledger. Nothing here writes.
+
+    `level` is a progressive floor, matching the viewer's "Warn+" semantics:
+    warn shows warn and everything worse.
+    """
+    try:
+        limit = max(1, min(int(limit), 2000))
+    except (TypeError, ValueError):
+        limit = 500
+
+    ranks = {'debug': 4, 'info': 3, 'warn': 2, 'error': 1, 'fatal': 0}
+    floor = ranks.get(str(level or 'all').lower(), -1)
+
+    def rank_of(name):
+        n = str(name or 'info').strip().lower()
+        if n in ('warning',):
+            n = 'warn'
+        if n == 'critical':
+            n = 'fatal'
+        if n == 'trace':
+            n = 'debug'
+        return ranks.get(n, 3)
+
+    entries = []
+
+    # Hermes side.
+    try:
+        payload = get_hermes_logs(limit=limit, source='gateway', profile=None)
+        for row in (payload.get('logs') or []):
+            entries.append({
+                'timestamp': str(row.get('time') or ''),
+                'level': str(row.get('level') or 'info'),
+                'component': str(row.get('logger') or 'gateway'),
+                'message': str(row.get('message') or ''),
+            })
+    except Exception as exc:  # noqa: BLE001
+        print(f'[console] hermes read failed: {type(exc).__name__}: {exc}', flush=True)
+
+    # Call-ledger side. The reader is optional — a host without it still gets
+    # the gateway half of the stream rather than a 500.
+    try:
+        if omniroute_logs is not None:
+            detail = omniroute_logs.read_call_logs(limit, 0)
+            for c in (detail.get('calls') or []):
+                code = c.get('status')
+                if code == 429:
+                    lvl = 'warn'
+                elif c.get('ok') is False:
+                    lvl = 'error'
+                elif isinstance(code, int) and code >= 400:
+                    lvl = 'error'
+                else:
+                    lvl = 'info'
+                bits = [f"{c.get('method') or 'POST'} {c.get('path') or ''}".strip(), c.get('model') or '']
+                entries.append({
+                    'timestamp': str(c.get('at') or ''),
+                    'level': lvl,
+                    'component': str(c.get('provider') or 'router'),
+                    'message': ' '.join(b for b in bits if b),
+                })
+    except Exception as exc:  # noqa: BLE001
+        print(f'[console] call-ledger read failed: {type(exc).__name__}: {exc}', flush=True)
+
+    if floor >= 0:
+        entries = [e for e in entries if rank_of(e['level']) <= floor]
+
+    # Newest first: the viewer auto-scrolls to the bottom, so the tail must be
+    # the last row rather than the first.
+    def sort_key(e):
+        try:
+            return (0, -time.mktime(time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')))
+        except Exception:
+            return (1, 0)
+
+    entries.sort(key=sort_key)
+    return entries[:limit]
+
+
 def get_hermes_logs(limit=HERMES_LOG_DEFAULT_LIMIT, source='gateway', profile=None):
     """Tail of a Hermes log file, parsed into display records.
 
@@ -1954,6 +2038,24 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     'count': 0,
                     'calls': [],
                 }, code=500)
+        elif self.path.startswith('/api/logs/console'):
+            # Serves the ported console log viewer, which asks for
+            # /api/logs/console?limit=500&level=<floor> and expects a bare JSON
+            # array of {timestamp, level, component, message} entries.
+            #
+            # Reads only: both underlying readers are existing read paths over
+            # log files and the call ledger. Nothing here writes, retries, or
+            # re-sends a request.
+            import urllib.parse
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            limit = qs.get('limit', ['500'])[0]
+            floor = (qs.get('level', ['all'])[0] or 'all').lower()
+            try:
+                rows = build_console_log_entries(limit, floor)
+                return self.send_json(rows)
+            except Exception as exc:  # noqa: BLE001
+                print(f'[console] log build failed: {type(exc).__name__}: {exc}', flush=True)
+                return self.send_json([], code=500)
         elif self.path.startswith('/api/hermes/logs'):
             # startswith, not ==: self.path carries the query string, so an
             # exact match 404s on the very first '?limit=' it is meant to read.

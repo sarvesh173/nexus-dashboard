@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
+@import "material-symbols/outlined.css";
 
 :root {
   --pa-ease-standard: var(--m3-easing-standard);
