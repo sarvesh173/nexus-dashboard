@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useHermesStatus } from '../../hooks/useHermes.js';
 import { DRAWER_ITEMS } from './navFlags.js';
+import { ThreeLineMark } from './BrandMark.jsx';
 
 const DRAWER_ICONS = { Activity, Boxes, Brain, Play, Coins, ScrollText, Sliders };
 
@@ -165,38 +166,12 @@ export function NavDrawer({
         onClick={() => setIsOpen(true)}
         className="hamburger-shell group relative rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center w-9 h-9"
               >
-                {/* Custom three-line mark. The lines are full-width rails rather than
-                    three centred dashes of different lengths: a real hamburger reads as
-                    a stack of rails, and equal lengths keep the fan symmetric when the
-                    group rotates on hover. Each rail is a thin gradient so it picks up
-                    a top light edge, matching the milled hardware elsewhere in the app. */}
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
+                {/* The shared three-line mark — same SVG everywhere it appears, defined once. */}
+                <ThreeLineMark
+                  size={20}
                   className="hamburger-icon"
-                >
-                  <defs>
-                    <linearGradient id="ham-rail-top" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" className="ham-metal-top" />
-                      <stop offset="100%" className="ham-metal-top" stopOpacity="0.72" />
-                    </linearGradient>
-                    <linearGradient id="ham-rail-mid" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" className="ham-metal-mid" />
-                      <stop offset="100%" className="ham-metal-mid" stopOpacity="0.72" />
-                    </linearGradient>
-                    <linearGradient id="ham-rail-bot" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" className="ham-metal-bot" />
-                      <stop offset="100%" className="ham-metal-bot" stopOpacity="0.72" />
-                    </linearGradient>
-                  </defs>
-                  <rect className="ham-line ham-line-top" x="3" y="5.6" width="14" height="1.9" rx="0.95" fill="url(#ham-rail-top)" />
-                  <rect className="ham-line ham-line-mid" x="3" y="9.05" width="14" height="1.9" rx="0.95" fill="url(#ham-rail-mid)" />
-                  <rect className="ham-line ham-line-bot" x="3" y="12.5" width="14" height="1.9" rx="0.95" fill="url(#ham-rail-bot)" />
-                </svg>
+                  lineClassName="ham-line"
+                />
               </button>
 
                     {/* Backdrop + panel are portalled to <body>.
@@ -237,9 +212,6 @@ export function NavDrawer({
               <h2 className="text-sm font-bold text-[var(--md-sys-color-on-surface)] tracking-tight">
                 Nexus Control
               </h2>
-              <p className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
-                v2.0 M3 System
-              </p>
             </div>
           </div>
           {/* Close button with subtle tactile opacity */}
@@ -251,17 +223,6 @@ export function NavDrawer({
           >
             <X size={18} className="transition-opacity duration-200" />
           </button>
-        </div>
-
-        {/* Quick System Telemetry / Diagnostic Badge */}
-        <div className="px-3 py-2 border-b border-[var(--md-sys-color-outline-variant)]/30 bg-[var(--md-sys-color-surface-container)]/50">
-          <div className="flex items-center justify-between text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)] px-1">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>CORE ONLINE</span>
-            </span>
-            <span className="text-zinc-500">60 FPS • 56MB</span>
-          </div>
         </div>
 
         {/* Scrollable Navigation Views with Kinetic Scroll & Staggered Transitions */}
