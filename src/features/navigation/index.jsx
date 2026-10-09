@@ -116,6 +116,17 @@ function NavigationIcon({ tab, iconStyle, currency }) {
   return <span className={`nav-${stem}-icon nav-motion-icon`} aria-hidden="true">
     <span className={`nav-${stem}-ring nav-motion-ring`}><span className="nav-motion-echo" /></span>
     {tab === 'overview' && [0, 1, 2, 3].map((cell) => <span key={cell} data-cell={cell} className="nav-overview-cell" />)}
+    {/* The three-line mark, drawn as its own rails so the nav pill can animate
+        it the way the drawer trigger does. Three spans rather than one glyph:
+        the rails have to move independently to fan open, which a single path
+        cannot do. */}
+    {tab === 'overview' && [0, 1, 2].map((line) => (
+      <span
+        key={line}
+        data-line={line}
+        className={`nav-overview-rail ham-line ham-line-${['top', 'mid', 'bot'][line]}`}
+      />
+    ))}
     {tab === 'agents' && <>
       <span className="nav-agent-pulse" />
       <span className="nav-agent-spark nav-agent-spark-a" />
@@ -216,6 +227,14 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-settings-icon > svg {
     position: relative;
     z-index: 2;
+  }
+
+  /* The Overview pill carries the three-line mark, drawn in three rails above.
+     Its route glyph is kept in the tree - it is what the aria-label and the
+     route logic read - but not painted, or the two marks overlap into mush
+     inside a 16px box. */
+  .nav-overview-icon > .nav-icon-glyph {
+    opacity: 0;
   }
 
   .nav-model-button:hover .nav-model-icon,
@@ -425,7 +444,316 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-overview-cell[data-cell="1"] { top: -1px; right: -1px; }
   .nav-overview-cell[data-cell="2"] { bottom: -1px; left: -1px; }
   .nav-overview-cell[data-cell="3"] { bottom: -1px; right: -1px; }
+
+  /* The Overview pill carries the three-line mark.
+
+     The rail geometry and its hover fan are shared with the drawer trigger
+     through the ham-* rules in NavDrawer: same rails, same spring, same
+     fan, one definition. What differs is size - the pill's mark is 12px
+     wide inside a 16px box and the trigger's is 14px in a 20px one - so
+     only the box is restated here, and the motion is inherited rather than
+     re-tuned. A second copy of these transforms is how the two marks drift
+     out of sync and start moving differently on the same screen. */
+  .nav-overview-rail {
+    position: absolute;
+    left: 2px;
+    width: 12px;
+    height: 1.4px;
+    border-radius: 0.7px;
+    background: currentColor;
+    z-index: 2;
+    transform-origin: center;
+    transition: transform 300ms cubic-bezier(0.22, 0.68, 0.24, 1);
+  }
+  .nav-overview-rail[data-line="0"] { top: 4.9px; }
+  .nav-overview-rail[data-line="1"] { top: 7.3px; }
+  .nav-overview-rail[data-line="2"] { top: 9.7px; }
+  .nav-overview-button:hover .nav-overview-rail[data-line="0"],
+  .nav-overview-button:focus-visible .nav-overview-rail[data-line="0"] {
+    transform: translateY(-1.2px) rotate(-8deg);
+  }
+  .nav-overview-button:hover .nav-overview-rail[data-line="2"],
+  .nav-overview-button:focus-visible .nav-overview-rail[data-line="2"] {
+    transform: translateY(1.2px) rotate(8deg);
+  }
+  .nav-overview-button:hover .nav-overview-rail[data-line="1"],
+  .nav-overview-button:focus-visible .nav-overview-rail[data-line="1"] {
+    transform: scaleX(0.76);
+  }
   .nav-overview-icon,
+  .nav-cost-icon,
+  .nav-settings-icon,
+  .nav-model-icon,
+  .nav-agent-icon {
+    transition: transform 460ms cubic-bezier(0.22, 1.4, 0.36, 1), filter 240ms ease;
+  }
+
+  .nav-model-icon {
+    perspective: 520px;
+  }
+
+  .nav-model-icon::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 6px;
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent),
+      transparent 62%
+    );
+    opacity: 0;
+    transform: scale(0.72);
+    transition: opacity 260ms ease, transform 380ms cubic-bezier(0.22, 1.4, 0.36, 1);
+    pointer-events: none;
+  }
+
+  /* The moving highlight is deliberately brief: each hover feels like a
+     polished object catching light instead of a constantly flashing icon. */
+  .nav-model-icon::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    top: -3px;
+    left: -7px;
+    width: 4px;
+    height: 22px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.65),
+      transparent
+    );
+    transform: translateX(-10px) rotate(25deg);
+  }
+
+  .nav-overview-icon > svg,
+  .nav-model-icon > svg,
+  .nav-agent-icon > svg,
+  .nav-cost-icon > svg,
+  .nav-settings-icon > svg {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* The Overview pill carries the three-line mark, drawn in three rails above.
+     Its route glyph is kept in the tree - it is what the aria-label and the
+     route logic read - but not painted, or the two marks overlap into mush
+     inside a 16px box. */
+  .nav-overview-icon > .nav-icon-glyph {
+    opacity: 0;
+  }
+
+  .nav-model-button:hover .nav-model-icon,
+  .nav-model-button:focus-visible .nav-model-icon,
+  .nav-model-button.nav-model-active:hover .nav-model-icon,
+  .nav-model-button.nav-model-active:focus-visible .nav-model-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(18deg) rotateY(-22deg)
+      translate3d(0, -1px, 3px) scale(1.12);
+  }
+
+  .nav-model-button:hover .nav-model-icon::before,
+  .nav-model-button:focus-visible .nav-model-icon::before,
+  .nav-model-button.nav-model-active .nav-model-icon::before {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  .nav-model-button:hover .nav-model-icon::after,
+  .nav-model-button:focus-visible .nav-model-icon::after,
+  .nav-model-button.nav-model-active .nav-model-icon::after {
+    animation: nav-model-metal-sheen 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .nav-model-button.nav-model-active .nav-model-icon {
+    transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+      translate3d(0, -0.5px, 2px) scale(1.06);
+  }
+
+  .nav-model-button:active .nav-model-icon,
+  .nav-model-button.nav-model-active:active .nav-model-icon {
+    animation: nav-model-spring 560ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  @keyframes nav-model-metal-sheen {
+    0% { opacity: 0; transform: translateX(-10px) rotate(25deg); }
+    18% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateX(30px) rotate(25deg); }
+  }
+
+  @keyframes nav-model-spring {
+    0% {
+      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+        translate3d(0, -0.5px, 2px) scale(1.06);
+    }
+    22% {
+      transform: perspective(520px) rotateX(-18deg) rotateY(24deg)
+        translate3d(0, 2px, -3px) scale(0.86, 0.88);
+    }
+    52% {
+      transform: perspective(520px) rotateX(22deg) rotateY(-27deg)
+        translate3d(0, -2px, 5px) scale(1.16);
+    }
+    76% {
+      transform: perspective(520px) rotateX(8deg) rotateY(-10deg)
+        translate3d(0, 0.5px, 1px) scale(1.02);
+    }
+    100% {
+      transform: perspective(520px) rotateX(12deg) rotateY(-14deg)
+        translate3d(0, -0.5px, 2px) scale(1.06);
+    }
+  }
+
+  .nav-agent-icon {
+    --nav-agent-glow: var(--md-sys-color-primary);
+  }
+
+  /* Layered rings make the Bot feel like it is receiving a small neural
+     signal, while the soft aura keeps the effect harmonious with M3 color. */
+  .nav-agent-icon::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 85%, var(--md-sys-color-surface));
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.52);
+    pointer-events: none;
+  }
+
+  .nav-agent-icon::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--nav-agent-glow) 58%, transparent),
+      transparent 70%
+    );
+    opacity: 0;
+    filter: blur(3px);
+    pointer-events: none;
+  }
+
+  .nav-agent-pulse {
+    position: absolute;
+    inset: 1px;
+    z-index: 1;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 88%, var(--md-sys-color-surface));
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.68);
+    pointer-events: none;
+  }
+
+  .nav-agent-spark {
+    position: absolute;
+    z-index: 4;
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--nav-agent-glow) 82%, var(--md-sys-color-surface));
+    box-shadow: 0 0 5px 1px var(--nav-agent-glow);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav-agent-spark::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 1px solid color-mix(in srgb, var(--nav-agent-glow) 78%, var(--md-sys-color-surface));
+    transform: rotate(45deg);
+  }
+
+  .nav-agent-spark-a { top: -1px; right: 0; }
+  .nav-agent-spark-b { bottom: 0; left: -1px; }
+
+  .nav-agent-button:hover .nav-agent-icon,
+  .nav-agent-button:focus-visible .nav-agent-icon,
+  .nav-agent-button.nav-agent-active .nav-agent-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 64%, transparent));
+    transform: translateY(-0.5px) scale(1.08);
+  }
+
+  .nav-agent-button:hover .nav-agent-icon::before,
+  .nav-agent-button:focus-visible .nav-agent-icon::before,
+  .nav-agent-button:hover .nav-agent-pulse,
+  .nav-agent-button:focus-visible .nav-agent-pulse {
+    animation: nav-agent-neural-pulse 1.65s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-icon::after,
+  .nav-agent-button:focus-visible .nav-agent-icon::after {
+    animation: nav-agent-aura 1.65s ease-in-out infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-spark-a,
+  .nav-agent-button:focus-visible .nav-agent-spark-a {
+    animation: nav-agent-spark-a 1.45s 120ms ease-in-out infinite;
+  }
+
+  .nav-agent-button:hover .nav-agent-spark-b,
+  .nav-agent-button:focus-visible .nav-agent-spark-b {
+    animation: nav-agent-spark-b 1.45s 480ms ease-in-out infinite;
+  }
+
+  .nav-agent-button:active .nav-agent-icon,
+  .nav-agent-button.nav-agent-active:active .nav-agent-icon {
+    transform: scale(0.91) rotate(5deg);
+  }
+
+  @keyframes nav-agent-neural-pulse {
+    0% { opacity: 0; transform: scale(0.52); box-shadow: 0 0 0 0 transparent; }
+    28% { opacity: 0.95; }
+    72% { opacity: 0.45; }
+    100% { opacity: 0; transform: scale(1.62); box-shadow: 0 0 0 3px transparent; }
+  }
+
+  @keyframes nav-agent-aura {
+    0%, 100% { opacity: 0.18; transform: scale(0.82); }
+    50% { opacity: 0.72; transform: scale(1.12); }
+  }
+
+  @keyframes nav-agent-spark-a {
+    0%, 100% { opacity: 0; transform: translate(-2px, 2px) scale(0.35) rotate(0deg); }
+    35% { opacity: 1; transform: translate(0, 0) scale(1) rotate(45deg); }
+    70% { opacity: 0.15; transform: translate(2px, -2px) scale(0.6) rotate(90deg); }
+  }
+
+  @keyframes nav-agent-spark-b {
+    0%, 100% { opacity: 0; transform: translate(2px, -1px) scale(0.35) rotate(0deg); }
+    35% { opacity: 0.18; transform: translate(0, 0) scale(0.6) rotate(45deg); }
+    70% { opacity: 1; transform: translate(-2px, 1px) scale(1) rotate(90deg); }
+  }
+
+  /* Dashboard tiles shift cleanly on hover without showing visual clutter at rest */
+  .nav-overview-cell {
+    position: absolute;
+    z-index: 1;
+    width: 4px;
+    height: 4px;
+    border: 1px solid var(--md-sys-color-primary);
+    border-radius: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  /* The four quadrant cells sit at the icon's corners, so they were positioned
+     against the 16px glyph box while the ripple ring expands to 22px around
+     it. The pulse therefore travelled inside the ring while the ring itself
+     expanded, and the two read as separate effects that never landed together.
+     Offsetting each cell out by the ring's 3px inset puts them on the ring's
+     corners, so one effect moves as one thing. */
+  .nav-overview-cell[data-cell="0"] { top: -1px; left: -1px; }
+  .nav-overview-cell[data-cell="1"] { top: -1px; right: -1px; }
+  .nav-overview-cell[data-cell="2"] { bottom: -1px; left: -1px; }
+  .nav-overview-cell[data-cell="3"] { bottom: -1px; right: -1px; }
+
   .nav-cost-icon,
   .nav-settings-icon {
     perspective: 520px;
