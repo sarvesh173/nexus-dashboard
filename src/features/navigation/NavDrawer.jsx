@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Activity, Boxes, Brain, Coins, Play, ScrollText, Sliders, X,
-} from 'lucide-react';
+  DrawerOverviewGlyph, DrawerModelsGlyph, DrawerAgentsGlyph, DrawerPlaygroundGlyph,
+  DrawerCostGlyph, DrawerLogsGlyph, DrawerSettingsGlyph, CloseGlyph,
+} from './RouteGlyphs.jsx';
 import { useHermesStatus } from '../../hooks/useHermes.js';
 import { DRAWER_ITEMS, PINNED_DRAWER_ITEM } from './navFlags.js';
 import { ThreeLineMark } from './BrandMark.jsx';
 
-const DRAWER_ICONS = { Activity, Boxes, Brain, Play, Coins, ScrollText, Sliders };
+// Keyed by the flag names in navFlags rather than by component, so renaming an
+// icon there cannot silently leave this map pointing at nothing.
+const DRAWER_ICONS = {
+  Activity: DrawerOverviewGlyph,
+  Boxes: DrawerModelsGlyph,
+  Brain: DrawerAgentsGlyph,
+  Play: DrawerPlaygroundGlyph,
+  Coins: DrawerCostGlyph,
+  ScrollText: DrawerLogsGlyph,
+  Sliders: DrawerSettingsGlyph,
+};
 
 /**
  * Three-line trigger + drawer row motion.
@@ -220,7 +231,7 @@ export function NavDrawer({
             aria-label="Close Navigation Drawer"
             className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 cursor-pointer active:scale-90"
           >
-            <X size={18} className="transition-opacity duration-200" />
+            <CloseGlyph size={18} className="transition-opacity duration-200" />
           </button>
         </div>
 
@@ -302,7 +313,7 @@ export function NavDrawer({
                 : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
             }`}
           >
-            <Sliders size={16} className="transition-colors duration-200" />
+            <DrawerSettingsGlyph size={16} className="transition-colors duration-200" />
             <span className="flex-1 text-left">{PINNED_DRAWER_ITEM.label}</span>
             {currentPath === PINNED_DRAWER_ITEM.path && (
               <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_white]" />
