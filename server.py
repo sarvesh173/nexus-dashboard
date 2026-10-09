@@ -1,13 +1,27 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import psutil
 import re
 import subprocess
 import os
 import sys
 import time
-import yaml
-import requests
+import urllib.error
+import urllib.request
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
+try:
+    import requests
+except ImportError:
+    requests = None
 from paths import (
     hermes_config_path,
     hermes_env_path,
@@ -222,18 +236,47 @@ def get_cost_overview():
         'usage_source': _cost_ledger['last_usage_source'],
     }
 
+def _http_get_json(url, headers=None, timeout=10):
+    req = urllib.request.Request(url, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                return resp.status, json.loads(resp.read().decode('utf-8'))
+            return resp.status, None
+    except urllib.error.HTTPError as err:
+        return err.code, None
+    except Exception:
+        return 0, None
+
+
 def get_telemetry():
     global _cached_data, _last_poll_time
     now = time.time()
     if _cached_data is not None and (now - _last_poll_time) < CACHE_TTL:
         return _cached_data
 
-    mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    per_cpu = psutil.cpu_percent(interval=None, percpu=True)
-    cpu_pct = psutil.cpu_percent(interval=None)
-    disk = psutil.disk_usage('/')
-    
+    if psutil is not None:
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        per_cpu = psutil.cpu_percent(interval=None, percpu=True)
+        cpu_pct = psutil.cpu_percent(interval=None)
+        disk = psutil.disk_usage('/')
+        ram_total = round(mem.total / (1024 * 1024))
+        ram_used = round(mem.used / (1024 * 1024))
+        ram_free = round(mem.available / (1024 * 1024))
+        ram_pct = round(mem.percent, 1)
+        swap_total = round(swap.total / (1024 * 1024))
+        swap_used = round(swap.used / (1024 * 1024))
+        swap_free = round(swap.free / (1024 * 1024))
+        swap_pct = round(swap.percent, 1)
+        cpu_p = round(cpu_pct, 1)
+        cores = per_cpu if len(per_cpu) >= 2 else [cpu_p, cpu_p]
+        disk_pct = round(disk.percent, 1)
+    else:
+        ram_total = ram_used = ram_free = swap_total = swap_used = swap_free = 0
+        ram_pct = swap_pct = cpu_p = disk_pct = 0.0
+        cores = [0.0, 0.0]
+
     # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
     # preview server (a different process, ~45 MB), so querying it reported a
     # plausible-looking number for the wrong process.
@@ -252,19 +295,19 @@ def get_telemetry():
         if val.isdigit():
             nexus_mem_mb = round(int(val) / (1024 * 1024), 1)
             break
-    
+
     _cached_data = {
-        'ram_total_mb': round(mem.total / (1024 * 1024)),
-        'ram_used_mb': round(mem.used / (1024 * 1024)),
-        'ram_free_mb': round(mem.available / (1024 * 1024)),
-        'ram_percent': round(mem.percent, 1),
-        'swap_total_mb': round(swap.total / (1024 * 1024)),
-        'swap_used_mb': round(swap.used / (1024 * 1024)),
-        'swap_free_mb': round(swap.free / (1024 * 1024)),
-        'swap_percent': round(swap.percent, 1),
-        'cpu_percent': round(cpu_pct, 1),
-        'cpu_cores': per_cpu if len(per_cpu) >= 2 else [round(cpu_pct, 1), round(cpu_pct, 1)],
-        'disk_percent': round(disk.percent, 1),
+        'ram_total_mb': ram_total,
+        'ram_used_mb': ram_used,
+        'ram_free_mb': ram_free,
+        'ram_percent': ram_pct,
+        'swap_total_mb': swap_total,
+        'swap_used_mb': swap_used,
+        'swap_free_mb': swap_free,
+        'swap_percent': swap_pct,
+        'cpu_percent': cpu_p,
+        'cpu_cores': cores,
+        'disk_percent': disk_pct,
         'nexus_mem_mb': nexus_mem_mb
     }
     _last_poll_time = now
@@ -382,10 +425,13 @@ def _hermes_active_model():
         # model that may well exist; this path is cached like the rest, so the
         # expensive fallback can only run on the slow path.
         try:
-            with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
-                cfg = yaml.safe_load(fh) or {}
-            raw = cfg.get('model') or {}
-            model = {k: v for k, v in raw.items() if not isinstance(v, (dict, list))}
+            if yaml is not None:
+                with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
+                    cfg = yaml.safe_load(fh) or {}
+                raw = cfg.get('model') or {}
+                model = {k: v for k, v in raw.items() if not isinstance(v, (dict, list))}
+            else:
+                model = {}
         except Exception as exc:  # noqa: BLE001 - reported, never raised
             print(f'[hermes] model config read failed: {type(exc).__name__}: {exc}', flush=True)
             model = {}
@@ -472,20 +518,27 @@ def get_hermes_status():
     uptime_sec = None
     process = None
     if isinstance(pid, int):
-        try:
-            proc = psutil.Process(pid)
-            proc.create_time()          # raises if the pid was recycled
-            alive = proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE
-            if alive:
-                uptime_sec = max(0, int(now - proc.create_time()))
-                with proc.oneshot():
-                    process = {'name': proc.name(), 'status': proc.status()}
-        except psutil.NoSuchProcess:
-            alive = False
-        except psutil.AccessDenied:
-            # The pid exists but is not ours to inspect. Reporting it dead
-            # would be a lie, so it stays alive with an unknown uptime.
-            alive = True
+        if psutil is not None:
+            try:
+                proc = psutil.Process(pid)
+                proc.create_time()          # raises if the pid was recycled
+                alive = proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE
+                if alive:
+                    uptime_sec = max(0, int(now - proc.create_time()))
+                    with proc.oneshot():
+                        process = {'name': proc.name(), 'status': proc.status()}
+            except psutil.NoSuchProcess:
+                alive = False
+            except psutil.AccessDenied:
+                # The pid exists but is not ours to inspect. Reporting it dead
+                # would be a lie, so it stays alive with an unknown uptime.
+                alive = True
+        else:
+            try:
+                os.kill(pid, 0)
+                alive = True
+            except OSError:
+                alive = False
 
     payload = {
         'ok': True,
@@ -871,8 +924,11 @@ def get_hermes_config_providers():
 
     config_path = hermes_config_path()
     try:
-        with open(config_path, 'r') as f:
-            cfg = yaml.safe_load(f)
+        if yaml is not None:
+            with open(config_path, 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+        else:
+            cfg = {}
     except Exception as e:
         cfg = {}
 
@@ -894,9 +950,14 @@ def get_hermes_config_providers():
         # Fetch live models from NVIDIA API
         try:
             headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
-            resp = requests.get(f'{base_url}/models', headers=headers, timeout=8)
-            if resp.status_code == 200:
-                data = resp.json().get('data', [])
+            if requests is not None:
+                resp = requests.get(f'{base_url}/models', headers=headers, timeout=8)
+                code = resp.status_code
+                data = resp.json().get('data', []) if code == 200 else []
+            else:
+                code, res_json = _http_get_json(f'{base_url}/models', headers=headers, timeout=8)
+                data = (res_json or {}).get('data', []) if code == 200 else []
+            if code == 200:
                 for item in data:
                     mid = item.get('id', '')
                     mname = mid.split('/')[-1].replace('-', ' ').title() if '/' in mid else mid
@@ -1359,8 +1420,11 @@ def _logo_for(pid):
 def get_all_config_providers():
     """Every provider in the Hermes config (routers included, marked as such)."""
     try:
-        with open(hermes_config_path(), 'r') as f:
-            cfg = yaml.safe_load(f) or {}
+        if yaml is not None:
+            with open(hermes_config_path(), 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+        else:
+            cfg = {}
     except Exception:
         cfg = {}
 
@@ -1556,9 +1620,12 @@ def config_provider_map():
     if _cfg_cache['map'] is not None and _t.time() - _cfg_cache['at'] < 60:
         return _cfg_cache['map']
     try:
-        with open(hermes_config_path(), 'r') as f:
-            cfg = yaml.safe_load(f) or {}
-        pm = cfg.get('providers', {}) or {}
+        if yaml is not None:
+            with open(hermes_config_path(), 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+            pm = cfg.get('providers', {}) or {}
+        else:
+            pm = {}
     except Exception:
         pm = {}
     _cfg_cache.update({'map': pm, 'at': _t.time()})
@@ -1715,11 +1782,41 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
                 start = time.time()
                 try:
-                    res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
+                    if requests is not None:
+                        res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
+                        status_code = res.status_code
+                        res_text = res.text
+                        try:
+                            res_json = res.json()
+                        except Exception:
+                            res_json = None
+                    else:
+                        req_obj = urllib.request.Request(
+                            gw_url,
+                            data=json.dumps(payload).encode('utf-8'),
+                            headers={**headers, 'Content-Type': 'application/json'},
+                            method='POST'
+                        )
+                        try:
+                            with urllib.request.urlopen(req_obj, timeout=12) as resp:
+                                status_code = resp.status
+                                res_text = resp.read().decode('utf-8', errors='replace')
+                                try:
+                                    res_json = json.loads(res_text)
+                                except Exception:
+                                    res_json = None
+                        except urllib.error.HTTPError as err:
+                            status_code = err.code
+                            res_text = err.read().decode('utf-8', errors='replace')
+                            try:
+                                res_json = json.loads(res_text)
+                            except Exception:
+                                res_json = None
+
                     latency = int((time.time() - start) * 1000)
 
-                    if res.status_code == 200:
-                        data = res.json()
+                    if status_code == 200:
+                        data = res_json or {}
                         choices = data.get('choices', [])
                         msg = choices[0].get('message', {}) if choices else {}
                         reply = msg.get('content') or msg.get('reasoning_content') or msg.get('reasoning') or 'Model responded successfully'
@@ -1742,28 +1839,25 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                         })
                     else:
                         err_text = ''
-                        try:
-                            err_data = res.json()
-                            if isinstance(err_data, dict):
-                                # Some gateways nest the message, some put a bare
-                                # string under 'error'. Both shapes are real.
-                                detail = err_data.get('error')
-                                err_text = (
-                                    detail.get('message', '') if isinstance(detail, dict)
-                                    else detail if isinstance(detail, str)
-                                    else ''
-                                ) or str(err_data)
-                            else:
-                                err_text = str(err_data)
-                        except Exception:  # noqa: BLE001 - non-JSON error body
-                            err_text = res.text
+                        err_data = res_json
+                        if isinstance(err_data, dict):
+                            detail = err_data.get('error')
+                            err_text = (
+                                detail.get('message', '') if isinstance(detail, dict)
+                                else detail if isinstance(detail, str)
+                                else ''
+                            ) or str(err_data)
+                        elif err_data is not None:
+                            err_text = str(err_data)
+                        else:
+                            err_text = res_text
                         return self.send_json({
                             'ok': False,
-                            'status': res.status_code,
+                            'status': status_code,
                             'latency_ms': latency,
-                            'error': err_text[:200] or f'HTTP {res.status_code}'
+                            'error': err_text[:200] or f'HTTP {status_code}'
                         })
-                except requests.exceptions.Timeout:
+                except (TimeoutError, urllib.error.URLError, getattr(getattr(requests, 'exceptions', None), 'Timeout', TimeoutError)):
                     latency = int((time.time() - start) * 1000)
                     return self.send_json({
                         'ok': False,
@@ -1903,9 +1997,14 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             if model_id:
                 try:
                     clean_id = model_id.split('/')[-1].lower()
-                    req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
-                    if req.status_code == 200:
-                        or_data = req.json().get('data', [])
+                    if requests is not None:
+                        req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
+                        code = req.status_code
+                        or_data = req.json().get('data', []) if code == 200 else []
+                    else:
+                        code, res_json = _http_get_json("https://openrouter.ai/api/v1/models", timeout=3)
+                        or_data = (res_json or {}).get('data', []) if code == 200 else []
+                    if code == 200:
                         for item in or_data:
                             i_id = item.get('id', '').lower()
                             if i_id == model_id.lower() or i_id.endswith('/' + clean_id):

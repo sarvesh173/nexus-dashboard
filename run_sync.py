@@ -13,6 +13,8 @@ import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.request
 
 from paths import REPO_DIR, hermes_config_path
 
@@ -24,15 +26,23 @@ BASE = 'https://integrate.api.nvidia.com/v1'
 
 def fetch_specs():
     """(model_id, category) straight from the live NVIDIA catalog."""
-    import yaml
-    import requests
-
     key = model_health._api_key()
     if not key:
         raise SystemExit('no NVIDIA key found in Hermes config')
 
-    with open(hermes_config_path()) as fh:
-        cfg = yaml.safe_load(fh) or {}
+    try:
+        import yaml
+        with open(hermes_config_path()) as fh:
+            cfg = yaml.safe_load(fh) or {}
+    except ImportError:
+        try:
+            with open(hermes_config_path()) as fh:
+                cfg = {}
+        except Exception:
+            cfg = {}
+    except Exception:
+        cfg = {}
+
     nv = (cfg.get('providers') or {}).get('nvidia') or {}
     base = nv.get('base_url') or BASE
 
@@ -56,9 +66,21 @@ def fetch_specs():
               'categorisation'.format(type(exc).__name__))
 
     if not specs:
-        r = requests.get(base.rstrip('/') + '/models', timeout=20,
-                         headers={'Authorization': 'Bearer {key}'.format(key=key)})
-        for m in r.json().get('data', []):
+        headers = {'Authorization': 'Bearer {key}'.format(key=key)}
+        url = base.rstrip('/') + '/models'
+        try:
+            import requests
+            r = requests.get(url, timeout=20, headers=headers)
+            models_data = r.json().get('data', [])
+        except (ImportError, Exception):
+            req = urllib.request.Request(url, headers=headers)
+            try:
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    models_data = json.loads(resp.read().decode('utf-8')).get('data', [])
+            except Exception:
+                models_data = []
+
+        for m in models_data:
             mid = m.get('id', '').lower()
             cat = 'text'
             if any(k in mid for k in ('embed', 'retriever')):
