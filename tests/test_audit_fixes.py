@@ -311,6 +311,27 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
                 self.fail(f"run_sync.fetch_specs raised NameError: {exc}")
 
 
+class TestFailSoftOptionalImports(unittest.TestCase):
+    """BUG: Unhandled missing imports (psutil, requests, yaml) crashed server and health tools.
+
+    Standard Python environments without psutil, requests or yaml must still
+    be able to import server and model_health without ModuleNotFoundError.
+    """
+
+    def test_server_and_health_importable_without_psutil(self):
+        from unittest.mock import patch
+
+        with patch("server.psutil", None):
+            import server
+
+            telemetry = server.get_telemetry()
+            self.assertIn("ram_percent", telemetry)
+            self.assertIn("cpu_percent", telemetry)
+
+            status = server.get_hermes_status()
+            self.assertTrue(status.get("ok"))
+
+
 class TestMetaCountsAgreeWithRows(unittest.TestCase):
     """The counts are what every consumer quotes, so they must be self-consistent."""
 
