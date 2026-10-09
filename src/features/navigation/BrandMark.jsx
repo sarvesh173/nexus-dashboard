@@ -56,9 +56,9 @@ export function ThreeLineMark({
           <stop offset="100%" className="ham-metal-bot" stopOpacity="0.72" />
         </linearGradient>
       </defs>
-      <rect className={`${lineClassName} ham-line-top`} x="3" y="5.6" width="14" height="1.9" rx="0.95" fill={`url(#${topId})`} />
-      <rect className={`${lineClassName} ham-line-mid`} x="3" y="9.05" width="14" height="1.9" rx="0.95" fill={`url(#${midId})`} />
-      <rect className={`${lineClassName} ham-line-bot`} x="3" y="12.5" width="14" height="1.9" rx="0.95" fill={`url(#${botId})`} />
+      <rect className={`${lineClassName} ham-line-top`} x="2.4" y="5.6" width="15.2" height="1.9" rx="0.35" fill={`url(#${topId})`} />
+      <rect className={`${lineClassName} ham-line-mid`} x="3.8" y="9.05" width="12.4" height="1.9" rx="0.35" fill={`url(#${midId})`} />
+      <rect className={`${lineClassName} ham-line-bot`} x="2.4" y="12.5" width="15.2" height="1.9" rx="0.35" fill={`url(#${botId})`} />
     </svg>
   );
 }

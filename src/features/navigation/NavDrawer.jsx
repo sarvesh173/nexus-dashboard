@@ -41,10 +41,38 @@ const DRAWER_STYLES = `
     inset 0 -1px 1px rgba(0, 0, 0, 0.35);
 }
 .hamburger-shell:hover,
-.hamburger-shell:focus-visible {
+.hamburger-shell:focus-visible,
+.hamburger-shell.is-open {
   --ham-metal-top: var(--md-sys-color-primary);
   --ham-metal-mid: var(--md-sys-color-primary);
   --ham-metal-bot: var(--md-sys-color-primary);
+}
+/* Hover: the rails gain a travelling highlight.
+
+   The fan was already there; what it lacked was any sign the mark was alive
+   between the rails. A light sweep runs across the group once per hover,
+   left to right, and the machine-metal gradient is what carries it — the
+   rails are filled from a gradient, so shifting the gradient's spread moves
+   the light without touching geometry. That keeps the motion on the material
+   rather than on the shape, which is what stops it reading as a glitch. */
+.hamburger-shell:hover .ham-line-top,
+.hamburger-shell:hover .ham-line-mid,
+.hamburger-shell:hover .ham-line-bot,
+.hamburger-shell:focus-visible .ham-line-top,
+.hamburger-shell:focus-visible .ham-line-mid,
+.hamburger-shell:focus-visible .ham-line-bot {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent));
+}
+/* The sweep: a quick widening of the top-lit edge, brightest at the start of
+   the travel. Short enough to read as a glint rather than a pulse. */
+@keyframes ham-metal-sweep {
+  0%   { stop-opacity: 0.72; }
+  35%  { stop-opacity: 1; }
+  100% { stop-opacity: 0.72; }
+}
+.hamburger-shell:hover .ham-line-mid,
+.hamburger-shell:focus-visible .ham-line-mid {
+  animation: ham-metal-sweep 520ms ease-out;
 }
 .hamburger-shell .ham-metal-top { stop-color: var(--ham-metal-top); }
 .hamburger-shell .ham-metal-mid { stop-color: var(--ham-metal-mid); }
@@ -93,6 +121,36 @@ const DRAWER_STYLES = `
 .hamburger-shell:active .ham-line-bot { transform: translateY(-0.95px) rotate(0deg); }
 .hamburger-shell:active .ham-line-mid { transform: scaleX(1); }
 
+/* Drawer open: the three rails fold into an X.
+
+   Placed after the hover rules on purpose. The trigger keeps focus after the
+   click that opens the drawer, so :focus-visible matches too, and whichever
+   rule wins the cascade is the one that decides whether the button reads as
+   a menu or as a close. Open has to win, or the button offers the opposite of
+   what clicking it does.
+
+   The travel is set from the mark's own geometry rather than picked to look
+   right: the outer rails sit at y=5.6 and y=12.5 in a 20-unit box, so meeting
+   at the middle is a 3.45px move each way. The middle rail retracts rather
+   than travelling, because a 12.4-unit rail cannot hide inside a 15.2-unit
+   crossing without leaving a stub through it. */
+.hamburger-shell.is-open .ham-line-top,
+.hamburger-shell.is-open:focus-visible .ham-line-top {
+  transform: translateY(3.45px) rotate(45deg);
+}
+.hamburger-shell.is-open .ham-line-bot,
+.hamburger-shell.is-open:focus-visible .ham-line-bot {
+  transform: translateY(-3.45px) rotate(-45deg);
+}
+.hamburger-shell.is-open .ham-line-mid,
+.hamburger-shell.is-open:focus-visible .ham-line-mid {
+  transform: scaleX(0);
+}
+/* The sweep must not run while the mark is an X: animating a stop on a rail
+   that has been scaled to nothing is motion on nothing. */
+.hamburger-shell.is-open .ham-line-mid {
+  animation: none;
+}
 /* Drawer rows: a real entrance. The old markup set an animationDelay but no
    animation, so the stagger never actually played. */
 @keyframes drawer-row-in {
@@ -173,8 +231,13 @@ export function NavDrawer({
       <button
         type="button"
         aria-label="Open Navigation Drawer"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(true)}
-        className="hamburger-shell group relative rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center w-9 h-9"
+        className={`hamburger-shell group relative rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center w-9 h-9 ${
+          // Once open, the trigger reads as a close. aria-expanded carries the
+          // state for anything assistive; the class carries it for the CSS.
+          isOpen ? 'is-open border-[var(--md-sys-color-primary)]' : ''
+        }`}
               >
                 {/* The shared three-line mark — same SVG everywhere it appears, defined once. */}
                 <ThreeLineMark
