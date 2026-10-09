@@ -1,5 +1,8 @@
 import React from 'react';
-import { Boxes, Bot, Compass, DollarSign, LayoutDashboard, Palette, Settings, Terminal } from 'lucide-react';
+import {
+  OverviewGlyph, ModelsGlyph, AgentsGlyph, PlaygroundGlyph, CostGlyph, SettingsGlyph,
+  EmptyCompassGlyph, PaletteGlyph,
+} from './RouteGlyphs.jsx';
 import { NavDrawer } from './NavDrawer.jsx';
 import {
   SHOW_PLAYGROUND_IN_TOP_NAV,
@@ -30,12 +33,12 @@ const navHiddenClass = (visible) => (visible ? '' : HIDDEN_NAV_TAB);
 const NAV_HOVER_STAGE_COUNT = 36;
 const NAV_ICON_STYLE_COUNT = 10;
 const NAV_GLYPHS = {
-  overview: { Glyph: LayoutDashboard, stem: 'overview' },
-  models: { Glyph: Boxes, stem: 'model' },
-  agents: { Glyph: Bot, stem: 'agent' },
-  playground: { Glyph: Terminal, stem: 'playground' },
-  cost: { Glyph: DollarSign, stem: 'cost' },
-  settings: { Glyph: Settings, stem: 'settings' },
+  overview: { Glyph: OverviewGlyph, stem: 'overview' },
+  models: { Glyph: ModelsGlyph, stem: 'model' },
+  agents: { Glyph: AgentsGlyph, stem: 'agent' },
+  playground: { Glyph: PlaygroundGlyph, stem: 'playground' },
+  cost: { Glyph: CostGlyph, stem: 'cost' },
+  settings: { Glyph: SettingsGlyph, stem: 'settings' },
 };
 
 // Real vector silhouettes, not ten filters applied to the same outline. Only
@@ -1670,9 +1673,9 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
 export function RouteNotFound({ pathname, onNavigate }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-24 px-6 max-w-lg mx-auto space-y-5">
-      <div className="w-20 h-20 rounded-[28px] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-primary)] flex items-center justify-center shadow-inner"><Compass size={38} /></div>
+      <div className="w-20 h-20 rounded-[28px] bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] text-[var(--md-sys-color-primary)] flex items-center justify-center shadow-inner"><EmptyCompassGlyph size={38} /></div>
       <div className="space-y-2"><span className="text-[11px] font-mono uppercase tracking-widest text-[var(--md-sys-color-primary)] font-bold bg-[var(--md-sys-color-primary)]/10 px-3 py-1 rounded-full border border-[var(--md-sys-color-primary)]/20">404 &bull; Page Not Found</span><h2 className="text-2xl font-bold text-[var(--md-sys-color-on-surface)]">This page does not exist</h2><p className="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">Nothing in Nexus Core is mounted at <code className="font-mono px-1.5 py-0.5 rounded-md bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] break-all">{pathname}</code>. It may have been renamed, or the link may be mistyped.</p></div>
-      <button type="button" onClick={onNavigate} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"><LayoutDashboard size={14} /><span>Return to Overview</span></button>
+      <button type="button" onClick={onNavigate} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"><OverviewGlyph size={14} /><span>Return to Overview</span></button>
     </div>
   );
 }
@@ -1882,7 +1885,7 @@ export function NavigationFeature(props) {
 
               className="p-1.5 sm:p-2 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] transition-all active:scale-90"
             >
-              <Palette size={15} />
+              <PaletteGlyph size={15} />
             </button>
 
             {palettePickerOpen && (
