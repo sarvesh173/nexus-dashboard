@@ -4,7 +4,7 @@ import {
   Activity, Boxes, Brain, Coins, Play, ScrollText, Sliders, X,
 } from 'lucide-react';
 import { useHermesStatus } from '../../hooks/useHermes.js';
-import { DRAWER_ITEMS } from './navFlags.js';
+import { DRAWER_ITEMS, PINNED_DRAWER_ITEM } from './navFlags.js';
 import { ThreeLineMark } from './BrandMark.jsx';
 
 const DRAWER_ICONS = { Activity, Boxes, Brain, Play, Coins, ScrollText, Sliders };
@@ -107,9 +107,8 @@ const DRAWER_STYLES = `
  * NavDrawer - Material 3 Navigation Drawer with Hamburger trigger.
  * Features:
  * - Hamburger toggle button with M3 tactile spring
- * - Smooth scrollable primary views (Overview, Models, Agents, Playground, Cost, Logs, Settings)
- * - Settings lives in the same scroll list as every other destination, so one
- *   hidden tab never leaves a stray pinned button glued to the drawer bottom
+ * - Smooth scrollable primary views (Overview, Models, Agents, Playground, Cost, Logs)
+ * - Settings is pinned to the drawer bottom, outside the scroll container
  * - Live gateway badge on the Logs destination (enabled only while open)
  * - Staggered entrance animations and SVG hover microgeometry
  */
@@ -282,10 +281,34 @@ export function NavDrawer({
           })}
         </div>
 
-        {/* Every destination — Settings included — scrolls in the same list
-            above. A dedicated pinned footer button used to sit below the list
-            and stay glued to the drawer bottom; that is what made the Settings
-            row look misaligned against the top-nav row it was mirroring. */}
+        {/* Settings — pinned. Always at the bottom, never scrolled away.
+
+            It sits outside the scroll container above and is the last flex
+            child of a full-height column, so `shrink-0` keeps the row's own
+            height while the list above takes whatever is left. No `fixed`
+            positioning: a fixed footer would detach from the panel and have
+            to be told the panel's height, and it would still cover the last
+            row once the list is long enough. Flex ordering is the honest
+            version of "always here" — it cannot overlap anything. */}
+        <div className="shrink-0 border-t border-[var(--md-sys-color-outline-variant)]/40 bg-[var(--md-sys-color-surface-container)] p-3">
+          <button
+            type="button"
+            onClick={() => handleSelect(PINNED_DRAWER_ITEM.path)}
+            aria-current={currentPath === PINNED_DRAWER_ITEM.path ? 'page' : undefined}
+            aria-label={PINNED_DRAWER_ITEM.label}
+            className={`drawer-row w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer active:scale-95 group relative overflow-hidden ${
+              currentPath === PINNED_DRAWER_ITEM.path
+                ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-semibold shadow-xs'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:text-[var(--md-sys-color-on-surface)]'
+            }`}
+          >
+            <Sliders size={16} className="transition-colors duration-200" />
+            <span className="flex-1 text-left">{PINNED_DRAWER_ITEM.label}</span>
+            {currentPath === PINNED_DRAWER_ITEM.path && (
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_white]" />
+            )}
+          </button>
+        </div>
       </div>
         </>,
         document.body,

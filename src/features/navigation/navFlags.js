@@ -28,5 +28,21 @@ export const DRAWER_ITEMS = [
   // badge below is not hardcoded to one label and cannot drift out of sync
   // with the item it annotates.
   { label: 'Logs', path: '/logs', icon: 'ScrollText', live: true },
-  { label: 'Settings', path: '/settings', icon: 'Sliders' },
 ];
+
+/**
+ * Settings is the one destination that does not scroll.
+ *
+ * It is a required option, not one destination among many, and a reader who
+ * has to scroll back down to reach it is being asked to hunt for it. So it is
+ * pulled out of the scrolling list above and pinned to the drawer's bottom,
+ * where it stays put no matter how many rows are above it.
+ *
+ * Keeping it here rather than hardcoding the path in NavDrawer means the
+ * label, icon and route all still come from the one list that owns them.
+ */
+export const PINNED_DRAWER_ITEM = {
+  label: 'Settings',
+  path: '/settings',
+  icon: 'Sliders',
+};
