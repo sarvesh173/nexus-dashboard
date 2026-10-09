@@ -415,10 +415,16 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     pointer-events: none;
     transition: opacity 200ms ease;
   }
-  .nav-overview-cell[data-cell="0"] { top: 2px; left: 2px; }
-  .nav-overview-cell[data-cell="1"] { top: 2px; right: 2px; }
-  .nav-overview-cell[data-cell="2"] { bottom: 2px; left: 2px; }
-  .nav-overview-cell[data-cell="3"] { bottom: 2px; right: 2px; }
+  /* The four quadrant cells sit at the icon's corners, so they were positioned
+     against the 16px glyph box while the ripple ring expands to 22px around
+     it. The pulse therefore travelled inside the ring while the ring itself
+     expanded, and the two read as separate effects that never landed together.
+     Offsetting each cell out by the ring's 3px inset puts them on the ring's
+     corners, so one effect moves as one thing. */
+  .nav-overview-cell[data-cell="0"] { top: -1px; left: -1px; }
+  .nav-overview-cell[data-cell="1"] { top: -1px; right: -1px; }
+  .nav-overview-cell[data-cell="2"] { bottom: -1px; left: -1px; }
+  .nav-overview-cell[data-cell="3"] { bottom: -1px; right: -1px; }
   .nav-overview-icon,
   .nav-cost-icon,
   .nav-settings-icon {
@@ -540,9 +546,19 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-overview-button:focus-visible .nav-overview-cell {
     animation: nav-overview-grid-pulse 820ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
   }
-  .nav-overview-cell[data-cell="1"] { animation-delay: 70ms !important; }
-  .nav-overview-cell[data-cell="2"] { animation-delay: 140ms !important; }
-  .nav-overview-cell[data-cell="3"] { animation-delay: 210ms !important; }
+  /* Staggered by delay, not by !important.
+
+     The important flag was doing nothing useful: nothing else in this block
+     sets animation-delay, so there was no declaration to win against. What
+     it did do was make the delay immune to any later override - a theme or
+     reduced-motion rule that wanted to zero the stagger silently could not.
+     Declaring the delay plainly keeps it overridable.
+
+     No backticks in this comment: the whole stylesheet is one template
+     literal, and a single backtick here closes the string mid-CSS. */
+  .nav-overview-cell[data-cell="1"] { animation-delay: 70ms; }
+  .nav-overview-cell[data-cell="2"] { animation-delay: 140ms; }
+  .nav-overview-cell[data-cell="3"] { animation-delay: 210ms; }
   @keyframes nav-overview-grid-pulse {
     0% { opacity: 0.3; transform: translate(0, 0) scale(0.7); }
     45% { opacity: 0.95; transform: translate(1px, -1px) scale(1.35); }
