@@ -311,6 +311,34 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
                 self.fail(f"run_sync.fetch_specs raised NameError: {exc}")
 
 
+class TestOptionalDependenciesHandling(unittest.TestCase):
+    """BUG: Missing psutil or requests caused ModuleNotFoundError when importing server.py or model_health.py."""
+
+    def test_import_server_and_model_health_without_requests_or_psutil(self):
+        import sys
+        import importlib
+        from unittest.mock import patch
+
+        modules_to_clear = ['server', 'model_health', 'run_sync']
+        for mod in modules_to_clear:
+            sys.modules.pop(mod, None)
+
+        with patch.dict(sys.modules, {'psutil': None, 'requests': None, 'yaml': None}):
+            import server
+            import model_health
+
+            # Ensure functions running telemetry/probe degrade gracefully rather than crashing
+            telemetry = server.get_telemetry()
+            self.assertIsInstance(telemetry, dict)
+            self.assertEqual(telemetry['nexus_mem_mb'], 0)
+
+            probe_status, probe_detail = model_health._probe('http://dummy', 'key', 'mid', '/v1/chat/completions')
+            self.assertEqual(probe_status, 'UNREACHABLE')
+
+        for mod in modules_to_clear:
+            sys.modules.pop(mod, None)
+
+
 class TestMetaCountsAgreeWithRows(unittest.TestCase):
     """The counts are what every consumer quotes, so they must be self-consistent."""
 

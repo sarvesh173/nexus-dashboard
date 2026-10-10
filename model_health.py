@@ -23,7 +23,10 @@ import tempfile
 import time
 from paths import hermes_config_path, hermes_env_path, omniroute_env_path
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'
@@ -52,7 +55,7 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
         return _catalog_cache['ids']
     key = key or _api_key()
     ids = set()
-    if key:
+    if key and requests is not None:
         try:
             r = requests.get(base.rstrip('/') + '/models', timeout=15,
                              headers={'Authorization': 'Bearer {key}'.format(key=key)})
@@ -149,6 +152,8 @@ def _api_key():
 
 def _probe(base, key, mid, route):
     """One request. Returns (status, detail)."""
+    if requests is None:
+        return 'UNREACHABLE', 'requests library missing'
     url = base.rstrip('/') + route
     if route == '/v1/embeddings':
         body = {'model': mid, 'input': [111, 222, 333],
