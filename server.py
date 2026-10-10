@@ -1,13 +1,33 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import psutil
+try:
+    import psutil
+    _NoSuchProcess = psutil.NoSuchProcess
+    _AccessDenied = psutil.AccessDenied
+    _STATUS_ZOMBIE = psutil.STATUS_ZOMBIE
+except (ImportError, AttributeError):
+    psutil = None
+    _NoSuchProcess = Exception
+    _AccessDenied = Exception
+    _STATUS_ZOMBIE = 'zombie'
+
 import re
 import subprocess
 import os
 import sys
 import time
-import yaml
-import requests
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+try:
+    import requests
+    _RequestTimeout = requests.exceptions.Timeout
+except (ImportError, AttributeError):
+    requests = None
+    _RequestTimeout = Exception
 from paths import (
     hermes_config_path,
     hermes_env_path,
@@ -228,11 +248,18 @@ def get_telemetry():
     if _cached_data is not None and (now - _last_poll_time) < CACHE_TTL:
         return _cached_data
 
-    mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    per_cpu = psutil.cpu_percent(interval=None, percpu=True)
-    cpu_pct = psutil.cpu_percent(interval=None)
-    disk = psutil.disk_usage('/')
+    if psutil is not None:
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        per_cpu = psutil.cpu_percent(interval=None, percpu=True)
+        cpu_pct = psutil.cpu_percent(interval=None)
+        disk = psutil.disk_usage('/')
+    else:
+        class _Zero:
+            total = used = free = available = percent = 0
+        mem = swap = disk = _Zero()
+        per_cpu = [0.0, 0.0]
+        cpu_pct = 0.0
     
     # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
     # preview server (a different process, ~45 MB), so querying it reported a
@@ -471,18 +498,18 @@ def get_hermes_status():
     alive = False
     uptime_sec = None
     process = None
-    if isinstance(pid, int):
+    if isinstance(pid, int) and psutil is not None:
         try:
             proc = psutil.Process(pid)
             proc.create_time()          # raises if the pid was recycled
-            alive = proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE
+            alive = proc.is_running() and proc.status() != _STATUS_ZOMBIE
             if alive:
                 uptime_sec = max(0, int(now - proc.create_time()))
                 with proc.oneshot():
                     process = {'name': proc.name(), 'status': proc.status()}
-        except psutil.NoSuchProcess:
+        except _NoSuchProcess:
             alive = False
-        except psutil.AccessDenied:
+        except _AccessDenied:
             # The pid exists but is not ours to inspect. Reporting it dead
             # would be a lie, so it stays alive with an unknown uptime.
             alive = True
@@ -893,6 +920,8 @@ def get_hermes_config_providers():
 
         # Fetch live models from NVIDIA API
         try:
+            if requests is None:
+                raise RuntimeError("requests module not available")
             headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
             resp = requests.get(f'{base_url}/models', headers=headers, timeout=8)
             if resp.status_code == 200:
@@ -1714,6 +1743,13 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 }
 
                 start = time.time()
+                if requests is None:
+                    return self.send_json({
+                        'ok': False,
+                        'status': 500,
+                        'latency_ms': 0,
+                        'error': 'requests library missing'
+                    })
                 try:
                     res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
                     latency = int((time.time() - start) * 1000)
@@ -1745,8 +1781,6 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                         try:
                             err_data = res.json()
                             if isinstance(err_data, dict):
-                                # Some gateways nest the message, some put a bare
-                                # string under 'error'. Both shapes are real.
                                 detail = err_data.get('error')
                                 err_text = (
                                     detail.get('message', '') if isinstance(detail, dict)
@@ -1755,7 +1789,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                                 ) or str(err_data)
                             else:
                                 err_text = str(err_data)
-                        except Exception:  # noqa: BLE001 - non-JSON error body
+                        except Exception:  # noqa: BLE001
                             err_text = res.text
                         return self.send_json({
                             'ok': False,
@@ -1763,7 +1797,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                             'latency_ms': latency,
                             'error': err_text[:200] or f'HTTP {res.status_code}'
                         })
-                except requests.exceptions.Timeout:
+                except _RequestTimeout:
                     latency = int((time.time() - start) * 1000)
                     return self.send_json({
                         'ok': False,
@@ -1900,7 +1934,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             res_output = None
             source = 'heuristic'
 
-            if model_id:
+            if model_id and requests is not None:
                 try:
                     clean_id = model_id.split('/')[-1].lower()
                     req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
