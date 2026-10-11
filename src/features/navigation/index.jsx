@@ -1033,6 +1033,24 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     animation-delay: calc(var(--nav-echo-delay) * 2);
   }
 
+  /* Smooth transition for settling back to normal after hover timer */
+  .nav-motion-icon {
+    transition: transform 380ms cubic-bezier(0.2, 0, 0, 1), filter 320ms ease-out;
+  }
+  .nav-tab[data-hover-settled="true"] .nav-motion-icon {
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+  }
+  .nav-tab[data-hover-settled="true"] .nav-motion-icon::before,
+  .nav-tab[data-hover-settled="true"] .nav-motion-icon::after,
+  .nav-tab[data-hover-settled="true"] .nav-motion-ring::before,
+  .nav-tab[data-hover-settled="true"] .nav-motion-ring::after,
+  .nav-tab[data-hover-settled="true"] .nav-motion-echo {
+    opacity: 0 !important;
+    animation: none !important;
+  }
+
   /* Phone / Touch ergonomics: strictly prevent sticky infinite loops while preserving rich animations */
   @media (hover: none) or (pointer: coarse) {
     .nav-tab:not([data-animating="playing"]) .nav-motion-icon,
@@ -1748,10 +1766,33 @@ export function NavigationFeature(props) {
   const activeInteractions = React.useRef({});
   const resetTimers = React.useRef({});
   const [animatingTab, setAnimatingTab] = React.useState(null);
+  const [settledTabs, setSettledTabs] = React.useState({});
   const touchAnimTimer = React.useRef(null);
   const prevPathRef = React.useRef(location.pathname);
 
+  const resetToNormal = React.useCallback((key) => {
+    setSettledTabs((prev) => ({ ...prev, [key]: true }));
+    setTabMotions((previous) => ({
+      ...previous,
+      [key]: {
+        variant: 0,
+        iconStyle: 1,
+      },
+    }));
+    if (resetTimers.current[key]) {
+      clearTimeout(resetTimers.current[key]);
+      delete resetTimers.current[key];
+    }
+  }, []);
+
   const advanceMotionStage = React.useCallback((key) => {
+    setSettledTabs((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
     setTabMotions((previous) => {
       const current = previous[key] || { variant: 0, iconStyle: 1 };
       const nextVariant = (current.variant + 1) % NAV_HOVER_STAGE_COUNT;
@@ -1774,8 +1815,9 @@ export function NavigationFeature(props) {
     if (touchAnimTimer.current) clearTimeout(touchAnimTimer.current);
     touchAnimTimer.current = setTimeout(() => {
       setAnimatingTab(null);
+      resetToNormal(key);
     }, 720);
-  }, []);
+  }, [resetToNormal]);
 
   // Trigger one-shot animation with next stage in history when route changes
   React.useEffect(() => {
@@ -1796,12 +1838,25 @@ export function NavigationFeature(props) {
   const beginInteraction = (key, source) => {
     const sources = activeInteractions.current[key] ??= new Set();
     sources.add(source);
-    // Active interaction: cancel any pending 3-second reset timer so hover continues smoothly
+
+    // Un-settle on new hover interaction
+    setSettledTabs((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    // "Hover karne ke kuch second baad jo SVG icon hai wo normal ho jana chahiye"
+    // Auto-settle SVG icon back to normal after 2.4 seconds of hover
     if (resetTimers.current[key]) {
       clearTimeout(resetTimers.current[key]);
-      delete resetTimers.current[key];
     }
+    resetTimers.current[key] = setTimeout(() => {
+      resetToNormal(key);
+    }, 2400);
   };
+
   const endInteraction = (key, source) => {
     const sources = activeInteractions.current[key];
     // A focus + pointer visit counts once, after BOTH have left. Touch scrolling
@@ -1824,20 +1879,13 @@ export function NavigationFeature(props) {
       return updated;
     });
 
-    // Start 3-second reset timer: after 3 seconds of hover exit, smoothly reset SVG icon back to normal (style 1, variant 0)
+    // When hover exits, smoothly return SVG icon back to normal within 1.2s
     if (resetTimers.current[key]) {
       clearTimeout(resetTimers.current[key]);
     }
     resetTimers.current[key] = setTimeout(() => {
-      setTabMotions((previous) => ({
-        ...previous,
-        [key]: {
-          variant: 0,
-          iconStyle: 1,
-        },
-      }));
-      delete resetTimers.current[key];
-    }, 3000);
+      resetToNormal(key);
+    }, 1200);
   };
 
   React.useEffect(() => {
@@ -1850,6 +1898,7 @@ export function NavigationFeature(props) {
     'data-variant': tabMotions[key]?.variant ?? 0,
     'data-icon-style': tabMotions[key]?.iconStyle ?? 1,
     'data-animating': animatingTab === key ? 'playing' : undefined,
+    'data-hover-settled': settledTabs[key] ? 'true' : undefined,
     onPointerDown: (event) => {
       if (event.pointerType === 'touch') {
         advanceMotionStage(key);
