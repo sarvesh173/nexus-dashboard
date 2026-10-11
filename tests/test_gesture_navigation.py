@@ -143,6 +143,34 @@ def main():
             return 1
         print("✓ On /model, edge swipe opened NavDrawer successfully")
 
+        # 9. Test Continuous Circular Loop: Swipe left from Logs wraps around to Overview
+        page.goto(URL + "/logs", wait_until="networkidle", timeout=15000)
+        page.wait_for_timeout(500)
+        page.evaluate("""() => {
+            const touchStart = new Touch({ identifier: 88, target: document.body, clientX: 300, clientY: 400 });
+            const touchEnd = new Touch({ identifier: 88, target: document.body, clientX: 100, clientY: 400 });
+            window.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart] }));
+            window.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd] }));
+        }""")
+        page.wait_for_timeout(500)
+        if page.url.rstrip("/") != URL:
+            print(f"FAILED: Circular loop from Logs -> Overview failed (got {page.url})")
+            return 1
+        print("✓ Continuous circular loop: Logs -> Overview on swipe left passed")
+
+        # 10. Test Continuous Circular Loop: Swipe right from Overview wraps around to Logs
+        page.evaluate("""() => {
+            const touchStart = new Touch({ identifier: 89, target: document.body, clientX: 100, clientY: 400 });
+            const touchEnd = new Touch({ identifier: 89, target: document.body, clientX: 300, clientY: 400 });
+            window.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart] }));
+            window.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd] }));
+        }""")
+        page.wait_for_timeout(500)
+        if "/logs" not in page.url:
+            print(f"FAILED: Circular loop from Overview -> Logs failed (got {page.url})")
+            return 1
+        print("✓ Continuous circular loop: Overview -> Logs on swipe right passed")
+
         print("ALL GESTURE & DRAWER TESTS PASSED!")
         browser.close()
         return 0

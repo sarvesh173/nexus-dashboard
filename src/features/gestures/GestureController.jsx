@@ -101,13 +101,17 @@ export function GestureController() {
   const handleSwipe = useCallback(
     (direction) => {
       wakeBar(2600);
-      if (direction === 'left' && currentIndex < SWIPE_ROUTES.length - 1) {
-        const nextRoute = SWIPE_ROUTES[currentIndex + 1];
+      if (direction === 'left') {
+        // Continuous circular loop navigation: Logs -> Overview
+        const nextIdx = (currentIndex + 1) % SWIPE_ROUTES.length;
+        const nextRoute = SWIPE_ROUTES[nextIdx];
         triggerPageTransition('left');
         navigate(nextRoute.path);
         showFeedback('left', nextRoute.title);
-      } else if (direction === 'right' && currentIndex > 0) {
-        const prevRoute = SWIPE_ROUTES[currentIndex - 1];
+      } else if (direction === 'right') {
+        // Continuous circular loop navigation: Overview -> Logs
+        const prevIdx = (currentIndex - 1 + SWIPE_ROUTES.length) % SWIPE_ROUTES.length;
+        const prevRoute = SWIPE_ROUTES[prevIdx];
         triggerPageTransition('right');
         navigate(prevRoute.path);
         showFeedback('right', prevRoute.title);
@@ -205,9 +209,6 @@ export function GestureController() {
     };
   }, [handleSwipe, openDrawer]);
 
-  const canGoLeft = currentIndex > 0;
-  const canGoRight = currentIndex < SWIPE_ROUTES.length - 1;
-
   return (
     <>
       <GestureFeedback gestureState={feedback} />
@@ -231,17 +232,15 @@ export function GestureController() {
             <M3DrawerMenuGestureIcon size={16} />
           </button>
 
-          {canGoLeft && (
-            <button
-              type="button"
-              onClick={() => handleSwipe('right')}
-              title={`Swipe right to ${SWIPE_ROUTES[currentIndex - 1]?.title}`}
-              aria-label={`Swipe right to ${SWIPE_ROUTES[currentIndex - 1]?.title}`}
-              className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5 cursor-pointer"
-            >
-              <M3GestureArrowLeft size={16} animate={false} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => handleSwipe('right')}
+            title={`Swipe right to ${SWIPE_ROUTES[(currentIndex - 1 + SWIPE_ROUTES.length) % SWIPE_ROUTES.length]?.title}`}
+            aria-label={`Swipe right to ${SWIPE_ROUTES[(currentIndex - 1 + SWIPE_ROUTES.length) % SWIPE_ROUTES.length]?.title}`}
+            className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5 cursor-pointer"
+          >
+            <M3GestureArrowLeft size={16} animate={false} />
+          </button>
 
           {/* Central tactile gesture home pill indicator */}
           <div
@@ -249,17 +248,15 @@ export function GestureController() {
             title="Swipe left or right to navigate"
           />
 
-          {canGoRight && (
-            <button
-              type="button"
-              onClick={() => handleSwipe('left')}
-              title={`Swipe left to ${SWIPE_ROUTES[currentIndex + 1]?.title}`}
-              aria-label={`Swipe left to ${SWIPE_ROUTES[currentIndex + 1]?.title}`}
-              className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5 cursor-pointer"
-            >
-              <M3GestureArrowRight size={16} animate={false} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => handleSwipe('left')}
+            title={`Swipe left to ${SWIPE_ROUTES[(currentIndex + 1) % SWIPE_ROUTES.length]?.title}`}
+            aria-label={`Swipe left to ${SWIPE_ROUTES[(currentIndex + 1) % SWIPE_ROUTES.length]?.title}`}
+            className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5 cursor-pointer"
+          >
+            <M3GestureArrowRight size={16} animate={false} />
+          </button>
         </div>
       </aside>
     </>

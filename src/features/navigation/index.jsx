@@ -988,20 +988,14 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
 
   /* Phone / Touch ergonomics: strictly prevent sticky infinite loops while preserving rich animations */
   @media (hover: none) or (pointer: coarse) {
-    .nav-tab:not([data-animating="playing"]) .nav-motion-icon,
-    .nav-tab:not([data-animating="playing"]) .nav-motion-icon::before,
-    .nav-tab:not([data-animating="playing"]) .nav-motion-icon::after,
-    .nav-tab:not([data-animating="playing"]) .nav-motion-ring::before,
-    .nav-tab:not([data-animating="playing"]) .nav-motion-ring::after,
-    .nav-tab:not([data-animating="playing"]) .nav-motion-echo {
+    .nav-tab:not([data-animating="playing"]) :is(.nav-motion-icon, .nav-agent-icon, .nav-overview-cell, .nav-agent-pulse, .nav-agent-spark) {
       animation: none !important;
     }
-    .nav-tab[data-animating="playing"] .nav-motion-icon,
-    .nav-tab[data-animating="playing"] .nav-motion-icon::before,
-    .nav-tab[data-animating="playing"] .nav-motion-icon::after,
-    .nav-tab[data-animating="playing"] .nav-motion-ring::before,
-    .nav-tab[data-animating="playing"] .nav-motion-ring::after,
-    .nav-tab[data-animating="playing"] .nav-motion-echo {
+    .nav-tab:not([data-animating="playing"]) :is(.nav-motion-icon::before, .nav-motion-icon::after, .nav-agent-icon::before, .nav-agent-icon::after, .nav-motion-ring::before, .nav-motion-ring::after, .nav-motion-echo) {
+      animation: none !important;
+      opacity: 0 !important;
+    }
+    .nav-tab[data-animating="playing"] :is(.nav-motion-icon, .nav-motion-icon::before, .nav-motion-icon::after) {
       animation-iteration-count: 1 !important;
     }
   }
