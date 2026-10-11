@@ -34,27 +34,39 @@ const DRAWER_STYLES = `
   --ham-metal-top: var(--md-sys-color-on-surface-variant);
   --ham-metal-mid: var(--md-sys-color-on-surface);
   --ham-metal-bot: var(--md-sys-color-on-surface-variant);
-  /* Milled recess so the button reads as machined hardware, not a flat chip.
-     Matches the RAM/swap gauge groove treatment in the Overview cards. */
   box-shadow:
     inset 0 1px 2px color-mix(in srgb, var(--md-sys-color-on-surface) 14%, transparent),
     inset 0 -1px 1px rgba(0, 0, 0, 0.35);
+  transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 220ms ease,
+              border-color 220ms ease,
+              box-shadow 280ms ease;
+  will-change: transform;
 }
-.hamburger-shell:hover,
-.hamburger-shell:focus-visible,
+.hamburger-shell:hover {
+  --ham-metal-top: var(--md-sys-color-primary);
+  --ham-metal-mid: var(--md-sys-color-primary);
+  --ham-metal-bot: var(--md-sys-color-primary);
+  transform: scale(1.06);
+  box-shadow:
+    0 4px 16px -2px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent),
+    inset 0 1px 2px color-mix(in srgb, var(--md-sys-color-on-surface) 14%, transparent);
+}
+.hamburger-shell:active,
+.hamburger-shell[data-active="true"] {
+  transform: scale(0.86) rotate(-5deg);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent),
+    inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  transition-duration: 90ms;
+}
 .hamburger-shell.is-open {
   --ham-metal-top: var(--md-sys-color-primary);
   --ham-metal-mid: var(--md-sys-color-primary);
   --ham-metal-bot: var(--md-sys-color-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent);
 }
-/* Hover: the rails gain a travelling highlight.
 
-   The fan was already there; what it lacked was any sign the mark was alive
-   between the rails. A light sweep runs across the group once per hover,
-   left to right, and the machine-metal gradient is what carries it — the
-   rails are filled from a gradient, so shifting the gradient's spread moves
-   the light without touching geometry. That keeps the motion on the material
-   rather than on the shape, which is what stops it reading as a glitch. */
 .hamburger-shell:hover .ham-line-top,
 .hamburger-shell:hover .ham-line-mid,
 .hamburger-shell:hover .ham-line-bot,
@@ -63,8 +75,7 @@ const DRAWER_STYLES = `
 .hamburger-shell:focus-visible .ham-line-bot {
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--md-sys-color-primary) 70%, transparent));
 }
-/* The sweep: a quick widening of the top-lit edge, brightest at the start of
-   the travel. Short enough to read as a glint rather than a pulse. */
+
 @keyframes ham-metal-sweep {
   0%   { stop-opacity: 0.72; }
   35%  { stop-opacity: 1; }
@@ -78,90 +89,90 @@ const DRAWER_STYLES = `
 .hamburger-shell .ham-metal-mid { stop-color: var(--ham-metal-mid); }
 .hamburger-shell .ham-metal-bot { stop-color: var(--ham-metal-bot); }
 
-.hamburger-icon { overflow: visible; }
+.hamburger-icon {
+  overflow: visible;
+  transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 .hamburger-icon .ham-line {
   transform-box: fill-box;
-  /* Pivot on the rail's own centre, not its left edge. Left-anchored rotation
-     drags each rail sideways as it tips, so the three bars never settle into a
-     clean symmetric fan — they drift out of register. */
   transform-origin: center;
-  transition: transform 320ms cubic-bezier(0.22, 0.68, 0.24, 1);
+  transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 280ms ease,
+              filter 280ms ease;
+  will-change: transform, opacity;
 }
-/* No delay stagger: the three rails were only 1.9px tall and ~3.4px apart, so a
-   45ms offset made the group tear apart mid-flight and land out of register.
-   They now travel as one rigid body. */
-.hamburger-shell .ham-line-top { transition-delay: 0ms; }
-.hamburger-shell .ham-line-mid { transition-delay: 0ms; }
-.hamburger-shell .ham-line-bot { transition-delay: 0ms; }
 
-/* The rails open outward and stay clear of each other. Each rail is only 1.9px
-   tall in a 20px box, so the travel has to be small but the spacing has to
-   open up: tilting in place just squashed the stack. */
+/* Hover: expressive kinetic fan */
 .hamburger-shell:hover .ham-line-top,
 .hamburger-shell:focus-visible .ham-line-top {
-  transform: translateY(-1.55px) rotate(-9deg);
+  transform: translateY(-2.2px) rotate(-13deg);
 }
 .hamburger-shell:hover .ham-line-bot,
 .hamburger-shell:focus-visible .ham-line-bot {
-  transform: translateY(1.55px) rotate(9deg);
+  transform: translateY(2.2px) rotate(13deg);
 }
 .hamburger-shell:hover .ham-line-mid,
 .hamburger-shell:focus-visible .ham-line-mid {
-  transform: scaleX(0.78);
+  transform: scaleX(0.72) translateX(-1px);
 }
 
-/* Press: the fan collapses back into a single stack. Deliberately fast and
-   undelayed — this is direct manipulation and must feel 1:1 with the finger. */
-.hamburger-shell:active .ham-line,
-.hamburger-shell:focus-visible:active .ham-line {
-  transition-duration: 110ms;
-  transition-delay: 0ms;
+/* Click / Active press: tactile mechanical recoil */
+.hamburger-shell:active .ham-line-top,
+.hamburger-shell[data-active="true"] .ham-line-top {
+  transform: translateY(-3.2px) rotate(-20deg) scaleX(1.1);
+  transition-duration: 90ms;
 }
-.hamburger-shell:active .ham-line-top { transform: translateY(0.95px) rotate(0deg); }
-.hamburger-shell:active .ham-line-bot { transform: translateY(-0.95px) rotate(0deg); }
-.hamburger-shell:active .ham-line-mid { transform: scaleX(1); }
+.hamburger-shell:active .ham-line-bot,
+.hamburger-shell[data-active="true"] .ham-line-bot {
+  transform: translateY(3.2px) rotate(20deg) scaleX(1.1);
+  transition-duration: 90ms;
+}
+.hamburger-shell:active .ham-line-mid,
+.hamburger-shell[data-active="true"] .ham-line-mid {
+  transform: scaleX(0.48) translateX(-2.5px);
+  transition-duration: 90ms;
+}
 
-/* Drawer open: the three rails fold into an X.
-
-   Placed after the hover rules on purpose. The trigger keeps focus after the
-   click that opens the drawer, so :focus-visible matches too, and whichever
-   rule wins the cascade is the one that decides whether the button reads as
-   a menu or as a close. Open has to win, or the button offers the opposite of
-   what clicking it does.
-
-   The travel is set from the mark's own geometry rather than picked to look
-   right: the outer rails sit at y=5.6 and y=12.5 in a 20-unit box, so meeting
-   at the middle is a 3.45px move each way. The middle rail retracts rather
-   than travelling, because a 12.4-unit rail cannot hide inside a 15.2-unit
-   crossing without leaving a stub through it. */
+/* Drawer open: the three rails morph seamlessly into an X */
 .hamburger-shell.is-open .ham-line-top,
 .hamburger-shell.is-open:focus-visible .ham-line-top {
   transform: translateY(3.45px) rotate(45deg);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 80%, transparent));
 }
 .hamburger-shell.is-open .ham-line-bot,
 .hamburger-shell.is-open:focus-visible .ham-line-bot {
   transform: translateY(-3.45px) rotate(-45deg);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 80%, transparent));
 }
 .hamburger-shell.is-open .ham-line-mid,
 .hamburger-shell.is-open:focus-visible .ham-line-mid {
   transform: scaleX(0);
-}
-/* The sweep must not run while the mark is an X: animating a stop on a rail
-   that has been scaled to nothing is motion on nothing. */
-.hamburger-shell.is-open .ham-line-mid {
+  opacity: 0;
   animation: none;
 }
-/* Drawer rows: a real entrance. The old markup set an animationDelay but no
-   animation, so the stagger never actually played. */
-@keyframes drawer-row-in {
-  from { opacity: 0; transform: translateX(-16px) scale(0.97); }
-  to   { opacity: 1; transform: translateX(0) scale(1); }
+
+/* Fluid drawer items entrance */
+@keyframes drawer-row-cascade {
+  0% {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0) scale(0.96);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(2px, 0, 0) scale(1.008);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 .drawer-row {
-  animation: drawer-row-in 380ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: drawer-row-cascade 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hamburger-shell,
   .hamburger-shell .ham-line,
   .drawer-row {
     transition-duration: 1ms !important;
@@ -186,7 +197,9 @@ export function NavDrawer({
   onNavigate,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
   const drawerTouchStartRef = useRef(0);
+  const clickTimeoutRef = useRef(null);
 
   // Backs the LIVE badge on the Logs item. Gated on `isOpen` so a closed
   // drawer costs no requests at all; when closed the badge simply reads its
@@ -209,6 +222,7 @@ export function NavDrawer({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('nexus:open-drawer', handleOpen);
       window.removeEventListener('nexus:close-drawer', handleClose);
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
     };
   }, [isOpen]);
 
@@ -216,6 +230,16 @@ export function NavDrawer({
     ...item,
     icon: DRAWER_ICONS[item.icon],
   }));
+
+  const handleOpenClick = (e) => {
+    e.currentTarget.blur();
+    setIsClicking(true);
+    if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+    clickTimeoutRef.current = setTimeout(() => {
+      setIsClicking(false);
+      setIsOpen(true);
+    }, 120);
+  };
 
   const handleSelect = (path) => {
     setIsOpen(false);
@@ -243,20 +267,21 @@ export function NavDrawer({
         type="button"
         aria-label="Open Navigation Drawer"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen(true)}
-        className={`hamburger-shell group relative rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center w-9 h-9 ${
+        onClick={handleOpenClick}
+        data-active={isClicking ? 'true' : undefined}
+        className={`hamburger-shell group relative rounded-xl bg-[var(--md-sys-color-surface-container)] hover:bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center w-9 h-9 ${
           // Once open, the trigger reads as a close. aria-expanded carries the
           // state for anything assistive; the class carries it for the CSS.
           isOpen ? 'is-open border-[var(--md-sys-color-primary)]' : ''
         }`}
-              >
-                {/* The shared three-line mark — same SVG everywhere it appears, defined once. */}
-                <ThreeLineMark
-                  size={20}
-                  className="hamburger-icon"
-                  lineClassName="ham-line"
-                />
-              </button>
+      >
+        {/* The shared three-line mark — same SVG everywhere it appears, defined once. */}
+        <ThreeLineMark
+          size={20}
+          className="hamburger-icon"
+          lineClassName="ham-line"
+        />
+      </button>
 
                     {/* Backdrop + panel are portalled to <body>.
           The trigger above stays in the header's flow, but the drawer itself
@@ -311,14 +336,14 @@ export function NavDrawer({
               </h2>
             </div>
           </div>
-          {/* Close button with subtle tactile opacity */}
+          {/* Close button with subtle tactile spring rotation */}
           <button
             type="button"
             onClick={() => setIsOpen(false)}
             aria-label="Close Navigation Drawer"
-            className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-highest)] transition-all duration-200 cursor-pointer active:scale-90"
+            className="p-1.5 rounded-lg text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-highest)] hover:rotate-90 active:scale-75 transition-all duration-300 cursor-pointer"
           >
-            <CloseGlyph size={18} className="transition-opacity duration-200" />
+            <CloseGlyph size={18} className="transition-transform duration-300" />
           </button>
         </div>
 
