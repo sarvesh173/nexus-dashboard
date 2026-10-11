@@ -12,7 +12,7 @@ html {
 }
 
 body {
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
   -webkit-font-smoothing: antialiased;
 }
 

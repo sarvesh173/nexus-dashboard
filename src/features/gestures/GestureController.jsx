@@ -15,12 +15,24 @@ const SWIPE_ROUTES = [
   { path: '/logs', title: 'Logs' },
 ];
 
+function resolveRouteIndex(pathname) {
+  if (pathname === '/' || pathname === '/overview') return 0;
+  if (
+    pathname.startsWith('/model') ||
+    pathname.startsWith('/models') ||
+    pathname.startsWith('/modules')
+  ) {
+    return 1;
+  }
+  if (pathname.startsWith('/agent')) return 2;
+  if (pathname.startsWith('/log')) return 3;
+  if (pathname.startsWith('/cost') || pathname.startsWith('/settings')) return 0;
+  return 1; // Resilient fallback: Models
+}
+
 /**
- * System Gesture Controller (Material 3 Motion).
- * Supports:
- * - Edge swipe / 3-lines swipe to open Navigation Drawer
- * - Horizontal swipe between main destinations with fluid page transition animation
- * - Mobile tactile bottom indicator bar
+ * Universal System Gesture Controller (Material 3 Motion).
+ * Active across ALL pages and subroutes (including /model/* deep-links).
  */
 export function GestureController() {
   const navigate = useNavigate();
@@ -29,7 +41,7 @@ export function GestureController() {
   const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
   const feedbackTimerRef = useRef(null);
 
-  const currentIndex = SWIPE_ROUTES.findIndex((r) => r.path === location.pathname);
+  const currentIndex = resolveRouteIndex(location.pathname);
 
   const showFeedback = useCallback((direction, targetTitle) => {
     if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
@@ -55,64 +67,62 @@ export function GestureController() {
     showFeedback('drawer', 'Navigation Menu');
   }, [showFeedback]);
 
-  const handleSwipe = useCallback((direction) => {
-    if (currentIndex === -1) return;
-
-    if (direction === 'left' && currentIndex < SWIPE_ROUTES.length - 1) {
-      const nextRoute = SWIPE_ROUTES[currentIndex + 1];
-      triggerPageTransition('left');
-      navigate(nextRoute.path);
-      showFeedback('left', nextRoute.title);
-    } else if (direction === 'right' && currentIndex > 0) {
-      const prevRoute = SWIPE_ROUTES[currentIndex - 1];
-      triggerPageTransition('right');
-      navigate(prevRoute.path);
-      showFeedback('right', prevRoute.title);
-    }
-  }, [currentIndex, navigate, showFeedback, triggerPageTransition]);
+  const handleSwipe = useCallback(
+    (direction) => {
+      if (direction === 'left' && currentIndex < SWIPE_ROUTES.length - 1) {
+        const nextRoute = SWIPE_ROUTES[currentIndex + 1];
+        triggerPageTransition('left');
+        navigate(nextRoute.path);
+        showFeedback('left', nextRoute.title);
+      } else if (direction === 'right' && currentIndex > 0) {
+        const prevRoute = SWIPE_ROUTES[currentIndex - 1];
+        triggerPageTransition('right');
+        navigate(prevRoute.path);
+        showFeedback('right', prevRoute.title);
+      }
+    },
+    [currentIndex, navigate, showFeedback, triggerPageTransition]
+  );
 
   useEffect(() => {
-    const onTouchStart = (e) => {
-      if (!e.touches || e.touches.length !== 1) return;
-      const t = e.touches[0];
-      touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
+    const onStart = (clientX, clientY) => {
+      touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
     };
 
-    const onTouchEnd = (e) => {
-      if (!e.changedTouches || e.changedTouches.length !== 1) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - touchStartRef.current.x;
-      const dy = t.clientY - touchStartRef.current.y;
+    const onEnd = (clientX, clientY, target) => {
+      const dx = clientX - touchStartRef.current.x;
+      const dy = clientY - touchStartRef.current.y;
       const dt = Date.now() - touchStartRef.current.time;
       const startX = touchStartRef.current.x;
 
-      // Relaxed duration & distance thresholds
-      if (dt > 800) return;
-      if (Math.abs(dx) < 40) return;
-      if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
+      // Relaxed travel thresholds: 35px is enough to register a deliberate flick
+      if (dt > 900) return;
+      if (Math.abs(dx) < 35) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.1) return;
 
-      // Avoid hijacking active inputs
-      const target = e.target;
+      // Only skip if user is actively typing in an input
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        return;
+        if (document.activeElement === target) return;
       }
 
-      // If Navigation Drawer is open, swipe left anywhere closes it
-      const isDrawerOpen = !!document.querySelector('[data-testid="nav-drawer-panel"].translate-x-0');
+      // 1. If Drawer is open, swipe left anywhere closes it
+      const isDrawerOpen = !!document.querySelector(
+        '[data-testid="nav-drawer-panel"].translate-x-0'
+      );
       if (isDrawerOpen) {
-        if (dx < -35) {
+        if (dx < -30) {
           window.dispatchEvent(new CustomEvent('nexus:close-drawer'));
         }
         return;
       }
 
-      // 1. Edge swipe from left / 3-lines menu swipe right -> Open Drawer
-      if (startX < 75 && dx > 40) {
+      // 2. Edge swipe from left / 3-lines menu swipe right -> Open Drawer
+      if (startX < 75 && dx > 35) {
         openDrawer();
         return;
       }
 
-      // 2. Normal view swipe navigation
+      // 3. Main views swipe navigation
       if (dx < 0) {
         handleSwipe('left');
       } else {
@@ -120,17 +130,25 @@ export function GestureController() {
       }
     };
 
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    const handleTouchStart = (e) => {
+      if (!e.touches || e.touches.length !== 1) return;
+      onStart(e.touches[0].clientX, e.touches[0].clientY);
+    };
+
+    const handleTouchEnd = (e) => {
+      if (!e.changedTouches || e.changedTouches.length !== 1) return;
+      onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.target);
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     };
   }, [handleSwipe, openDrawer]);
-
-  if (currentIndex === -1) return null;
 
   const canGoLeft = currentIndex > 0;
   const canGoRight = currentIndex < SWIPE_ROUTES.length - 1;
@@ -139,7 +157,7 @@ export function GestureController() {
     <>
       <GestureFeedback gestureState={feedback} />
 
-      {/* Bottom tactile gesture guide pill (Material 3 elevated surface) */}
+      {/* Universal tactile gesture guide pill (visible across all views) */}
       <aside
         aria-label="Gesture navigation bar"
         className="fixed bottom-0 inset-x-0 z-40 flex justify-center pointer-events-none pb-[max(env(safe-area-inset-bottom),8px)] pt-1"

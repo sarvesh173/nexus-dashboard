@@ -85,6 +85,52 @@ def main():
             print("FAILED: Did not navigate back to Overview on swipe right")
             return 1
 
+        # 6. Direct test on Models Page (/model): Swipe left to Agents
+        page.goto(URL + "/model", wait_until="networkidle", timeout=15000)
+        page.wait_for_timeout(500)
+        page.evaluate("""() => {
+            const touchStart = new Touch({ identifier: 3, target: document.body, clientX: 280, clientY: 400 });
+            const touchEnd = new Touch({ identifier: 3, target: document.body, clientX: 90, clientY: 400 });
+            window.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart] }));
+            window.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd] }));
+        }""")
+        page.wait_for_timeout(500)
+        if "/agents" not in page.url:
+            print(f"FAILED: On /model, swipe left did not navigate to /agents (got {page.url})")
+            return 1
+        print("✓ On /model, swipe left navigated to Agents successfully")
+
+        # 7. Direct test on Models Deep-Link (/model/nvidia): Swipe left to Agents
+        page.goto(URL + "/model/nvidia", wait_until="networkidle", timeout=15000)
+        page.wait_for_timeout(500)
+        page.evaluate("""() => {
+            const touchStart = new Touch({ identifier: 4, target: document.body, clientX: 280, clientY: 400 });
+            const touchEnd = new Touch({ identifier: 4, target: document.body, clientX: 90, clientY: 400 });
+            window.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart] }));
+            window.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd] }));
+        }""")
+        page.wait_for_timeout(500)
+        if "/agents" not in page.url:
+            print(f"FAILED: On /model/nvidia, swipe left did not navigate to /agents (got {page.url})")
+            return 1
+        print("✓ On /model/nvidia deep-link, swipe left navigated to Agents successfully")
+
+        # 8. Test Edge Swipe on /model to open NavDrawer
+        page.goto(URL + "/model", wait_until="networkidle", timeout=15000)
+        page.wait_for_timeout(500)
+        page.evaluate("""() => {
+            const touchStart = new Touch({ identifier: 5, target: document.body, clientX: 20, clientY: 300 });
+            const touchEnd = new Touch({ identifier: 5, target: document.body, clientX: 180, clientY: 300 });
+            window.dispatchEvent(new TouchEvent('touchstart', { touches: [touchStart], changedTouches: [touchStart] }));
+            window.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touchEnd] }));
+        }""")
+        page.wait_for_timeout(500)
+        drawer_class_models = page.locator('[data-testid="nav-drawer-panel"]').get_attribute("class") or ""
+        if "translate-x-0" not in drawer_class_models:
+            print("FAILED: Edge swipe on /model did not open drawer")
+            return 1
+        print("✓ On /model, edge swipe opened NavDrawer successfully")
+
         print("ALL GESTURE & DRAWER TESTS PASSED!")
         browser.close()
         return 0
