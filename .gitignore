@@ -20,3 +20,9 @@ model_health.json
 cache/
 .audit/
 tests/screenshot_*.png
+media/
+*.mp4
+omnirush_prompt*
+scripts/
+active_model_store.json
+*.png
