@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  OverviewGlyph, ModelsGlyph, AgentsGlyph, PlaygroundGlyph, CostGlyph, SettingsGlyph,
+  OverviewGlyph, ModelsGlyph, AgentsGlyph, LogsGlyph, PlaygroundGlyph, CostGlyph, SettingsGlyph,
   EmptyCompassGlyph, PaletteGlyph,
 } from './RouteGlyphs.jsx';
 import { NavDrawer } from './NavDrawer.jsx';
@@ -8,6 +8,7 @@ import {
   SHOW_PLAYGROUND_IN_TOP_NAV,
   SHOW_COST_IN_TOP_NAV,
   SHOW_SETTINGS_IN_TOP_NAV,
+  SHOW_LOGS_IN_TOP_NAV,
 } from './navFlags.js';
 
 // A hidden tab keeps its button, its icon animation and its route. It leaves
@@ -36,6 +37,7 @@ const NAV_GLYPHS = {
   overview: { Glyph: OverviewGlyph, stem: 'overview' },
   models: { Glyph: ModelsGlyph, stem: 'model' },
   agents: { Glyph: AgentsGlyph, stem: 'agent' },
+  logs: { Glyph: LogsGlyph, stem: 'log' },
   playground: { Glyph: PlaygroundGlyph, stem: 'playground' },
   cost: { Glyph: CostGlyph, stem: 'cost' },
   settings: { Glyph: SettingsGlyph, stem: 'settings' },
@@ -133,6 +135,7 @@ function NavigationIcon({ tab, iconStyle, currency }) {
 export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-model-icon,
   .nav-agent-icon,
+  .nav-log-icon,
   .nav-cost-icon,
   .nav-settings-icon {
     position: relative;
@@ -164,7 +167,8 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-cost-icon,
   .nav-settings-icon,
   .nav-model-icon,
-  .nav-agent-icon {
+  .nav-agent-icon,
+  .nav-log-icon {
     transition: transform 460ms cubic-bezier(0.22, 1.4, 0.36, 1), filter 240ms ease;
   }
 
@@ -622,6 +626,11 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--nav-agent-glow) 66%, transparent));
     transform: perspective(520px) rotateX(-14deg) rotateY(12deg) translate3d(0, -1px, 3px) scale(1.1);
   }
+  .nav-logs-button[data-variant="0"]:hover .nav-log-icon,
+  .nav-logs-button[data-variant="0"]:focus-visible .nav-log-icon {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
+    transform: perspective(520px) rotateX(12deg) rotateY(16deg) translate3d(0, -1px, 3px) scale(1.11);
+  }
   .nav-playground-button[data-variant="0"]:hover .nav-playground-icon,
   .nav-playground-button[data-variant="0"]:focus-visible .nav-playground-icon {
     filter: drop-shadow(0 0 5px color-mix(in srgb, var(--md-sys-color-primary) 66%, transparent));
@@ -921,6 +930,10 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-agent-button {
     --nav-tilt-x: -14deg; --nav-tilt-y: 12deg; --nav-roll: 0deg;
     --nav-swing: -3deg; --nav-radius: 50%; --nav-orbit-start: 120deg; --nav-echo-delay: 320ms;
+  }
+  .nav-logs-button {
+    --nav-tilt-x: 14deg; --nav-tilt-y: 16deg; --nav-roll: 0deg;
+    --nav-swing: 5deg; --nav-radius: 4px; --nav-orbit-start: 150deg; --nav-echo-delay: 220ms;
   }
   .nav-playground-button {
     --nav-tilt-x: -14deg; --nav-tilt-y: 16deg; --nav-roll: 0deg;
@@ -1841,6 +1854,23 @@ export function NavigationFeature(props) {
           >
             <NavigationIcon tab="agents" iconStyle={tabMotions.agents.iconStyle} />
             <span>Agents</span>
+          </button>
+
+          {/* 4th Tab: Logs (Ported RequestLoggerV2 Live Stream) */}
+          <button
+            type="button"
+            onClick={() => navigate('/logs')}
+            {...motionProps('logs')}
+            {...navVisibility(SHOW_LOGS_IN_TOP_NAV)}
+            aria-current={location.pathname === '/logs' ? 'page' : undefined}
+            className={`nav-tab nav-logs-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${navHiddenClass(SHOW_LOGS_IN_TOP_NAV)} ${
+              location.pathname === '/logs'
+                ? 'nav-logs-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
+                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
+            }`}
+          >
+            <NavigationIcon tab="logs" iconStyle={tabMotions.logs?.iconStyle || 1} />
+            <span>Logs</span>
           </button>
 
           {/* Top Navbar Playground Button with Apple Micro-Animated SVG */}

@@ -16,6 +16,7 @@
 export const SHOW_PLAYGROUND_IN_TOP_NAV = false;
 export const SHOW_COST_IN_TOP_NAV = false;
 export const SHOW_SETTINGS_IN_TOP_NAV = false;
+export const SHOW_LOGS_IN_TOP_NAV = true;
 
 /** Which destinations live inside the hamburger (three-line) drawer. */
 export const DRAWER_ITEMS = [

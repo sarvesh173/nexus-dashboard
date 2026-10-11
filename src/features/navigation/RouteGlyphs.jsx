@@ -254,6 +254,11 @@ export function DrawerLogsGlyph({ size = 16, ...rest }) {
   ), rest);
 }
 
+/** Top Nav Logs — standard 16px feed glyph. */
+export function LogsGlyph({ size = 16, ...rest }) {
+  return DrawerLogsGlyph({ size, ...rest });
+}
+
 /** Drawer Settings — the tuning rails, matching the nav gear's cousin. */
 export function DrawerSettingsGlyph({ size = 16, ...rest }) {
   return glyph(size, (

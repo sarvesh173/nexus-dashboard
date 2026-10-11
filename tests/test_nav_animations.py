@@ -20,6 +20,7 @@ BUTTONS = [
     "nav-overview-button",
     "nav-model-button",
     "nav-agent-button",
+    "nav-logs-button",
     "nav-playground-button",
     "nav-cost-button",
     "nav-settings-button",
