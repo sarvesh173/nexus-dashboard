@@ -1765,9 +1765,9 @@ export function NavigationFeature(props) {
 
   const activeInteractions = React.useRef({});
   const resetTimers = React.useRef({});
+  const touchAnimTimers = React.useRef({});
   const [animatingTab, setAnimatingTab] = React.useState(null);
   const [settledTabs, setSettledTabs] = React.useState({});
-  const touchAnimTimer = React.useRef(null);
   const prevPathRef = React.useRef(location.pathname);
 
   const resetToNormal = React.useCallback((key) => {
@@ -1782,6 +1782,10 @@ export function NavigationFeature(props) {
     if (resetTimers.current[key]) {
       clearTimeout(resetTimers.current[key]);
       delete resetTimers.current[key];
+    }
+    if (touchAnimTimers.current[key]) {
+      clearTimeout(touchAnimTimers.current[key]);
+      delete touchAnimTimers.current[key];
     }
   }, []);
 
@@ -1810,16 +1814,20 @@ export function NavigationFeature(props) {
       return updated;
     });
 
-    // One-shot animation: plays for 720ms then settles, NEVER loops infinitely!
+    // One-shot animation: plays for 720ms then settles, per-tab timer so rapid swiping never wedges!
     setAnimatingTab(key);
-    if (touchAnimTimer.current) clearTimeout(touchAnimTimer.current);
-    touchAnimTimer.current = setTimeout(() => {
-      setAnimatingTab(null);
+    if (touchAnimTimers.current[key]) {
+      clearTimeout(touchAnimTimers.current[key]);
+    }
+    touchAnimTimers.current[key] = setTimeout(() => {
+      setAnimatingTab((prev) => (prev === key ? null : prev));
       resetToNormal(key);
+      delete touchAnimTimers.current[key];
     }, 720);
   }, [resetToNormal]);
 
   // Trigger one-shot animation with next stage in history when route changes
+  // AND immediately reset any inactive tabs so fast swiping never leaves intermediate tabs stuck!
   React.useEffect(() => {
     if (prevPathRef.current !== location.pathname) {
       prevPathRef.current = location.pathname;
@@ -1830,10 +1838,17 @@ export function NavigationFeature(props) {
       else if (location.pathname.startsWith('/log')) targetKey = 'logs';
 
       if (targetKey) {
+        // Immediately normalize all other tabs that are not currently active
+        Object.keys(NAV_GLYPHS).forEach((k) => {
+          if (k !== targetKey) {
+            resetToNormal(k);
+          }
+        });
+
         advanceMotionStage(targetKey);
       }
     }
-  }, [location.pathname, advanceMotionStage]);
+  }, [location.pathname, advanceMotionStage, resetToNormal]);
 
   const beginInteraction = (key, source) => {
     const sources = activeInteractions.current[key] ??= new Set();
@@ -1891,7 +1906,7 @@ export function NavigationFeature(props) {
   React.useEffect(() => {
     return () => {
       Object.values(resetTimers.current).forEach((timer) => clearTimeout(timer));
-      if (touchAnimTimer.current) clearTimeout(touchAnimTimer.current);
+      Object.values(touchAnimTimers.current).forEach((timer) => clearTimeout(timer));
     };
   }, []);
   const motionProps = (key) => ({
