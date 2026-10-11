@@ -21,6 +21,7 @@ import {
 // Ported verbatim from the reference checkout: the full request logger, with
 // its table, filters, grouping and detail modal.
 import RequestLoggerV2 from "@/shared/components/RequestLoggerV2";
+import { GestureController } from './features/gestures/GestureController.jsx';
 import { useHoverGraceTimer, useSmoothCounter } from './features/overview/logic.js';
 import {
   topCores as topCoresFor, coreCount, swapReadout,
@@ -1109,6 +1110,9 @@ export default function App() {
         changePalette={changePalette}
         toast={toast}
       />
+
+      {/* Global Touch Gesture Navigation Controller with Custom SVG Feedback */}
+      <GestureController />
 
       <main className="flex-1 w-full px-4 sm:px-8 md:px-12 lg:px-16 py-6 flex flex-col justify-start">
         <Breadcrumbs

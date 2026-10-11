@@ -1,0 +1,40 @@
+/* Gesture Feature Animation Styles */
+
+@keyframes gesture-glide-left {
+  0% { transform: translateX(6px); opacity: 0.6; }
+  50% { transform: translateX(-4px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes gesture-glide-right {
+  0% { transform: translateX(-6px); opacity: 0.6; }
+  50% { transform: translateX(4px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes gesture-pop-in {
+  0% { transform: translate(-50%, 16px) scale(0.92); opacity: 0; }
+  60% { transform: translate(-50%, -2px) scale(1.03); opacity: 1; }
+  100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+}
+
+@keyframes gesture-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent); }
+  50% { box-shadow: 0 0 16px 4px color-mix(in srgb, var(--md-sys-color-primary) 25%, transparent); }
+}
+
+.gesture-icon-animate-left {
+  animation: gesture-glide-left 360ms cubic-bezier(0.22, 1.4, 0.36, 1) forwards;
+}
+
+.gesture-icon-animate-right {
+  animation: gesture-glide-right 360ms cubic-bezier(0.22, 1.4, 0.36, 1) forwards;
+}
+
+.gesture-badge-feedback {
+  animation: gesture-pop-in 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.gesture-pill-glow {
+  animation: gesture-pulse-glow 2.4s ease-in-out infinite;
+}
