@@ -1009,28 +1009,48 @@ export const navMicroAnimationStyles = `  .nav-overview-icon,
   .nav-motion-ring::after { display: var(--nav-echo-display); }
   .nav-motion-echo { display: var(--nav-third-display); }
 
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon {
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-icon {
     filter: var(--nav-light);
   }
-  .nav-tab[data-variant]:not([data-variant="0"]):is(:hover, :focus-visible) .nav-motion-icon {
+  .nav-tab[data-variant]:not([data-variant="0"]):is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-icon {
     animation: var(--nav-body-motion) var(--nav-duration) var(--nav-curve) infinite alternate;
   }
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon::before {
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-icon::before {
     animation: var(--nav-well-motion) var(--nav-duration) var(--nav-curve) infinite alternate;
   }
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-icon::after {
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-icon::after {
     animation: var(--nav-glare-motion) calc(var(--nav-duration) * 1.5) var(--nav-curve) infinite;
   }
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::before,
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::after,
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-echo {
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-ring::before,
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-ring::after,
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-echo {
     animation: var(--nav-wave-motion) var(--nav-wave-duration) var(--nav-curve) infinite;
   }
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-ring::after {
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-ring::after {
     animation-delay: var(--nav-echo-delay);
   }
-  .nav-tab[data-variant]:is(:hover, :focus-visible) .nav-motion-echo {
+  .nav-tab[data-variant]:is(:hover, :focus-visible, [data-animating="playing"]) .nav-motion-echo {
     animation-delay: calc(var(--nav-echo-delay) * 2);
+  }
+
+  /* Phone / Touch ergonomics: strictly prevent sticky infinite loops while preserving rich animations */
+  @media (hover: none) or (pointer: coarse) {
+    .nav-tab:not([data-animating="playing"]) .nav-motion-icon,
+    .nav-tab:not([data-animating="playing"]) .nav-motion-icon::before,
+    .nav-tab:not([data-animating="playing"]) .nav-motion-icon::after,
+    .nav-tab:not([data-animating="playing"]) .nav-motion-ring::before,
+    .nav-tab:not([data-animating="playing"]) .nav-motion-ring::after,
+    .nav-tab:not([data-animating="playing"]) .nav-motion-echo {
+      animation: none !important;
+    }
+    .nav-tab[data-animating="playing"] .nav-motion-icon,
+    .nav-tab[data-animating="playing"] .nav-motion-icon::before,
+    .nav-tab[data-animating="playing"] .nav-motion-icon::after,
+    .nav-tab[data-animating="playing"] .nav-motion-ring::before,
+    .nav-tab[data-animating="playing"] .nav-motion-ring::after,
+    .nav-tab[data-animating="playing"] .nav-motion-echo {
+      animation-iteration-count: 1 !important;
+    }
   }
   /* Legacy illustration accents belong only to the verified baseline. */
   .nav-tab[data-variant]:not([data-variant="0"]) :is(.nav-overview-cell, .nav-agent-pulse, .nav-agent-spark) {
@@ -1714,11 +1734,64 @@ export function NavigationFeature(props) {
     isPlaygroundNavActive, activeCurrency, palettePickerOpen, setPalettePickerOpen,
     palettes, theme, changePalette, toast } = props;
 
-  const [tabMotions, setTabMotions] = React.useState(() => Object.fromEntries(
-    Object.keys(NAV_GLYPHS).map((key) => [key, { variant: 0, iconStyle: 1 }]),
-  ));
+  // Load persistent animation history from sessionStorage so phone remembers stages across navigation
+  const [tabMotions, setTabMotions] = React.useState(() => {
+    try {
+      const stored = sessionStorage.getItem('nexus_tab_motions');
+      if (stored) return JSON.parse(stored);
+    } catch (_) {}
+    return Object.fromEntries(
+      Object.keys(NAV_GLYPHS).map((key) => [key, { variant: 0, iconStyle: 1 }])
+    );
+  });
+
   const activeInteractions = React.useRef({});
   const resetTimers = React.useRef({});
+  const [animatingTab, setAnimatingTab] = React.useState(null);
+  const touchAnimTimer = React.useRef(null);
+  const prevPathRef = React.useRef(location.pathname);
+
+  const advanceMotionStage = React.useCallback((key) => {
+    setTabMotions((previous) => {
+      const current = previous[key] || { variant: 0, iconStyle: 1 };
+      const nextVariant = (current.variant + 1) % NAV_HOVER_STAGE_COUNT;
+      const nextStyle = (current.iconStyle % NAV_ICON_STYLE_COUNT) + 1;
+      const updated = {
+        ...previous,
+        [key]: {
+          variant: nextVariant,
+          iconStyle: nextStyle,
+        },
+      };
+      try {
+        sessionStorage.setItem('nexus_tab_motions', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    // One-shot animation: plays for 720ms then settles, NEVER loops infinitely!
+    setAnimatingTab(key);
+    if (touchAnimTimer.current) clearTimeout(touchAnimTimer.current);
+    touchAnimTimer.current = setTimeout(() => {
+      setAnimatingTab(null);
+    }, 720);
+  }, []);
+
+  // Trigger one-shot animation with next stage in history when route changes
+  React.useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      let targetKey = null;
+      if (location.pathname === '/' || location.pathname === '/overview') targetKey = 'overview';
+      else if (location.pathname.startsWith('/model') || location.pathname.startsWith('/models') || location.pathname.startsWith('/modules')) targetKey = 'models';
+      else if (location.pathname.startsWith('/agent')) targetKey = 'agents';
+      else if (location.pathname.startsWith('/log')) targetKey = 'logs';
+
+      if (targetKey) {
+        advanceMotionStage(targetKey);
+      }
+    }
+  }, [location.pathname, advanceMotionStage]);
 
   const beginInteraction = (key, source) => {
     const sources = activeInteractions.current[key] ??= new Set();
@@ -1734,13 +1807,22 @@ export function NavigationFeature(props) {
     // A focus + pointer visit counts once, after BOTH have left. Touch scrolling
     // and duplicate leave/cancel events must not consume unseen stages.
     if (!sources?.delete(source) || sources.size) return;
-    setTabMotions((previous) => ({
-      ...previous,
-      [key]: {
-        variant: (previous[key].variant + 1) % NAV_HOVER_STAGE_COUNT,
-        iconStyle: (previous[key].iconStyle % NAV_ICON_STYLE_COUNT) + 1,
-      },
-    }));
+    setTabMotions((previous) => {
+      const current = previous[key] || { variant: 0, iconStyle: 1 };
+      const nextVariant = (current.variant + 1) % NAV_HOVER_STAGE_COUNT;
+      const nextStyle = (current.iconStyle % NAV_ICON_STYLE_COUNT) + 1;
+      const updated = {
+        ...previous,
+        [key]: {
+          variant: nextVariant,
+          iconStyle: nextStyle,
+        },
+      };
+      try {
+        sessionStorage.setItem('nexus_tab_motions', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
 
     // Start 3-second reset timer: after 3 seconds of hover exit, smoothly reset SVG icon back to normal (style 1, variant 0)
     if (resetTimers.current[key]) {
@@ -1761,11 +1843,18 @@ export function NavigationFeature(props) {
   React.useEffect(() => {
     return () => {
       Object.values(resetTimers.current).forEach((timer) => clearTimeout(timer));
+      if (touchAnimTimer.current) clearTimeout(touchAnimTimer.current);
     };
   }, []);
   const motionProps = (key) => ({
-    'data-variant': tabMotions[key].variant,
-    'data-icon-style': tabMotions[key].iconStyle,
+    'data-variant': tabMotions[key]?.variant ?? 0,
+    'data-icon-style': tabMotions[key]?.iconStyle ?? 1,
+    'data-animating': animatingTab === key ? 'playing' : undefined,
+    onPointerDown: (event) => {
+      if (event.pointerType === 'touch') {
+        advanceMotionStage(key);
+      }
+    },
     onPointerEnter: (event) => {
       if (event.pointerType !== 'touch') beginInteraction(key, 'pointer');
     },
@@ -1813,7 +1902,7 @@ export function NavigationFeature(props) {
           
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={(e) => { navigate('/'); e.currentTarget.blur(); }}
             {...motionProps('overview')}
             aria-current={location.pathname === '/' ? 'page' : undefined}
             className={`nav-tab nav-overview-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
@@ -1828,7 +1917,7 @@ export function NavigationFeature(props) {
 
           <button
             type="button"
-            onClick={() => navigate('/model')}
+            onClick={(e) => { navigate('/model'); e.currentTarget.blur(); }}
             {...motionProps('models')}
             aria-current={isModelsNavActive ? 'page' : undefined}
             className={`nav-tab nav-model-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
@@ -1843,7 +1932,7 @@ export function NavigationFeature(props) {
 
           <button
             type="button"
-            onClick={() => navigate('/agents')}
+            onClick={(e) => { navigate('/agents'); e.currentTarget.blur(); }}
             {...motionProps('agents')}
             aria-current={isAgentsNavActive ? 'page' : undefined}
             className={`nav-tab nav-agent-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative ${
@@ -1859,7 +1948,7 @@ export function NavigationFeature(props) {
           {/* 4th Tab: Logs (Ported RequestLoggerV2 Live Stream) */}
           <button
             type="button"
-            onClick={() => navigate('/logs')}
+            onClick={(e) => { navigate('/logs'); e.currentTarget.blur(); }}
             {...motionProps('logs')}
             {...navVisibility(SHOW_LOGS_IN_TOP_NAV)}
             aria-current={location.pathname === '/logs' ? 'page' : undefined}
