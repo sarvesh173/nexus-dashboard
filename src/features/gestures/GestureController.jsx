@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { GestureFeedback } from './GestureFeedback.jsx';
-import { SwipeLeftGestureIcon, SwipeRightGestureIcon } from './GestureIcons.jsx';
+import {
+  M3GestureArrowLeft,
+  M3GestureArrowRight,
+  M3DrawerMenuGestureIcon,
+} from './GestureIcons.jsx';
 import './gestures.css';
 
 const SWIPE_ROUTES = [
@@ -12,8 +16,11 @@ const SWIPE_ROUTES = [
 ];
 
 /**
- * Mobile-native touch gesture controller for switching main views.
- * Supports smooth horizontal swipe navigation with animated feedback.
+ * System Gesture Controller (Material 3 Motion).
+ * Supports:
+ * - Edge swipe / 3-lines swipe to open Navigation Drawer
+ * - Horizontal swipe between main destinations with fluid page transition animation
+ * - Mobile tactile bottom indicator bar
  */
 export function GestureController() {
   const navigate = useNavigate();
@@ -32,19 +39,37 @@ export function GestureController() {
     }, 1300);
   }, []);
 
+  const triggerPageTransition = useCallback((direction) => {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.classList.remove('page-swipe-transition-left', 'page-swipe-transition-right');
+      void mainEl.offsetWidth; // Force reflow
+      mainEl.classList.add(
+        direction === 'left' ? 'page-swipe-transition-left' : 'page-swipe-transition-right'
+      );
+    }
+  }, []);
+
+  const openDrawer = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('nexus:open-drawer'));
+    showFeedback('drawer', 'Navigation Menu');
+  }, [showFeedback]);
+
   const handleSwipe = useCallback((direction) => {
     if (currentIndex === -1) return;
 
     if (direction === 'left' && currentIndex < SWIPE_ROUTES.length - 1) {
       const nextRoute = SWIPE_ROUTES[currentIndex + 1];
+      triggerPageTransition('left');
       navigate(nextRoute.path);
       showFeedback('left', nextRoute.title);
     } else if (direction === 'right' && currentIndex > 0) {
       const prevRoute = SWIPE_ROUTES[currentIndex - 1];
+      triggerPageTransition('right');
       navigate(prevRoute.path);
       showFeedback('right', prevRoute.title);
     }
-  }, [currentIndex, navigate, showFeedback]);
+  }, [currentIndex, navigate, showFeedback, triggerPageTransition]);
 
   useEffect(() => {
     const onTouchStart = (e) => {
@@ -59,20 +84,35 @@ export function GestureController() {
       const dx = t.clientX - touchStartRef.current.x;
       const dy = t.clientY - touchStartRef.current.y;
       const dt = Date.now() - touchStartRef.current.time;
+      const startX = touchStartRef.current.x;
 
-      // Ignore slow drags (>600ms) or short moves (<50px)
-      if (dt > 600) return;
-      if (Math.abs(dx) < 55) return;
+      // Relaxed duration & distance thresholds
+      if (dt > 800) return;
+      if (Math.abs(dx) < 40) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
 
-      // Require clear horizontal intent over vertical scroll
-      if (Math.abs(dx) < Math.abs(dy) * 1.4) return;
-
-      // Don't trigger if swiping inside interactive elements
+      // Avoid hijacking active inputs
       const target = e.target;
-      if (target && target.closest && target.closest('input, textarea, pre, code, [data-prevent-swipe]')) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
         return;
       }
 
+      // If Navigation Drawer is open, swipe left anywhere closes it
+      const isDrawerOpen = !!document.querySelector('[data-testid="nav-drawer-panel"].translate-x-0');
+      if (isDrawerOpen) {
+        if (dx < -35) {
+          window.dispatchEvent(new CustomEvent('nexus:close-drawer'));
+        }
+        return;
+      }
+
+      // 1. Edge swipe from left / 3-lines menu swipe right -> Open Drawer
+      if (startX < 75 && dx > 40) {
+        openDrawer();
+        return;
+      }
+
+      // 2. Normal view swipe navigation
       if (dx < 0) {
         handleSwipe('left');
       } else {
@@ -88,7 +128,7 @@ export function GestureController() {
       window.removeEventListener('touchend', onTouchEnd);
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     };
-  }, [handleSwipe]);
+  }, [handleSwipe, openDrawer]);
 
   if (currentIndex === -1) return null;
 
@@ -99,21 +139,32 @@ export function GestureController() {
     <>
       <GestureFeedback gestureState={feedback} />
 
-      {/* Bottom tactile gesture guide pill (visible on mobile / touch viewports) */}
+      {/* Bottom tactile gesture guide pill (Material 3 elevated surface) */}
       <aside
         aria-label="Gesture navigation bar"
         className="fixed bottom-0 inset-x-0 z-40 flex justify-center pointer-events-none pb-[max(env(safe-area-inset-bottom),8px)] pt-1"
       >
-        <div className="pointer-events-auto flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--md-sys-color-surface-container)]/75 border border-[var(--md-sys-color-outline-variant)]/40 shadow-sm backdrop-blur-md opacity-75 hover:opacity-100 transition-opacity">
+        <div className="pointer-events-auto flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--md-sys-color-surface-container)]/85 border border-[var(--md-sys-color-outline-variant)]/60 shadow-md backdrop-blur-xl opacity-80 hover:opacity-100 transition-opacity">
+          {/* Quick Drawer trigger */}
+          <button
+            type="button"
+            onClick={openDrawer}
+            title="Open Menu Drawer"
+            aria-label="Open Menu Drawer"
+            className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5"
+          >
+            <M3DrawerMenuGestureIcon size={16} />
+          </button>
+
           {canGoLeft && (
             <button
               type="button"
               onClick={() => handleSwipe('right')}
               title={`Swipe right to ${SWIPE_ROUTES[currentIndex - 1]?.title}`}
               aria-label={`Swipe right to ${SWIPE_ROUTES[currentIndex - 1]?.title}`}
-              className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-95 transition-all p-0.5"
+              className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5"
             >
-              <SwipeLeftGestureIcon size={16} animate={false} />
+              <M3GestureArrowLeft size={16} animate={false} />
             </button>
           )}
 
@@ -126,9 +177,9 @@ export function GestureController() {
               onClick={() => handleSwipe('left')}
               title={`Swipe left to ${SWIPE_ROUTES[currentIndex + 1]?.title}`}
               aria-label={`Swipe left to ${SWIPE_ROUTES[currentIndex + 1]?.title}`}
-              className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-95 transition-all p-0.5"
+              className="text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] active:scale-90 transition-all p-0.5"
             >
-              <SwipeRightGestureIcon size={16} animate={false} />
+              <M3GestureArrowRight size={16} animate={false} />
             </button>
           )}
         </div>

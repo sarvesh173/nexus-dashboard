@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   DrawerOverviewGlyph, DrawerModelsGlyph, DrawerAgentsGlyph, DrawerPlaygroundGlyph,
@@ -186,19 +186,30 @@ export function NavDrawer({
   onNavigate,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const drawerTouchStartRef = useRef(0);
 
   // Backs the LIVE badge on the Logs item. Gated on `isOpen` so a closed
   // drawer costs no requests at all; when closed the badge simply reads its
   // last known value, which is what a badge like this should do anyway.
   const { alive, loadState } = useHermesStatus({ enabled: isOpen });
 
-  // Close on Escape key
+  // Close on Escape key & listen for gesture-triggered events
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') setIsOpen(false);
     };
+    const handleOpen = () => setIsOpen(true);
+    const handleClose = () => setIsOpen(false);
+
     if (isOpen) window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('nexus:open-drawer', handleOpen);
+    window.addEventListener('nexus:close-drawer', handleClose);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('nexus:open-drawer', handleOpen);
+      window.removeEventListener('nexus:close-drawer', handleClose);
+    };
   }, [isOpen]);
 
   const navItems = DRAWER_ITEMS.map((item) => ({
@@ -271,6 +282,19 @@ export function NavDrawer({
       {/* Slide-out Drawer Panel with Expressive Spring */}
       <div
         data-testid="nav-drawer-panel"
+        onTouchStart={(e) => {
+          if (e.touches && e.touches[0]) {
+            drawerTouchStartRef.current = e.touches[0].clientX;
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (e.changedTouches && e.changedTouches[0]) {
+            const dx = e.changedTouches[0].clientX - drawerTouchStartRef.current;
+            if (dx < -40) {
+              setIsOpen(false);
+            }
+          }
+        }}
         className={`fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[85vw] bg-[var(--md-sys-color-surface-container-low)] border-r border-[var(--md-sys-color-outline-variant)] flex flex-col shadow-2xl transition-transform duration-350 ease-[cubic-bezier(0.38,1.21,0.22,1)] ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}

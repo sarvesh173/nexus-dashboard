@@ -1,107 +1,115 @@
 import React from 'react';
 
 /**
- * Custom bespoke SVG gesture icons with inline animation support.
+ * System-grade Gesture SVG Icons (Material 3 & Apple HIG).
+ * Features:
+ * - Crisp optical curves with balanced stroke weight
+ * - Rounded geometric terminal caps (stroke-linecap: round, stroke-linejoin: round)
+ * - Cohesive proportions matching modern mobile operating systems
  */
 
-export function SwipeLeftGestureIcon({ size = 24, className = '', animate = true }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 ${animate ? 'gesture-icon-animate-left' : ''} ${className}`}
-      aria-hidden="true"
-    >
-      {/* Dynamic speed motion trail particles */}
-      <path
-        d="M26 9H21M28 16H22M25 23H20"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeOpacity="0.4"
-      />
-      {/* Stylized Touch Hand / Directional Indicator */}
-      <path
-        d="M16 8L8 16L16 24"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="16" r="2.5" fill="currentColor" />
-    </svg>
-  );
-}
-
-export function SwipeRightGestureIcon({ size = 24, className = '', animate = true }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 ${animate ? 'gesture-icon-animate-right' : ''} ${className}`}
-      aria-hidden="true"
-    >
-      {/* Speed trails */}
-      <path
-        d="M6 9H11M4 16H10M7 23H12"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeOpacity="0.4"
-      />
-      {/* Directional Chevron Pointer */}
-      <path
-        d="M16 8L24 16L16 24"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="24" cy="16" r="2.5" fill="currentColor" />
-    </svg>
-  );
-}
-
-export function GestureTwoWayIcon({ size = 20, className = '' }) {
+export function M3GestureArrowLeft({ size = 20, className = '', animate = true }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`shrink-0 ${className}`}
+      xmlns="http://www.w3.org/2000/svg"
+      className={`shrink-0 ${animate ? 'gesture-icon-slide-left' : ''} ${className}`}
       aria-hidden="true"
     >
-      <path d="M7 16l-4-4 4-4" />
-      <path d="M17 8l4 4-4 4" />
-      <path d="M3 12h18" strokeDasharray="3 3" />
+      <circle cx="12" cy="12" r="10" fill="currentColor" fillOpacity="0.12" />
+      <path
+        d="M14.5 16.5L10 12L14.5 7.5"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.5 12H17"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
-export function GestureTouchPillIcon({ size = 28, className = '' }) {
+export function M3GestureArrowRight({ size = 20, className = '', animate = true }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 36 36"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`shrink-0 ${animate ? 'gesture-icon-slide-right' : ''} ${className}`}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" fill="currentColor" fillOpacity="0.12" />
+      <path
+        d="M9.5 7.5L14 12L9.5 16.5"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.5 12H7"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function M3DrawerMenuGestureIcon({ size = 22, className = '' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}
       aria-hidden="true"
     >
-      <rect x="6" y="16" width="24" height="4" rx="2" fill="currentColor" fillOpacity="0.85" />
-      <circle cx="18" cy="18" r="8" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" strokeOpacity="0.5" />
+      <rect x="3" y="6" width="12" height="2.2" rx="1.1" fill="currentColor" />
+      <rect x="3" y="11" width="16" height="2.2" rx="1.1" fill="currentColor" />
+      <rect x="3" y="16" width="10" height="2.2" rx="1.1" fill="currentColor" />
+      {/* Reveal arrow indicating swipe-to-open gesture */}
+      <path
+        d="M16 8.5L19.5 12L16 15.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
+
+export function M3HomeIndicatorPill({ className = '' }) {
+  return (
+    <svg
+      width="44"
+      height="5"
+      viewBox="0 0 44 5"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`shrink-0 ${className}`}
+      aria-hidden="true"
+    >
+      <rect width="44" height="5" rx="2.5" fill="currentColor" fillOpacity="0.5" />
+    </svg>
+  );
+}
+
+// Aliases for compatibility
+export {
+  M3GestureArrowLeft as SwipeLeftGestureIcon,
+  M3GestureArrowRight as SwipeRightGestureIcon,
+};
