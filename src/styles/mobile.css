@@ -1,0 +1,100 @@
+/* ==========================================================================
+   Mobile-Native Ergonomics & Phone Viewport Optimization
+   Adheres to DIVISION-RULE.md: Modular, self-contained chunk (< 150 lines).
+   Bound to M3 system tokens.
+   ========================================================================== */
+
+/* 1. Global Touch Baseline & Highlight Eradication */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  touch-action: pan-x pan-y;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 2. Prevent iOS Auto-Zoom on Input Focus */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* 3. Fast-Response Taps & Control Selection Prevention */
+button,
+a,
+[role="button"],
+.nav-tab,
+.provider-card,
+.pa-action {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 4. Notch & Safe Area Inset Support */
+header.sticky {
+  padding-top: max(0.625rem, env(safe-area-inset-top));
+}
+
+main {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
+/* 5. Mobile Smooth Momentum Scrolling */
+.nav-scroll-fade,
+.overflow-x-auto,
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* 6. Phone Form-Factor Layout Adaptations (<= 640px) */
+@media (max-width: 640px) {
+  #root,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Nav Tab touch targets: minimum 40px height for finger dexterity */
+  .nav-tab {
+    min-height: 38px;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+
+  /* Compact overview cards on phones */
+  .overview-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Provider cards: adapt smoothly to single column on narrow mobile screens */
+  .provider-card {
+    min-height: auto !important;
+    max-width: 100% !important;
+  }
+
+  /* Modality chip bar smooth horizontal pan on mobile */
+  .modality-scroll-track {
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0.5rem;
+  }
+}
+
+/* 7. Tactile Active Press Feedback on Coarse/Touch Screens */
+@media (pointer: coarse) {
+  .nav-tab:active,
+  .provider-card:active,
+  button:active {
+    transform: scale(0.975);
+    transition: transform 90ms var(--m3-easing-emphasized, ease-out);
+  }
+}

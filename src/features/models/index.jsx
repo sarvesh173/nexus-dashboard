@@ -275,7 +275,7 @@ export function ModelsFeature(props) {
                           </button>
 
                           {/* Leader Line (Badi Dandi) Overlay Animated Path */}
-                          <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isSelectHovered ? 'visible' : 'invisible'}`}>
+                          <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isSelectHovered ? 'visible block' : 'invisible hidden'}`}>
                             <svg
                               className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                               style={{
@@ -407,7 +407,7 @@ export function ModelsFeature(props) {
                             {/* Apple Leader-Style Explainer Tooltip Box */}
                             <div
                               className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none z-50 transition-all duration-200 ${
-                                isHideHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                                isHideHovered ? 'opacity-100 scale-100 block' : 'opacity-0 scale-95 hidden'
                               }`}
                             >
                               <div className="w-64 p-3 rounded-2xl bg-[var(--md-sys-color-surface-container-highest)]/95 backdrop-blur-2xl border border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.6)] text-[10.5px] font-mono leading-relaxed text-[var(--md-sys-color-on-surface)] space-y-1">
@@ -500,7 +500,7 @@ export function ModelsFeature(props) {
                                   </span>
 
                                   {/* Apple Cupertino Animated SVG Leader Line & Compact HUD Card */}
-                                  <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isActiveStatusHovered ? 'visible' : 'invisible'}`}>
+                                  <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isActiveStatusHovered ? 'visible block' : 'invisible hidden'}`}>
                                     <svg
                                       className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                       style={{
@@ -633,7 +633,7 @@ export function ModelsFeature(props) {
                                   </span>
 
                                   {/* Apple Cupertino Animated SVG Leader Line & Compact HUD Card */}
-                                  <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isOfflineStatusHovered ? 'visible' : 'invisible'}`}>
+                                  <div className={`absolute inset-0 pointer-events-none z-[100] overflow-visible ${isOfflineStatusHovered ? 'visible block' : 'invisible hidden'}`}>
                                     <svg
                                       className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
                                       style={{
@@ -784,7 +784,7 @@ export function ModelsFeature(props) {
                           {/* Simple Auto-Centered Hover Flyout (No complicated targeting) */}
                           <div
                             className={`absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+8px)] pointer-events-none z-[100] transition-all duration-250 ease-[cubic-bezier(0,0,0.2,1)] origin-bottom ${
-                              isLogoHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                              isLogoHovered ? 'opacity-100 scale-100 block' : 'opacity-0 scale-95 pointer-events-none hidden'
                             }`}
                           >
                             <div className="px-2.5 py-1 rounded-xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] shadow-lg text-[9.5px] font-mono text-[var(--md-sys-color-on-surface)] whitespace-nowrap flex items-center gap-1.5">

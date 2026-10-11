@@ -448,7 +448,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
       </div>
 
       {/* Overlay: Dot + Line (Badi Dandi) + Context Box */}
-      <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible'}`}>
+      <div className={`absolute inset-0 pointer-events-none z-50 overflow-visible ${isHovered ? 'visible' : 'invisible hidden'}`}>
         {/* SVG Drawing Line (Themed to Dashboard Primary) */}
         <svg
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
@@ -586,7 +586,7 @@ export function InteractiveActiveModelsBadge({ provider, totalCount, onSelect })
       {/* Live models hover popover with smooth fade/scale enter */}
       <div
         className={`absolute right-0 top-full w-52 pt-1.5 z-50 pointer-events-auto transition-all duration-250 ease-[cubic-bezier(0.2,0,0,1)] ${
-          isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+          isHovered ? 'opacity-100 scale-100 block' : 'opacity-0 scale-95 pointer-events-none hidden'
         }`}
         onClick={(e) => e.stopPropagation()}
       >

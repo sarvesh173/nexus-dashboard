@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Real-browser mount check: catches any runtime error the dashboard throws."""
-import sys
+import os, sys
 from playwright.sync_api import sync_playwright
 
 URL = "http://127.0.0.1:5173/"
 errors, console_errors = [], []
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(args=["--no-sandbox"])
+    launch_kwargs = {"args": ["--no-sandbox"]}
+    if os.path.exists("/usr/bin/chromium"):
+        launch_kwargs["executable_path"] = "/usr/bin/chromium"
+    browser = p.chromium.launch(**launch_kwargs)
     page = browser.new_page()
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: console_errors.append(f"{m.type}: {m.text}")
