@@ -374,7 +374,8 @@ def _shape_call(row):
 
 def artifact_root():
     """Directory holding the per-call JSON artifacts."""
-    return os.path.join(OMNIROUTE_HOME, 'call_logs')
+    home = os.environ.get('OMNIROUTE_HOME') or OMNIROUTE_HOME
+    return os.path.join(home, 'call_logs')
 
 
 def resolve_artifact(relpath):

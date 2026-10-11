@@ -1,13 +1,25 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import psutil
 import re
 import subprocess
 import os
 import sys
 import time
-import yaml
-import requests
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+try:
+    import requests
+except ImportError:
+    requests = None
 from paths import (
     hermes_config_path,
     hermes_env_path,
@@ -228,12 +240,36 @@ def get_telemetry():
     if _cached_data is not None and (now - _last_poll_time) < CACHE_TTL:
         return _cached_data
 
-    mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    per_cpu = psutil.cpu_percent(interval=None, percpu=True)
-    cpu_pct = psutil.cpu_percent(interval=None)
-    disk = psutil.disk_usage('/')
-    
+    if psutil is not None:
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        per_cpu = psutil.cpu_percent(interval=None, percpu=True)
+        cpu_pct = psutil.cpu_percent(interval=None)
+        disk = psutil.disk_usage('/')
+        ram_total_mb = round(mem.total / (1024 * 1024))
+        ram_used_mb = round(mem.used / (1024 * 1024))
+        ram_free_mb = round(mem.available / (1024 * 1024))
+        ram_percent = round(mem.percent, 1)
+        swap_total_mb = round(swap.total / (1024 * 1024))
+        swap_used_mb = round(swap.used / (1024 * 1024))
+        swap_free_mb = round(swap.free / (1024 * 1024))
+        swap_percent = round(swap.percent, 1)
+        cpu_percent = round(cpu_pct, 1)
+        cpu_cores = per_cpu if len(per_cpu) >= 2 else [round(cpu_pct, 1), round(cpu_pct, 1)]
+        disk_percent = round(disk.percent, 1)
+    else:
+        ram_total_mb = 0
+        ram_used_mb = 0
+        ram_free_mb = 0
+        ram_percent = 0.0
+        swap_total_mb = 0
+        swap_used_mb = 0
+        swap_free_mb = 0
+        swap_percent = 0.0
+        cpu_percent = 0.0
+        cpu_cores = [0.0, 0.0]
+        disk_percent = 0.0
+
     # This is the BACKEND's own memory. nexus-dashboard.service is the Vite
     # preview server (a different process, ~45 MB), so querying it reported a
     # plausible-looking number for the wrong process.
@@ -252,19 +288,19 @@ def get_telemetry():
         if val.isdigit():
             nexus_mem_mb = round(int(val) / (1024 * 1024), 1)
             break
-    
+
     _cached_data = {
-        'ram_total_mb': round(mem.total / (1024 * 1024)),
-        'ram_used_mb': round(mem.used / (1024 * 1024)),
-        'ram_free_mb': round(mem.available / (1024 * 1024)),
-        'ram_percent': round(mem.percent, 1),
-        'swap_total_mb': round(swap.total / (1024 * 1024)),
-        'swap_used_mb': round(swap.used / (1024 * 1024)),
-        'swap_free_mb': round(swap.free / (1024 * 1024)),
-        'swap_percent': round(swap.percent, 1),
-        'cpu_percent': round(cpu_pct, 1),
-        'cpu_cores': per_cpu if len(per_cpu) >= 2 else [round(cpu_pct, 1), round(cpu_pct, 1)],
-        'disk_percent': round(disk.percent, 1),
+        'ram_total_mb': ram_total_mb,
+        'ram_used_mb': ram_used_mb,
+        'ram_free_mb': ram_free_mb,
+        'ram_percent': ram_percent,
+        'swap_total_mb': swap_total_mb,
+        'swap_used_mb': swap_used_mb,
+        'swap_free_mb': swap_free_mb,
+        'swap_percent': swap_percent,
+        'cpu_percent': cpu_percent,
+        'cpu_cores': cpu_cores,
+        'disk_percent': disk_percent,
         'nexus_mem_mb': nexus_mem_mb
     }
     _last_poll_time = now
@@ -382,8 +418,11 @@ def _hermes_active_model():
         # model that may well exist; this path is cached like the rest, so the
         # expensive fallback can only run on the slow path.
         try:
-            with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
-                cfg = yaml.safe_load(fh) or {}
+            if yaml is not None:
+                with open(hermes_config_path(), 'r', encoding='utf-8') as fh:
+                    cfg = yaml.safe_load(fh) or {}
+            else:
+                cfg = {}
             raw = cfg.get('model') or {}
             model = {k: v for k, v in raw.items() if not isinstance(v, (dict, list))}
         except Exception as exc:  # noqa: BLE001 - reported, never raised
@@ -871,8 +910,11 @@ def get_hermes_config_providers():
 
     config_path = hermes_config_path()
     try:
-        with open(config_path, 'r') as f:
-            cfg = yaml.safe_load(f)
+        if yaml is not None:
+            with open(config_path, 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+        else:
+            cfg = {}
     except Exception as e:
         cfg = {}
 
@@ -1359,8 +1401,11 @@ def _logo_for(pid):
 def get_all_config_providers():
     """Every provider in the Hermes config (routers included, marked as such)."""
     try:
-        with open(hermes_config_path(), 'r') as f:
-            cfg = yaml.safe_load(f) or {}
+        if yaml is not None:
+            with open(hermes_config_path(), 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+        else:
+            cfg = {}
     except Exception:
         cfg = {}
 
@@ -1556,9 +1601,12 @@ def config_provider_map():
     if _cfg_cache['map'] is not None and _t.time() - _cfg_cache['at'] < 60:
         return _cfg_cache['map']
     try:
-        with open(hermes_config_path(), 'r') as f:
-            cfg = yaml.safe_load(f) or {}
-        pm = cfg.get('providers', {}) or {}
+        if yaml is not None:
+            with open(hermes_config_path(), 'r') as f:
+                cfg = yaml.safe_load(f) or {}
+            pm = cfg.get('providers', {}) or {}
+        else:
+            pm = {}
     except Exception:
         pm = {}
     _cfg_cache.update({'map': pm, 'at': _t.time()})

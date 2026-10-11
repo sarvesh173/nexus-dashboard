@@ -23,7 +23,10 @@ import tempfile
 import time
 from paths import hermes_config_path, hermes_env_path, omniroute_env_path
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'

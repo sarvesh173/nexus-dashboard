@@ -24,15 +24,27 @@ BASE = 'https://integrate.api.nvidia.com/v1'
 
 def fetch_specs():
     """(model_id, category) straight from the live NVIDIA catalog."""
-    import yaml
-    import requests
+    try:
+        import yaml
+    except ImportError:
+        yaml = None
+
+    try:
+        import requests
+    except ImportError:
+        requests = None
 
     key = model_health._api_key()
     if not key:
         raise SystemExit('no NVIDIA key found in Hermes config')
 
-    with open(hermes_config_path()) as fh:
-        cfg = yaml.safe_load(fh) or {}
+    cfg = {}
+    if yaml is not None:
+        try:
+            with open(hermes_config_path()) as fh:
+                cfg = yaml.safe_load(fh) or {}
+        except Exception:
+            cfg = {}
     nv = (cfg.get('providers') or {}).get('nvidia') or {}
     base = nv.get('base_url') or BASE
 
