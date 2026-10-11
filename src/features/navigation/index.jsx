@@ -43,74 +43,9 @@ const NAV_GLYPHS = {
   settings: { Glyph: SettingsGlyph, stem: 'settings' },
 };
 
-// Real vector silhouettes, not ten filters applied to the same outline. Only
-// the selected surface is mounted; the familiar route glyph stays recognizable.
-function NavIconSurface({ iconStyle }) {
-  let surface;
-  switch (iconStyle) {
-    case 1: // Minimal Outline Line-Art: the unadorned 1.5px glyph.
-      return null;
-    case 2: // Duo-Tone Ambient.
-      surface = <path className="nav-skin-ambient" d="M8 3h12a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5Z" />;
-      break;
-    case 3: // Filled Squircle Micro-Badge: recessed well + embossed rim.
-      surface = <>
-        <path className="nav-skin-well" d="M14 2C4 2 2 4 2 14s2 12 12 12 12-2 12-12S24 2 14 2Z" />
-        <path className="nav-skin-highlight" d="M5 13C5 6 6 5 14 5s9 1 9 8" />
-        <path className="nav-skin-facet" d="M5 17c0 5 3 6 9 6s9-1 9-6" />
-      </>;
-      break;
-    case 4: // 3D Isometric Wireframe: explicitly projected vector facets.
-      surface = <>
-        <path className="nav-skin-ambient" d="m14 1 12 7-12 7L2 8Z" />
-        <path className="nav-skin-facet" d="m2 8 12 7v12L2 20Zm24 0v12l-12 7V15Z" />
-        <path d="M14 1v12M2 8l12 7 12-7M14 15v12" />
-      </>;
-      break;
-    case 5: // Neon-Flux Ray Trace: a moving specular ray around the perimeter.
-      surface = <>
-        <path className="nav-skin-facet" d="M8 3h12l5 5v12l-5 5H8l-5-5V8Z" />
-        <path className="nav-skin-ray" pathLength="100" d="M14 3h6l5 5v12l-5 5H8l-5-5V8l5-5Z" />
-      </>;
-      break;
-    case 6: // Dotted Matrix Mesh: small points keep the glyph legible.
-      surface = <g className="nav-skin-matrix">
-        {[3, 8.5, 14, 19.5, 25].flatMap((x) =>
-          [3, 8.5, 14, 19.5, 25].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="0.7" />))}
-      </g>;
-      break;
-    case 7: // Concentric Micro-Ring Badge: two independently drawn borders.
-      surface = <>
-        <circle cx="14" cy="14" r="12" />
-        <circle className="nav-skin-facet" cx="14" cy="14" r="9.5" />
-        <path className="nav-skin-highlight" d="M5.5 5.5A12 12 0 0 1 14 2" />
-      </>;
-      break;
-    case 8: // Geometric Chiseled: chamfered corners and contrasting bevels.
-      surface = <>
-        <path className="nav-skin-well" d="M7 2h14l5 5v14l-5 5H7l-5-5V7Z" />
-        <path className="nav-skin-highlight" d="m3 8 5-5h12M7 7h14" />
-        <path className="nav-skin-facet" d="m21 3-3 4m7 13-5 5H8l3-4h10V7l4 4" />
-      </>;
-      break;
-    case 9: // Fluid Liquid Droplet: asymmetric, continuously curved outline.
-      surface = <>
-        <path className="nav-skin-well" d="M14 2c5 0 5 5 9 7 3 2 3 5 2 8-1 6-5 9-11 9C7 26 2 21 2 15 2 8 6 2 14 2Z" />
-        <path className="nav-skin-highlight" d="M6 12c0-4 3-7 7-7" />
-        <path className="nav-skin-facet" d="M15 23c4 0 7-3 7-7" />
-      </>;
-      break;
-    case 10: // Tactile Capsule Emblem: inset pill, floating above a lower rim.
-      surface = <>
-        <rect className="nav-skin-well" x="1" y="5" width="26" height="18" rx="9" />
-        <path className="nav-skin-highlight" d="M5 12a6 6 0 0 1 6-4h7" />
-        <path className="nav-skin-facet" d="M5 19c2 3 4 4 9 4s8-1 10-4" />
-      </>;
-      break;
-    default:
-      return null;
-  }
-  return <svg className="nav-icon-surface" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{surface}</svg>;
+// Pure, unadorned optical vector glyphs. Clean lines without noisy wireframe cages or squircle boxes.
+function NavIconSurface() {
+  return null;
 }
 
 function NavigationIcon({ tab, iconStyle, currency }) {

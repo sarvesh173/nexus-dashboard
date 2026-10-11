@@ -1,60 +1,158 @@
-/* System Gesture Animation Styles (Material 3 Motion System) */
+/* System Gesture Animation Styles (Apple HIG & Material 3 Fluid Motion) */
 
-@keyframes m3-gesture-slide-left {
-  0% { transform: translateX(8px); opacity: 0.5; }
-  60% { transform: translateX(-3px); opacity: 1; }
-  100% { transform: translateX(0); opacity: 1; }
+/* Spatial Inertial Page Transitions */
+@keyframes apple-page-slide-in-left {
+  0% {
+    transform: translate3d(24%, 0, 0) scale(0.965);
+    opacity: 0.2;
+    filter: blur(4px);
+  }
+  65% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
 }
 
-@keyframes m3-gesture-slide-right {
-  0% { transform: translateX(-8px); opacity: 0.5; }
-  60% { transform: translateX(3px); opacity: 1; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes m3-gesture-pop-in {
-  0% { transform: translate(-50%, 20px) scale(0.9); opacity: 0; }
-  65% { transform: translate(-50%, -3px) scale(1.02); opacity: 1; }
-  100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
-}
-
-@keyframes m3-page-slide-in-left {
-  0% { transform: translateX(36px); opacity: 0.65; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes m3-page-slide-in-right {
-  0% { transform: translateX(-36px); opacity: 0.65; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-
-.gesture-icon-slide-left {
-  animation: m3-gesture-slide-left 340ms cubic-bezier(0.05, 0.7, 0.1, 1) forwards;
-}
-
-.gesture-icon-slide-right {
-  animation: m3-gesture-slide-right 340ms cubic-bezier(0.05, 0.7, 0.1, 1) forwards;
-}
-
-.gesture-badge-feedback {
-  animation: m3-gesture-pop-in 260ms cubic-bezier(0.05, 0.7, 0.1, 1) forwards;
+@keyframes apple-page-slide-in-right {
+  0% {
+    transform: translate3d(-24%, 0, 0) scale(0.965);
+    opacity: 0.2;
+    filter: blur(4px);
+  }
+  65% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
 }
 
 .page-swipe-transition-left {
-  animation: m3-page-slide-in-left 280ms cubic-bezier(0.05, 0.7, 0.1, 1) forwards;
+  animation: apple-page-slide-in-left 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
 }
 
 .page-swipe-transition-right {
-  animation: m3-page-slide-in-right 280ms cubic-bezier(0.05, 0.7, 0.1, 1) forwards;
+  animation: apple-page-slide-in-right 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+/* Floating Feedback HUD Capsule */
+@keyframes dynamic-pill-enter {
+  0% {
+    transform: translate3d(-50%, 26px, 0) scale(0.82);
+    opacity: 0;
+    filter: blur(8px);
+  }
+  60% {
+    transform: translate3d(-50%, -3px, 0) scale(1.03);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+@keyframes dynamic-pill-exit {
+  0% {
+    transform: translate3d(-50%, 0, 0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate3d(-50%, 16px, 0) scale(0.88);
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+.gesture-badge-feedback {
+  animation: dynamic-pill-enter 340ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.gesture-badge-feedback-exit {
+  animation: dynamic-pill-exit 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Directional Arrow Micro-Springs */
+@keyframes apple-arrow-bounce-left {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(-6px) scale(1.1); }
+  70% { transform: translateX(2px) scale(0.96); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes apple-arrow-bounce-right {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(6px) scale(1.1); }
+  70% { transform: translateX(-2px) scale(0.96); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+.gesture-icon-slide-left {
+  animation: apple-arrow-bounce-left 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.gesture-icon-slide-right {
+  animation: apple-arrow-bounce-right 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Auto-Hiding Gesture Bar */
+.nexus-gesture-bar-container {
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
+              filter 360ms ease-out;
+  will-change: transform, opacity, filter;
+}
+
+.nexus-gesture-bar-visible {
+  transform: translateY(0);
+  opacity: 1;
+  filter: blur(0px);
+  pointer-events: auto;
+}
+
+.nexus-gesture-bar-hidden {
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* Glassmorphic Capsule Styling */
+.nexus-gesture-pill-surface {
+  background: color-mix(in srgb, var(--md-sys-color-surface-container) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 65%, transparent);
+  box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.35),
+              0 0 1px 1px rgba(255, 255, 255, 0.08) inset;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .gesture-icon-slide-left,
   .gesture-icon-slide-right,
   .gesture-badge-feedback,
+  .gesture-badge-feedback-exit,
   .page-swipe-transition-left,
-  .page-swipe-transition-right {
+  .page-swipe-transition-right,
+  .nexus-gesture-bar-container {
     animation: none !important;
     transform: none !important;
+    transition: none !important;
+    filter: none !important;
   }
 }

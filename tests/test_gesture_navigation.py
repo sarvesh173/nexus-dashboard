@@ -17,14 +17,26 @@ def main():
         page.goto(URL, wait_until="networkidle", timeout=15000)
         page.wait_for_timeout(500)
 
-        # 1. Verify bottom gesture guide bar exists
+        # 1. Verify bottom gesture guide bar exists and auto-hides after inactivity
         bar = page.locator('aside[aria-label="Gesture navigation bar"]')
         if bar.count() == 0:
             print("FAILED: Gesture navigation bar not found")
             return 1
         print("✓ Gesture navigation bar is mounted")
 
-        # 2. Test Edge swipe from left / 3-lines menu swipe right -> Opens Drawer
+        # Verify auto-hide behavior
+        bar_initial = bar.get_attribute("class") or ""
+        if "nexus-gesture-bar-visible" not in bar_initial:
+            print("FAILED: Gesture bar should initially be visible")
+            return 1
+        page.wait_for_timeout(2800)
+        bar_hidden = bar.get_attribute("class") or ""
+        if "nexus-gesture-bar-hidden" not in bar_hidden:
+            print(f"FAILED: Gesture bar did not auto-hide after inactivity (class: {bar_hidden})")
+            return 1
+        print("✓ Gesture navigation bar auto-hides after inactivity")
+
+        # 2. Test Edge swipe from left / 3-lines menu swipe right -> Opens Drawer and re-awakens bar
         page.evaluate("""() => {
             const touchStart = new Touch({ identifier: 10, target: document.body, clientX: 25, clientY: 300 });
             const touchEnd = new Touch({ identifier: 10, target: document.body, clientX: 160, clientY: 300 });
