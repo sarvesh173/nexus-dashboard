@@ -183,13 +183,25 @@ export function DrawerModelsGlyph({ size = 16, ...rest }) {
   ), rest);
 }
 
-/** Drawer Agents — a cortex rail: two folded halves over a stem. */
+/** Drawer Agents — the fleet at rest and in flight.
+
+   Two reads, not one. The lower rail is a solid node sitting on a baseline -
+   a thing that is parked. The upper rail is the same node lifted off that
+   baseline with a motion arc over it - a thing that is running. That is what
+   this page actually shows: a set of agents, some idle, some working. An
+   earlier attempt drew a single symmetric brain half on a stem and read as a
+   medical symbol at 16px, which is worse than no symbol at all.
+
+   Deliberately not a robot head and not a chat bubble: both are so heavily
+   used as "AI agent" iconography that they carry no information here. */
 export function DrawerAgentsGlyph({ size = 16, ...rest }) {
   return glyph(size, (
     <>
-      <path d="M8 2.1v11.8" />
-      <path d="M8 3.4c-1.5 0-2.6.5-3.2 1.4-.9.3-1.5 1.1-1.5 2 0 .6.2 1.1.6 1.5-.3.4-.4.8-.4 1.3 0 1.1.9 2 2 2 .5 0 1-.2 1.3-.6.6.3 1.3.5 2 .5" />
-      <path d="M8 3.4c1.5 0 2.6.5 3.2 1.4.9.3 1.5 1.1 1.5 2 0 .6-.2 1.1-.6 1.5.3.4.4.8.4 1.3 0 1.1-.9 2-2 2-.5 0-1-.2-1.3-.6-.6.3-1.3.5-2 .5" />
+      {/* the running node, lifted clear of its rail, with a travel arc over it */}
+      <path d="M3.6 7.4 5.8 4.3a1.6 1.6 0 0 1 2.4 0l2.2 3.1" />
+      <circle cx="8" cy="10.4" r="1.75" />
+      {/* the idle node, parked on its own rail */}
+      <path d="M2.6 13.4h2.6M10.8 13.4h2.6" />
     </>
   ), rest);
 }
@@ -205,12 +217,28 @@ export function DrawerPlaygroundGlyph({ size = 16, ...rest }) {
   ), rest);
 }
 
-/** Drawer Cost — a coin edge with a rising cost rail across it. */
+/** Drawer Cost — a metered bar, not a coin.
+
+   This is spend, and spend has a shape: a rising bar chart under one
+   threshold line. The earlier version was a coin with a trend squiggle
+   across it, which is a stock ticker at 16px - it says "market", not
+   "what this cost me". Bars read faster at small sizes than a currency
+   glyph does, because three bars of different heights is a shape you
+   recognise before you finish reading it.
+
+   The bars are unequal and clipped to the frame on purpose: equal bars
+   would be a menu icon, and an unclipped set would overflow the rail
+   weight. One bar crosses the threshold line, because the point of the
+   page is where the spend went past. */
 export function DrawerCostGlyph({ size = 16, ...rest }) {
   return glyph(size, (
     <>
-      <circle cx="8" cy="8" r="6.1" />
-      <path d="M4.6 10.4 6.8 8.2l1.7 1.7 3-3.5" />
+      {/* the meter floor */}
+      <path d="M2 13.1h12" />
+      {/* three bars, unequal, all rising off the floor */}
+      <path d="M4.2 13.1V9.4M8 13.1V6.2M11.8 13.1v-4.6" />
+      {/* the budget line the middle bar has already crossed */}
+      <path d="M2 8.1h4.9" />
     </>
   ), rest);
 }
