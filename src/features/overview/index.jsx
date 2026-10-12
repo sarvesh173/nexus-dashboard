@@ -103,8 +103,31 @@ const OVERVIEW_MOTION_STYLES = `
   .overview-motion-root .overview-control {
     transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease-out;
   }
-  .overview-motion-root .overview-control:active:not(:disabled) { transform: scale(0.95); }
+  .overview-motion-root .overview-control:active:not(:disabled) { transform: scale(0.92); }
   .overview-motion-root .overview-control:disabled { opacity: 0.55; }
+
+  @keyframes currency-flip-in {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.85);
+      filter: blur(1px);
+    }
+    60% {
+      transform: translateY(-1.5px) scale(1.05);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .currency-flip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    animation: currency-flip-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
 
   .overview-motion-root .m3-linear-progress {
     display: flex;
@@ -1017,9 +1040,8 @@ export function OverviewFeature(props = {}) {
                   </div>
                   
                   <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="text-[11px] font-mono text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1.5" title={hasRealTelemetry ? 'Live host telemetry' : 'Waiting for live host telemetry'}>
+                    <span className="flex items-center" title={hasRealTelemetry ? 'Live host telemetry' : 'Waiting for live host telemetry'}>
                       <StatusDot live={hasRealTelemetry} />
-                      Dual-Core CPU & Physical Swap
                     </span>
                     <button
                       onClick={() => {
@@ -1030,10 +1052,12 @@ export function OverviewFeature(props = {}) {
                       }}
                       type="button"
                       aria-label={`Change currency (currently ${activeCurrency.id})`}
-                      className="overview-control px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] flex items-center gap-1.5 text-xs font-bold font-mono shadow-2xs cursor-pointer"
+                      className="overview-control px-2.5 py-1 rounded-full border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-surface-container-high)] hover:border-[var(--md-sys-color-primary)] flex items-center gap-1.5 text-xs font-bold font-mono shadow-2xs cursor-pointer active:scale-90"
                     >
-                      <span>{activeCurrency.flag}</span>
-                      <span>{activeCurrency.symbol} {activeCurrency.id}</span>
+                      <span key={currencyCode} className="currency-flip-badge">
+                        <span>{activeCurrency.flag}</span>
+                        <span>{activeCurrency.symbol} {activeCurrency.id}</span>
+                      </span>
                     </button>
                     <button
                       onClick={onRefreshStats}
