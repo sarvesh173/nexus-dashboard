@@ -935,6 +935,8 @@ def get_hermes_config_providers():
 
         # Fetch live models from NVIDIA API
         try:
+            if requests is None:
+                raise RuntimeError('requests library unavailable')
             headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
             resp = requests.get(f'{base_url}/models', headers=headers, timeout=8)
             if resp.status_code == 200:
@@ -1763,6 +1765,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
                 start = time.time()
                 try:
+                    if requests is None:
+                        raise RuntimeError('requests library unavailable')
                     res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
                     latency = int((time.time() - start) * 1000)
 
@@ -1811,13 +1815,20 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                             'latency_ms': latency,
                             'error': err_text[:200] or f'HTTP {res.status_code}'
                         })
-                except requests.exceptions.Timeout:
+                except Exception as exc:
                     latency = int((time.time() - start) * 1000)
+                    if 'Timeout' in type(exc).__name__:
+                        return self.send_json({
+                            'ok': False,
+                            'status': 408,
+                            'latency_ms': latency,
+                            'error': 'Time Out (Model exceeded 12s response deadline)'
+                        })
                     return self.send_json({
                         'ok': False,
-                        'status': 408,
+                        'status': 500,
                         'latency_ms': latency,
-                        'error': 'Time Out (Model exceeded 12s response deadline)'
+                        'error': str(exc)[:180]
                     })
                 except Exception as e:
                     latency = int((time.time() - start) * 1000)
@@ -1950,6 +1961,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
             if model_id:
                 try:
+                    if requests is None:
+                        raise RuntimeError('requests library unavailable')
                     clean_id = model_id.split('/')[-1].lower()
                     req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
                     if req.status_code == 200:

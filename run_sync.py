@@ -68,6 +68,8 @@ def fetch_specs():
               'categorisation'.format(type(exc).__name__))
 
     if not specs:
+        if requests is None:
+            return []
         r = requests.get(base.rstrip('/') + '/models', timeout=20,
                          headers={'Authorization': 'Bearer {key}'.format(key=key)})
         for m in r.json().get('data', []):
