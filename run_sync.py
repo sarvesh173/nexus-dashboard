@@ -67,7 +67,7 @@ def fetch_specs():
         print('[sync] server import failed ({}), falling back to keyword '
               'categorisation'.format(type(exc).__name__))
 
-    if not specs:
+    if not specs and requests is not None:
         r = requests.get(base.rstrip('/') + '/models', timeout=20,
                          headers={'Authorization': 'Bearer {key}'.format(key=key)})
         for m in r.json().get('data', []):

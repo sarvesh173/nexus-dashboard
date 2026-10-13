@@ -55,7 +55,7 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
         return _catalog_cache['ids']
     key = key or _api_key()
     ids = set()
-    if key:
+    if key and requests is not None:
         try:
             r = requests.get(base.rstrip('/') + '/models', timeout=15,
                              headers={'Authorization': 'Bearer {key}'.format(key=key)})
@@ -152,6 +152,9 @@ def _api_key():
 
 def _probe(base, key, mid, route):
     """One request. Returns (status, detail)."""
+    if requests is None:
+        return 'UNREACHABLE', 'requests_not_installed'
+
     url = base.rstrip('/') + route
     if route == '/v1/embeddings':
         body = {'model': mid, 'input': [111, 222, 333],
@@ -167,8 +170,10 @@ def _probe(base, key, mid, route):
         r = requests.post(url, json=body, timeout=PROBE_TIMEOUT,
                           headers={'Authorization': 'Bearer {key}'.format(key=key),
                                    'Content-Type': 'application/json'})
-    except requests.Timeout:
-        return 'UNREACHABLE', 'timeout'
+    except getattr(requests, 'Timeout', Exception) as exc:
+        if isinstance(exc, getattr(requests, 'Timeout', ())):
+            return 'UNREACHABLE', 'timeout'
+        return 'UNREACHABLE', type(exc).__name__
     except Exception as exc:                      # connection reset, DNS, ...
         return 'UNREACHABLE', type(exc).__name__
 

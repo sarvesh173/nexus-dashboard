@@ -295,20 +295,38 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
 
     When an NVIDIA API key was present in configuration, `run_sync.py` crashed
     with `NameError: name 'hermes_config_path' is not defined`.
+    Also tests that missing `requests` is handled gracefully without AttributeError.
     """
 
     def test_fetch_specs_resolves_hermes_config_path_without_name_error(self):
-        from unittest.mock import patch
+        from unittest.mock import patch, MagicMock
         import run_sync
 
+        fake_requests = MagicMock()
+        fake_requests.get.return_value.json.return_value = {"data": []}
+
         with patch("model_health._api_key", return_value="dummy_key"), \
-             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"):
+             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch.dict("sys.modules", {"requests": fake_requests}):
             try:
                 run_sync.fetch_specs()
             except FileNotFoundError:
                 pass  # hermes_config_path was successfully called and resolved
             except NameError as exc:
                 self.fail(f"run_sync.fetch_specs raised NameError: {exc}")
+
+    def test_fetch_specs_handles_none_requests_without_attribute_error(self):
+        from unittest.mock import patch
+        import run_sync
+
+        with patch("model_health._api_key", return_value="dummy_key"), \
+             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch.dict("sys.modules", {"requests": None}):
+            try:
+                specs = run_sync.fetch_specs()
+                self.assertIsInstance(specs, list)
+            except AttributeError as exc:
+                self.fail(f"run_sync.fetch_specs raised AttributeError when requests was None: {exc}")
 
 
 class TestMetaCountsAgreeWithRows(unittest.TestCase):
