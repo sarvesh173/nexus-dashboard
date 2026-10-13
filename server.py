@@ -510,7 +510,7 @@ def get_hermes_status():
     alive = False
     uptime_sec = None
     process = None
-    if isinstance(pid, int):
+    if psutil is not None and isinstance(pid, int):
         try:
             proc = psutil.Process(pid)
             proc.create_time()          # raises if the pid was recycled
@@ -935,9 +935,12 @@ def get_hermes_config_providers():
 
         # Fetch live models from NVIDIA API
         try:
-            headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
-            resp = requests.get(f'{base_url}/models', headers=headers, timeout=8)
-            if resp.status_code == 200:
+            if requests is not None:
+                headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+                resp = requests.get(f'{base_url}/models', headers=headers, timeout=8)
+            else:
+                resp = None
+            if resp is not None and resp.status_code == 200:
                 data = resp.json().get('data', [])
                 for item in data:
                     mid = item.get('id', '')
@@ -1763,6 +1766,13 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
                 start = time.time()
                 try:
+                    if requests is None:
+                        return self.send_json({
+                            'ok': False,
+                            'status': 503,
+                            'latency_ms': 0,
+                            'error': 'requests module is not installed'
+                        })
                     res = requests.post(gw_url, headers=headers, json=payload, timeout=12)
                     latency = int((time.time() - start) * 1000)
 
@@ -1811,7 +1821,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                             'latency_ms': latency,
                             'error': err_text[:200] or f'HTTP {res.status_code}'
                         })
-                except requests.exceptions.Timeout:
+                except getattr(getattr(requests, 'exceptions', None), 'Timeout', ()) if requests is not None else ():
                     latency = int((time.time() - start) * 1000)
                     return self.send_json({
                         'ok': False,
@@ -1948,7 +1958,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             res_output = None
             source = 'heuristic'
 
-            if model_id:
+            if model_id and requests is not None:
                 try:
                     clean_id = model_id.split('/')[-1].lower()
                     req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)

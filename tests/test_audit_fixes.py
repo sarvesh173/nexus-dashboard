@@ -347,5 +347,41 @@ class TestMetaCountsAgreeWithRows(unittest.TestCase):
         self.assertLessEqual(meta["unique_models"], meta["models"])
 
 
+class TestServerOptionalImportsGuard(unittest.TestCase):
+    """Guard optional psutil and requests imports in server.py against AttributeError when None."""
+
+    def test_get_hermes_status_when_psutil_is_none(self):
+        from unittest.mock import patch, mock_open
+        import server
+
+        with patch.object(server, 'psutil', None), \
+             patch.object(server, '_hermes_state_cache', {'payload': None, 'at': 0}), \
+             patch('server.hermes_gateway_state_path', return_value='/tmp/fake_state.json'), \
+             patch('builtins.open', mock_open(read_data='{"pid": 12345}')):
+            status = server.get_hermes_status()
+            self.assertIsInstance(status, dict)
+            self.assertFalse(status['alive'])
+            self.assertEqual(status['pid'], 12345)
+
+    def test_get_hermes_config_providers_when_requests_is_none(self):
+        from unittest.mock import patch, mock_open
+        import server
+
+        class FakeYaml:
+            @staticmethod
+            def safe_load(f):
+                return {'providers': {'nvidia': {'api_key': 'test', 'enabled': True}}}
+
+        with patch.object(server, 'requests', None), \
+             patch.object(server, 'yaml', FakeYaml), \
+             patch('server.hermes_config_path', return_value='/tmp/fake.yaml'), \
+             patch('builtins.open', mock_open(read_data='dummy')):
+            providers = server.get_hermes_config_providers()
+            self.assertIsInstance(providers, list)
+            self.assertEqual(len(providers), 1)
+            self.assertEqual(providers[0]['status'], 'Unavailable')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
