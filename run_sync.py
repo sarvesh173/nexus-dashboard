@@ -68,26 +68,44 @@ def fetch_specs():
               'categorisation'.format(type(exc).__name__))
 
     if not specs and requests is not None:
-        r = requests.get(base.rstrip('/') + '/models', timeout=20,
-                         headers={'Authorization': 'Bearer {key}'.format(key=key)})
-        for m in r.json().get('data', []):
-            mid = m.get('id', '').lower()
-            cat = 'text'
-            if any(k in mid for k in ('embed', 'retriever')):
-                cat = 'embedding'
-            elif any(k in mid for k in ('diffusion', 'sdxl', 'flux', 'sana')):
-                cat = 'image-gen'
-            elif any(k in mid for k in ('vision', 'fuyu', 'kosmos', 'neva',
-                                        'vila', '-vl-', 'vlm', 'paligemma')):
-                cat = 'vision'
-            elif any(k in mid for k in ('tts', 'voice', 'magpie', 'chatterbox')):
-                cat = 'tts'
-            elif any(k in mid for k in ('stt', 'whisper', 'parakeet', 'canary',
-                                        'riva-translate', 'asr')):
-                cat = 'stt'
-            elif any(k in mid for k in ('reason', 'dbrx', 'thinking')):
-                cat = 'decision'
-            specs.append((m['id'], cat))
+        try:
+            r = requests.get(base.rstrip('/') + '/models', timeout=20,
+                             headers={'Authorization': 'Bearer {key}'.format(key=key)})
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, list):
+                    items = data
+                elif isinstance(data, dict):
+                    items = data.get('data')
+                else:
+                    items = None
+                if isinstance(items, list):
+                    for m in items:
+                        if not isinstance(m, dict):
+                            continue
+                        raw_mid = m.get('id')
+                        if not isinstance(raw_mid, str) or not raw_mid.strip():
+                            continue
+                        mid = raw_mid.strip()
+                        mid_lower = mid.lower()
+                        cat = 'text'
+                        if any(k in mid_lower for k in ('embed', 'retriever')):
+                            cat = 'embedding'
+                        elif any(k in mid_lower for k in ('diffusion', 'sdxl', 'flux', 'sana')):
+                            cat = 'image-gen'
+                        elif any(k in mid_lower for k in ('vision', 'fuyu', 'kosmos', 'neva',
+                                                    'vila', '-vl-', 'vlm', 'paligemma')):
+                            cat = 'vision'
+                        elif any(k in mid_lower for k in ('tts', 'voice', 'magpie', 'chatterbox')):
+                            cat = 'tts'
+                        elif any(k in mid_lower for k in ('stt', 'whisper', 'parakeet', 'canary',
+                                                    'riva-translate', 'asr')):
+                            cat = 'stt'
+                        elif any(k in mid_lower for k in ('reason', 'dbrx', 'thinking')):
+                            cat = 'decision'
+                        specs.append((mid, cat))
+        except Exception:
+            pass
 
     # dedupe, preserve order
     seen = set()

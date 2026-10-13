@@ -328,6 +328,35 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
             except AttributeError as exc:
                 self.fail(f"run_sync.fetch_specs raised AttributeError when requests was None: {exc}")
 
+    def test_fetch_specs_handles_http_errors_and_list_payloads_safely(self):
+        from unittest.mock import patch, MagicMock
+        import run_sync
+
+        fake_resp_500 = MagicMock()
+        fake_resp_500.status_code = 500
+
+        fake_resp_list = MagicMock()
+        fake_resp_list.status_code = 200
+        fake_resp_list.json.return_value = [{"id": "nvidia/embed-v1"}, "bad-item", {"id": "nvidia/sdxl"}, {"id": None}]
+
+        fake_requests = MagicMock()
+
+        # Case 1: HTTP 500 error on fallback
+        fake_requests.get.return_value = fake_resp_500
+        with patch("model_health._api_key", return_value="dummy_key"), \
+             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch.dict("sys.modules", {"requests": fake_requests}):
+            specs = run_sync.fetch_specs()
+            self.assertEqual(specs, [])
+
+        # Case 2: HTTP 200 list response with mixed malformed items
+        fake_requests.get.return_value = fake_resp_list
+        with patch("model_health._api_key", return_value="dummy_key"), \
+             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch.dict("sys.modules", {"requests": fake_requests}):
+            specs = run_sync.fetch_specs()
+            self.assertEqual(specs, [("nvidia/embed-v1", "embedding"), ("nvidia/sdxl", "image-gen")])
+
 
 class TestMetaCountsAgreeWithRows(unittest.TestCase):
     """The counts are what every consumer quotes, so they must be self-consistent."""

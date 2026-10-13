@@ -941,9 +941,22 @@ def get_hermes_config_providers():
             else:
                 resp = None
             if resp is not None and resp.status_code == 200:
-                data = resp.json().get('data', [])
+                raw_json = resp.json()
+                if isinstance(raw_json, list):
+                    data = raw_json
+                elif isinstance(raw_json, dict):
+                    data = raw_json.get('data')
+                else:
+                    data = None
+                if not isinstance(data, list):
+                    data = []
                 for item in data:
+                    if not isinstance(item, dict):
+                        continue
                     mid = item.get('id', '')
+                    if not isinstance(mid, str) or not mid.strip():
+                        continue
+                    mid = mid.strip()
                     mname = mid.split('/')[-1].replace('-', ' ').title() if '/' in mid else mid
                     mid_lower = mid.lower()
 
