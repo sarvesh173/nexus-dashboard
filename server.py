@@ -1322,8 +1322,10 @@ def get_hermes_config_providers():
                 for sm in speech_models:
                     if not any(m['id'] == sm['id'] for m in models_list):
                         models_list.append(sm)
-            else:
+            elif resp is not None:
                 api_status = f'HTTP {resp.status_code}'
+            else:
+                api_status = 'Unavailable'
         except Exception as e:
             api_status = 'Unavailable'
 

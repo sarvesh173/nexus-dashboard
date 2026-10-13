@@ -372,6 +372,7 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             def safe_load(f):
                 return {'providers': {'nvidia': {'api_key': 'test', 'enabled': True}}}
 
+        server._cached_providers = None
         with patch.object(server, 'requests', None), \
              patch.object(server, 'yaml', FakeYaml), \
              patch('server.hermes_config_path', return_value='/tmp/fake.yaml'), \
@@ -380,6 +381,35 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertIsInstance(providers, list)
             self.assertEqual(len(providers), 1)
             self.assertEqual(providers[0]['status'], 'Unavailable')
+
+
+    def test_get_hermes_config_providers_status_healthy_when_200(self):
+        from unittest.mock import patch, MagicMock, mock_open
+        import server
+
+        cfg_dict = {"providers": {"nvidia": {"api_key": "dummy"}}}
+        mock_req = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"data": [{"id": "nvidia/model-a"}]}
+        mock_req.get.return_value = mock_resp
+
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = cfg_dict
+
+        with patch("server.requests", mock_req), \
+             patch("server.yaml", fake_yaml), \
+             patch("server.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch("builtins.open", mock_open(read_data="{}")):
+            server._cached_providers = None
+            res = server.get_hermes_config_providers()
+            self.assertIsInstance(res, list)
+            self.assertEqual(len(res), 1)
+            self.assertEqual(res[0].get("status"), "Healthy")
+            model_ids = [m["id"] for m in res[0].get("models", [])]
+            self.assertIn("nvidia/model-a", model_ids)
+
+
 
 
 if __name__ == "__main__":
