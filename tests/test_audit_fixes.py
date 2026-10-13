@@ -347,9 +347,6 @@ class TestMetaCountsAgreeWithRows(unittest.TestCase):
         self.assertLessEqual(meta["unique_models"], meta["models"])
 
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
-
 class TestServerOptionalImportsGuard(unittest.TestCase):
     """Guard optional psutil and requests imports in server.py against AttributeError when None."""
 
@@ -383,3 +380,8 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertIsInstance(providers, list)
             self.assertEqual(len(providers), 1)
             self.assertEqual(providers[0]['status'], 'Unavailable')
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+
