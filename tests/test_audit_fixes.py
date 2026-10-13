@@ -347,5 +347,68 @@ class TestMetaCountsAgreeWithRows(unittest.TestCase):
         self.assertLessEqual(meta["unique_models"], meta["models"])
 
 
+class TestServerOptionalModulesGraceful(unittest.TestCase):
+    """BUG: server functions raised AttributeError when psutil or requests was None."""
+
+    def test_get_hermes_status_handles_none_psutil_without_attribute_error(self):
+        from unittest.mock import patch
+        import server
+
+        state_data = json.dumps({"pid": 12345, "gateway_state": "running"})
+        with patch("server.psutil", None), \
+             patch("server.hermes_gateway_state_path", return_value="/nonexistent/state.json"), \
+             patch("builtins.open", unittest.mock.mock_open(read_data=state_data)):
+            server._hermes_state_cache["payload"] = None
+            try:
+                res = server.get_hermes_status()
+                self.assertIsInstance(res, dict)
+                self.assertFalse(res["alive"])
+            except AttributeError as exc:
+                self.fail(f"get_hermes_status raised AttributeError when psutil was None: {exc}")
+
+    def test_get_hermes_config_providers_handles_none_requests_without_attribute_error(self):
+        from unittest.mock import patch
+        import server
+
+        config_data = json.dumps({"providers": {"nvidia": {"api_key": "dummy"}}})
+        with patch("server.requests", None), \
+             patch("server.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch("builtins.open", unittest.mock.mock_open(read_data=config_data)):
+            server._cached_providers = None
+            try:
+                res = server.get_hermes_config_providers()
+                self.assertIsInstance(res, list)
+                if res:
+                    self.assertEqual(res[0].get("status"), "Unavailable")
+            except AttributeError as exc:
+                self.fail(f"get_hermes_config_providers raised AttributeError when requests was None: {exc}")
+
+    def test_get_hermes_config_providers_status_healthy_when_200(self):
+        from unittest.mock import patch, MagicMock
+        import server
+
+        cfg_dict = {"providers": {"nvidia": {"api_key": "dummy"}}}
+        mock_req = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"data": [{"id": "nvidia/model-a"}]}
+        mock_req.get.return_value = mock_resp
+
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = cfg_dict
+
+        with patch("server.requests", mock_req), \
+             patch("server.yaml", fake_yaml), \
+             patch("server.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch("builtins.open", unittest.mock.mock_open(read_data="{}")):
+            server._cached_providers = None
+            res = server.get_hermes_config_providers()
+            self.assertIsInstance(res, list)
+            self.assertEqual(len(res), 1)
+            self.assertEqual(res[0].get("status"), "Healthy")
+            model_ids = [m["id"] for m in res[0].get("models", [])]
+            self.assertIn("nvidia/model-a", model_ids)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
