@@ -3,8 +3,37 @@ import urllib.request
 import urllib.error
 import json
 
+import os
+import sys
+import threading
+from http.server import HTTPServer
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import server
+
+
 class TestModelConnectionEndpoints(unittest.TestCase):
     BASE_URL = "http://127.0.0.1:5174"
+    httpd = None
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            req = urllib.request.Request(f"{cls.BASE_URL}/api/stats")
+            with urllib.request.urlopen(req, timeout=1):
+                pass
+        except Exception:
+            try:
+                cls.httpd = HTTPServer(('127.0.0.1', 5174), server.TelemetryHandler)
+                t = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+                t.start()
+            except Exception as exc:
+                print(f"Test server start skipped: {exc}")
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.httpd:
+            cls.httpd.shutdown()
 
     def test_connection_health_endpoint(self):
         req = urllib.request.Request(f"{self.BASE_URL}/api/model/connection-health")

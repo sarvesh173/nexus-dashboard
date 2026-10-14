@@ -410,6 +410,41 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertIn("nvidia/model-a", model_ids)
 
 
+class TestOpenRouterTopProviderNull(unittest.TestCase):
+    """BUG: OpenRouter model data with top_provider: None raised AttributeError on .get('max_completion_tokens')."""
+
+    def test_null_top_provider_does_not_raise(self):
+        from unittest.mock import patch, MagicMock
+        import server
+
+        mock_req = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "data": [
+                {
+                    "id": "openai/gpt-4o",
+                    "context_length": 128000,
+                    "top_provider": None,
+                }
+            ]
+        }
+        mock_req.get.return_value = mock_resp
+
+        with patch("server.requests", mock_req):
+            handler = server.TelemetryHandler.__new__(server.TelemetryHandler)
+            handler.path = "/api/model/context?model=openai/gpt-4o"
+            sent_data = []
+            handler.send_json = lambda data, code=200: sent_data.append((data, code))
+
+            handler.do_GET()
+
+            self.assertEqual(len(sent_data), 1)
+            payload, code = sent_data[0]
+            self.assertEqual(code, 200)
+            self.assertTrue(payload.get("ok"))
+            self.assertEqual(payload.get("raw_context"), 128000)
+            self.assertEqual(payload.get("max_output_tokens"), 8192)
 
 
 if __name__ == "__main__":

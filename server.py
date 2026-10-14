@@ -1498,7 +1498,8 @@ def _alias_models(pid, merged):
         if card['id'] not in prefixes:
             continue
         for m in (card.get('models') or []):
-            if not needle or needle in m.get('id', '').lower():
+            mid = m.get('id', '') if isinstance(m, dict) else str(m or '')
+            if not needle or needle in mid.lower():
                 # ids are "<gateway>/<vendor>/<model>" for routed catalogs
                 # (openrouter/black-forest-labs/flux.2-pro) but only
                 # "<gateway>/<vendor>/<model>" for flat ones, so take the
@@ -1580,8 +1581,8 @@ def get_live_providers():
                 card['hidden'] = True
             if hidden_m and card.get('models'):
                 card['models'] = [m for m in card['models']
-                                  if m.get('id') not in hidden_m
-                                  and m.get('fullModel') not in hidden_m]
+                                  if (m.get('id') if isinstance(m, dict) else str(m)) not in hidden_m
+                                  and (m.get('fullModel') if isinstance(m, dict) else str(m)) not in hidden_m]
                 card['model_count'] = len(card['models'])
                 card['total_models'] = card['model_count']
         merged = [c for c in merged if not c.get('hidden')]
@@ -1591,7 +1592,7 @@ def get_live_providers():
     # trivially known and therefore never prunable - prune() was a guaranteed
     # no-op and hidden_store.json grew without bound.
     visibility.prune({c['id'] for c in merged},
-                     {m.get('id') for c in merged
+                     {m.get('id') if isinstance(m, dict) else str(m) for c in merged
                       for m in (c.get('models') or [])})
 
     return merged
@@ -1970,7 +1971,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                             i_id = item.get('id', '').lower()
                             if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
                                 res_context = item.get('context_length')
-                                res_output = item.get('top_provider', {}).get('max_completion_tokens')
+                                res_output = (item.get('top_provider') or {}).get('max_completion_tokens')
                                 source = 'openrouter-verified'
                                 break
                 except Exception:
