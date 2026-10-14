@@ -183,5 +183,49 @@ class TestCallLogLimits(unittest.TestCase):
         conn.close()
 
 
+class TestReadSessionsModelPrecedence(unittest.TestCase):
+    """Ensure message_model fields take precedence over session.model string/JSON."""
+
+    def test_message_model_overrides_session_model_json_string(self):
+        import sqlite3
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            'CREATE TABLE session (id TEXT, title TEXT, agent TEXT, model TEXT, '
+            'directory TEXT, cost REAL, tokens_input INTEGER, tokens_output INTEGER, '
+            'tokens_reasoning INTEGER, time_created INTEGER, time_updated INTEGER)'
+        )
+        conn.execute(
+            'CREATE TABLE message (id TEXT, session_id TEXT, time_created INTEGER, data TEXT)'
+        )
+        conn.execute(
+            'CREATE TABLE part (id TEXT, session_id TEXT, message_id TEXT, time_created INTEGER, data TEXT)'
+        )
+
+        session_model_json = json.dumps({'id': 'stale-model', 'providerID': 'old-provider'})
+        conn.execute(
+            'INSERT INTO session VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            ('s1', 'Test Session', 'build', session_model_json, '/tmp', 0.0, 0, 0, 0, 100, 100)
+        )
+
+        msg_data = json.dumps({
+            'role': 'assistant',
+            'modelID': 'active-model',
+            'providerID': 'new-provider',
+            'variant': 'high'
+        })
+        conn.execute(
+            'INSERT INTO message VALUES (?, ?, ?, ?)',
+            ('m1', 's1', 101, msg_data)
+        )
+
+        sessions = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(len(sessions), 1)
+        session = sessions[0]
+        self.assertEqual(session['model_id'], 'active-model')
+        self.assertEqual(session['model_provider'], 'new-provider')
+        self.assertEqual(session['model_variant'], 'high')
+        conn.close()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -473,6 +473,10 @@ def _read_sessions(conn, include_idle):
         prompts = _read_prompts(conn, sid)
         events = _read_stream(conn, sid) if live else []
 
+        session_model_dict = model if isinstance(model, dict) else (_loads(model, {}) or {})
+        if not isinstance(session_model_dict, dict):
+            session_model_dict = {}
+
         agents.append({
             'id': sid,
             'title': title or 'Untitled session',
@@ -481,12 +485,12 @@ def _read_sessions(conn, include_idle):
             # style provider and variant separately without re-parsing.
             'model': _session_model_text(model, message_model),
             'model_id': (message_model or {}).get('modelID')
-                        or (model or {}).get('id') if isinstance(model, dict)
-                        else _loads(model, {}).get('id'),
+                        or session_model_dict.get('modelID')
+                        or session_model_dict.get('id'),
             'model_provider': (message_model or {}).get('providerID')
-                              or (_loads(model, {}) or {}).get('providerID'),
+                              or session_model_dict.get('providerID'),
             'model_variant': (message_model or {}).get('variant')
-                             or (_loads(model, {}) or {}).get('variant'),
+                             or session_model_dict.get('variant'),
             'directory': _rel_dir(directory),
             'state': 'running' if live else 'idle',
             'last_active_ms': age_ms,
