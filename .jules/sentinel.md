@@ -14,3 +14,8 @@
 **Learning**: `server.py` imported `psutil` and `requests` inside `try...except ImportError` fallback blocks setting them to `None` when missing, but subsequent functions (`get_hermes_status`, `get_hermes_config_providers`, model test handling, model context lookup) called attributes/methods on `psutil` or `requests` without checking `if psutil is not None` or `if requests is not None`, causing `AttributeError: 'NoneType' object has no attribute 'Process'` / `'get'` / `'post'` / `'exceptions'`.
 **Action**: Added explicit `if psutil is not None` and `if requests is not None` checks before referencing `psutil.Process` or `requests.get()` / `requests.post()` / `requests.exceptions.Timeout` in `server.py`. Added unit tests in `tests/test_audit_fixes.py`.
 **Fingerprint**: server.py:513 - AttributeError: 'NoneType' object has no attribute 'Process'
+
+## 2026-10-14 - Guard top-level execution and handle offline endpoints in test suite
+**Learning**: Test scripts under `tests/` that run Playwright or make HTTP requests to local servers (e.g. `test_dashboard_mounts.py` and `test_model_connection.py`) caused `python3 -m unittest discover` to fail when running offline because `test_dashboard_mounts.py` executed top-level browser navigation on import and `test_model_connection.py` did not catch `urllib.error.URLError`.
+**Action**: Wrapped top-level script logic in `tests/test_dashboard_mounts.py` inside `def main():` guarded by `if __name__ == '__main__':` and added `urllib.error.URLError` handling with `self.skipTest()` in `tests/test_model_connection.py`.
+**Fingerprint**: tests/test_dashboard_mounts.py:19 - Page.goto: net::ERR_CONNECTION_REFUSED
