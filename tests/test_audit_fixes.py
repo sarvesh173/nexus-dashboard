@@ -382,6 +382,28 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertEqual(len(providers), 1)
             self.assertEqual(providers[0]['status'], 'Unavailable')
 
+    def test_server_yaml_is_none_guards(self):
+        from unittest.mock import patch, mock_open
+        import server
+
+        server._hermes_model_cache = {'payload': None, 'at': 0}
+        server._cfg_cache = {'map': None, 'at': 0}
+
+        with patch.object(server, 'yaml', None), \
+             patch('server.hermes_config_path', return_value='/tmp/fake.yaml'), \
+             patch('builtins.open', mock_open(read_data='model:\n  default: test-model')):
+            # _hermes_active_model should work with block parser or fallback gracefully when yaml is None
+            active_model = server._hermes_active_model()
+            self.assertIsInstance(active_model, dict)
+
+            # config_provider_map should return {} when yaml is None
+            cfg_map = server.config_provider_map()
+            self.assertEqual(cfg_map, {})
+
+            # get_all_config_providers should return [] when yaml is None
+            all_providers = server.get_all_config_providers()
+            self.assertEqual(all_providers, [])
+
 
     def test_get_hermes_config_providers_status_healthy_when_200(self):
         from unittest.mock import patch, MagicMock, mock_open

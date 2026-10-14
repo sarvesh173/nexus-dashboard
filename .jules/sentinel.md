@@ -14,3 +14,8 @@
 **Learning**: `server.py` imported `psutil` and `requests` inside `try...except ImportError` fallback blocks setting them to `None` when missing, but subsequent functions (`get_hermes_status`, `get_hermes_config_providers`, model test handling, model context lookup) called attributes/methods on `psutil` or `requests` without checking `if psutil is not None` or `if requests is not None`, causing `AttributeError: 'NoneType' object has no attribute 'Process'` / `'get'` / `'post'` / `'exceptions'`.
 **Action**: Added explicit `if psutil is not None` and `if requests is not None` checks before referencing `psutil.Process` or `requests.get()` / `requests.post()` / `requests.exceptions.Timeout` in `server.py`. Added unit tests in `tests/test_audit_fixes.py`.
 **Fingerprint**: server.py:513 - AttributeError: 'NoneType' object has no attribute 'Process'
+
+## 2026-10-14 - Guard optional yaml module test coverage in server.py
+**Learning**: Functions in `server.py` (`_hermes_active_model`, `config_provider_map`, `get_all_config_providers`) safely check `if yaml is not None`, but lacked explicit unit test coverage for the `yaml is None` fallback path.
+**Action**: Added `test_server_yaml_is_none_guards` in `tests/test_audit_fixes.py` to verify graceful fallback execution when `yaml` is missing.
+**Fingerprint**: server.py:421 - AttributeError: 'NoneType' object has no attribute 'safe_load'
