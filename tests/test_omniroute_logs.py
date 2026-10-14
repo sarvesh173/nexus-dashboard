@@ -387,6 +387,45 @@ class TestReadCallLogs(unittest.TestCase):
         plain = o._shape_call(_row(None))
         self.assertEqual(o.classify_agent(plain), 'unknown')
 
+    def test_filtering_by_model(self):
+        payload = o.read_call_logs(limit=10, filters={'model': 'model-a'})
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['total'], 1)
+        self.assertEqual(payload['count'], 1)
+        self.assertEqual(payload['calls'][0]['id'], CALL_ID)
+
+    def test_filtering_by_provider(self):
+        payload = o.read_call_logs(limit=10, filters={'provider': 'prov2'})
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['total'], 1)
+        self.assertEqual(payload['count'], 1)
+        self.assertEqual(payload['calls'][0]['id'], FAILED_CALL_ID)
+
+    def test_filtering_by_status(self):
+        errors = o.read_call_logs(limit=10, filters={'status': 'error'})
+        self.assertEqual(errors['total'], 1)
+        self.assertEqual(errors['calls'][0]['id'], FAILED_CALL_ID)
+
+        successes = o.read_call_logs(limit=10, filters={'status': 'ok'})
+        self.assertEqual(successes['total'], 2)
+        self.assertEqual({c['id'] for c in successes['calls']}, {CALL_ID, NO_ARTIFACT_CALL_ID})
+
+    def test_filtering_by_agent_claude_protocol(self):
+        payload = o.read_call_logs(limit=10, filters={'agent': 'claude-protocol'})
+        self.assertEqual(payload['total'], 1)
+        self.assertEqual(payload['calls'][0]['id'], FAILED_CALL_ID)
+
+    def test_filtering_by_search(self):
+        payload = o.read_call_logs(limit=10, filters={'search': 'weather'})
+        self.assertEqual(payload['total'], 1)
+        self.assertEqual(payload['calls'][0]['id'], NO_ARTIFACT_CALL_ID)
+
+    def test_read_call_logs_page_filters(self):
+        rows = o.read_call_logs_page({'status': ['error']})
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['id'], FAILED_CALL_ID)
+        self.assertEqual(rows[0]['status'], 429)
+
 
 class TestReadDetail(unittest.TestCase):
     """The detail route: one artifact, bounded on the way out."""

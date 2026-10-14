@@ -227,7 +227,42 @@ def _source_state(path, error):
     }
 
 
-def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
+def _build_where_clause(filters):
+    if not filters:
+        return '', ()
+    conditions = []
+    params = []
+
+    if filters.get('model'):
+        conditions.append('(model = ? OR requested_model = ?)')
+        params.extend([filters['model'], filters['model']])
+    if filters.get('provider'):
+        conditions.append('provider = ?')
+        params.append(filters['provider'])
+    if filters.get('account'):
+        conditions.append('account = ?')
+        params.append(filters['account'])
+    if filters.get('status') == 'ok':
+        conditions.append('status = 200')
+    elif filters.get('status') == 'error':
+        conditions.append('status != 200')
+    if filters.get('agent') == 'claude-protocol':
+        conditions.append("path = '/v1/messages'")
+    elif filters.get('agent') == 'auto-router':
+        conditions.append("combo_name IS NOT NULL AND combo_name != ''")
+    elif filters.get('agent') == 'unknown':
+        conditions.append("(path IS NULL OR path != '/v1/messages') AND (combo_name IS NULL OR combo_name = '')")
+    if filters.get('search'):
+        s = '%' + str(filters['search']) + '%'
+        conditions.append('(model LIKE ? OR requested_model LIKE ? OR provider LIKE ? OR account LIKE ? OR error_summary LIKE ? OR request_summary LIKE ? OR path LIKE ?)')
+        params.extend([s, s, s, s, s, s, s])
+
+    if not conditions:
+        return '', ()
+    return 'WHERE ' + ' AND '.join(conditions), tuple(params)
+
+
+def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0, filters=None):
     """One page of the LLM call ledger, newest first.
 
     Pagination is offset-based because the table is ordered by an indexed
@@ -238,7 +273,9 @@ def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
     bounded_offset = _clamp_offset(offset)
     now = time.time()
 
-    key = (bounded_limit, bounded_offset)
+    clean_filters = {k: v for k, v in (filters or {}).items() if v}
+    filter_key = tuple(sorted(clean_filters.items())) if clean_filters else None
+    key = (bounded_limit, bounded_offset, filter_key)
     cached = _list_cache['payload']
     if cached is not None and _list_cache['key'] == key:
         if now - _list_cache['at'] < _CACHE_TTL:
@@ -256,7 +293,7 @@ def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
         elif not _table_exists(conn, 'call_logs'):
             error = _NO_TABLE
         else:
-            calls, total = _query_calls(conn, bounded_limit, bounded_offset)
+            calls, total = _query_calls(conn, bounded_limit, bounded_offset, clean_filters)
     except Exception as exc:  # noqa: BLE001 - reported as data, never raised
         calls = []
         total = 0
@@ -284,20 +321,19 @@ def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
     return payload
 
 
-def _query_calls(conn, limit, offset):
-    """Page the ledger. Returns (rows, total).
+def _query_calls(conn, limit, offset, filters=None):
+    """Page the ledger with optional SQL filters. Returns (rows, total).
 
     One query for the page and one COUNT(*) for the total, in that order and no
     more: each extra round trip against a 490MB store is paid on every poll.
     """
+    where_sql, where_params = _build_where_clause(filters)
     columns = '%s, %s' % (', '.join(_LIST_COLUMNS), _FALLBACK_COLUMNS)
+    sql = 'SELECT %s FROM call_logs %s %s LIMIT ? OFFSET ?' % (columns, where_sql, _ORDER)
+    count_sql = 'SELECT COUNT(*) FROM call_logs %s' % where_sql
     try:
-        rows = conn.execute(
-            'SELECT %s FROM call_logs %s LIMIT ? OFFSET ?' % (columns, _ORDER),
-            (limit, offset),
-        ).fetchall()
-        total = _as_int(
-            conn.execute('SELECT COUNT(*) FROM call_logs').fetchone()[0], 0)
+        rows = conn.execute(sql, where_params + (limit, offset)).fetchall()
+        total = _as_int(conn.execute(count_sql, where_params).fetchone()[0], 0)
     except sqlite3.Error:
         return [], 0
 
@@ -681,9 +717,9 @@ def _to_logger_row(call):
 def read_call_logs_page(qs):
     """One page for the ported logger, honouring its query parameters.
 
-    Read-only. Unknown filters are ignored rather than silently returning an
-    unfiltered page, so a filter the ledger cannot honour is visible as
-    'no rows' instead of masquerading as a filter that worked.
+    Read-only. Parameterized SQL filtering is applied directly in the database
+    query so offset, limit, total count, and returned rows accurately reflect
+    the filtered subset.
     """
     def first(name, default=''):
         v = qs.get(name)
@@ -692,38 +728,18 @@ def read_call_logs_page(qs):
     limit = _clamp_limit(first('limit', '50'))
     offset = _clamp_offset(first('offset', '0'))
 
-    payload = read_call_logs(limit, offset)
+    filters = {}
+    for name in ('model', 'provider', 'account', 'status', 'agent', 'search'):
+        val = first(name).strip()
+        if val:
+            filters[name] = val
+
+    payload = read_call_logs(limit, offset, filters=filters)
     calls = payload.get('calls') or []
 
-    model = first('model')
-    provider = first('provider')
-    account = first('account')
-    status = first('status')
-    agent = first('agent')
-    search = first('search').lower()
-
-    rows = [_to_logger_row(c) for c in calls]
-
-    if model:
-        rows = [r for r in rows if r['model'] == model or r['requestedModel'] == model]
-    if provider:
-        rows = [r for r in rows if r['provider'] == provider]
-    if account:
-        rows = [r for r in rows if r['account'] == account]
-    if status == 'error':
-        rows = [r for r in rows if r['status'] != 200]
-    elif status == 'ok':
-        rows = [r for r in rows if r['status'] == 200]
-    if agent:
-        rows = [r for r in rows if r['agent'] == agent]
-    if search:
-        rows = [r for r in rows if search in json.dumps(r).lower()]
-
     # A bare array, not an envelope: the ported component does
-    # `setLogs(await res.json())` and reads `data.length`. Returning
-    # {'logs': [...]} here rendered the full table with "0 Total" and no rows,
-    # because an object has no length.
-    return rows
+    # `setLogs(await res.json())` and reads `data.length`.
+    return [_to_logger_row(c) for c in calls]
 
 
 def read_call_log_filters():
