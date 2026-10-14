@@ -70,8 +70,22 @@ def fetch_specs():
     if not specs and requests is not None:
         r = requests.get(base.rstrip('/') + '/models', timeout=20,
                          headers={'Authorization': 'Bearer {key}'.format(key=key)})
-        for m in r.json().get('data', []):
-            mid = m.get('id', '').lower()
+        raw_json = r.json()
+        if isinstance(raw_json, dict):
+            data = raw_json.get('data', [])
+        elif isinstance(raw_json, list):
+            data = raw_json
+        else:
+            data = []
+        if not isinstance(data, list):
+            data = []
+        for m in data:
+            if not isinstance(m, dict):
+                continue
+            mid_raw = m.get('id')
+            if not isinstance(mid_raw, str):
+                continue
+            mid = mid_raw.lower()
             cat = 'text'
             if any(k in mid for k in ('embed', 'retriever')):
                 cat = 'embedding'

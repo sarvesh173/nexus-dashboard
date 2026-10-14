@@ -941,9 +941,21 @@ def get_hermes_config_providers():
             else:
                 resp = None
             if resp is not None and resp.status_code == 200:
-                data = resp.json().get('data', [])
+                raw_json = resp.json()
+                if isinstance(raw_json, dict):
+                    data = raw_json.get('data', [])
+                elif isinstance(raw_json, list):
+                    data = raw_json
+                else:
+                    data = []
+                if not isinstance(data, list):
+                    data = []
                 for item in data:
-                    mid = item.get('id', '')
+                    if not isinstance(item, dict):
+                        continue
+                    mid = item.get('id')
+                    if not isinstance(mid, str):
+                        continue
                     mname = mid.split('/')[-1].replace('-', ' ').title() if '/' in mid else mid
                     mid_lower = mid.lower()
 
@@ -1965,12 +1977,25 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     clean_id = model_id.split('/')[-1].lower()
                     req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
                     if req.status_code == 200:
-                        or_data = req.json().get('data', [])
+                        raw_json = req.json()
+                        if isinstance(raw_json, dict):
+                            or_data = raw_json.get('data', [])
+                        elif isinstance(raw_json, list):
+                            or_data = raw_json
+                        else:
+                            or_data = []
+                        if not isinstance(or_data, list):
+                            or_data = []
                         for item in or_data:
-                            i_id = item.get('id', '').lower()
-                            if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
+                            if not isinstance(item, dict):
+                                continue
+                            i_id = item.get('id')
+                            if not isinstance(i_id, str):
+                                continue
+                            i_id_low = i_id.lower()
+                            if i_id_low == model_id.lower() or i_id_low.endswith('/' + clean_id):
                                 res_context = item.get('context_length')
-                                res_output = item.get('top_provider', {}).get('max_completion_tokens')
+                                res_output = (item.get('top_provider') or {}).get('max_completion_tokens')
                                 source = 'openrouter-verified'
                                 break
                 except Exception:

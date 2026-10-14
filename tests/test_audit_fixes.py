@@ -412,6 +412,70 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
 
 
 
+class TestModelCatalogResponseParsing(unittest.TestCase):
+    """Guard model catalog parsing against list responses, null top_provider, and invalid item types."""
+
+    def test_model_health_live_catalog_handles_list_and_invalid_items(self):
+        from unittest.mock import patch, MagicMock
+        import model_health
+
+        mock_req = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        # Returns a top-level list with valid item, non-dict item, and item with non-string ID
+        mock_resp.json.return_value = [{"id": "nvidia/model-list-1"}, "invalid_item", {"id": None}, {"id": 123}]
+        mock_req.get.return_value = mock_resp
+
+        model_health._catalog_cache = {'ids': set(), 'at': 0}
+        with patch.object(model_health, 'requests', mock_req):
+            res = model_health.live_catalog(key='dummy_key')
+            self.assertIn("nvidia/model-list-1", res)
+            self.assertEqual(len(res), 1)
+
+    def test_server_get_hermes_config_providers_handles_list_response(self):
+        from unittest.mock import patch, MagicMock, mock_open
+        import server
+
+        cfg_dict = {"providers": {"nvidia": {"api_key": "dummy"}}}
+        mock_req = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        # Top-level list response instead of dict
+        mock_resp.json.return_value = [{"id": "nvidia/model-b"}, None, {"id": 456}]
+        mock_req.get.return_value = mock_resp
+
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = cfg_dict
+
+        with patch("server.requests", mock_req), \
+             patch("server.yaml", fake_yaml), \
+             patch("server.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch("builtins.open", mock_open(read_data="{}")):
+            server._cached_providers = None
+            res = server.get_hermes_config_providers()
+            self.assertIsInstance(res, list)
+            self.assertEqual(len(res), 1)
+            model_ids = [m["id"] for m in res[0].get("models", [])]
+            self.assertIn("nvidia/model-b", model_ids)
+
+    def test_run_sync_fetch_specs_handles_list_and_non_string_id(self):
+        from unittest.mock import patch, MagicMock
+        import run_sync
+
+        mock_req = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = [{"id": "nvidia/embed-model"}, {"id": None}, 42]
+        mock_req.get.return_value = mock_resp
+
+        with patch("model_health._api_key", return_value="dummy_key"), \
+             patch("run_sync.hermes_config_path", return_value="/nonexistent/config.yaml"), \
+             patch.dict("sys.modules", {"requests": mock_req}), \
+             patch("importlib.util.spec_from_file_location", side_effect=ImportError("skip server import")):
+            specs = run_sync.fetch_specs()
+            self.assertEqual(specs, [("nvidia/embed-model", "embedding")])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

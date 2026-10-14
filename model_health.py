@@ -60,7 +60,19 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
             r = requests.get(base.rstrip('/') + '/models', timeout=15,
                              headers={'Authorization': 'Bearer {key}'.format(key=key)})
             if r.status_code == 200:
-                ids = {m.get('id') for m in r.json().get('data', []) if m.get('id')}
+                raw_json = r.json()
+                if isinstance(raw_json, dict):
+                    data = raw_json.get('data', [])
+                elif isinstance(raw_json, list):
+                    data = raw_json
+                else:
+                    data = []
+                if not isinstance(data, list):
+                    data = []
+                ids = {
+                    m.get('id') for m in data
+                    if isinstance(m, dict) and isinstance(m.get('id'), str) and m.get('id')
+                }
         except Exception:
             pass
     _catalog_cache.update({'ids': ids, 'at': time.time()})
