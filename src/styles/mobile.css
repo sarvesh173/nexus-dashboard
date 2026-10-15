@@ -55,8 +55,12 @@ main {
   scroll-behavior: smooth;
 }
 
-/* 6. Phone Form-Factor Layout Adaptations (<= 640px) */
-@media (max-width: 640px) {
+/* 6. Phone Form-Factor Layout Adaptations (<= 640px)
+   Also applied to coarse-pointer (touch) devices with a wide viewport:
+   a phone browser in "Desktop site" mode reports a desktop-width viewport
+   but a small physical touch screen, so the phone adaptations are still
+   required there. Laptops keep a fine pointer and are unaffected. */
+@media (max-width: 640px), (pointer: coarse) and (min-width: 641px) {
   #root,
   body {
     max-width: 100vw;
