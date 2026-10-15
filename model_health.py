@@ -158,7 +158,18 @@ def _probe(base, key, mid, route):
     if requests is None:
         return 'UNREACHABLE', 'requests_not_installed'
 
-    url = base.rstrip('/') + route
+    # Join without doubling the /v1 prefix. BASE ends in '/v1' and every route
+    # in SPECIAL_ROUTES also starts with '/v1', so base + route built
+    # '/v1/v1/chat/completions' — a path that exists on no host. nginx
+    # answered 404 page not found, the 404 branch did not recognise it as a
+    # retired-function body, and all 91 registry entries were recorded
+    # WRONG_EP while the same models answer correctly (410/200) on the
+    # single-/v1 URL. Auto-hide only fires on RETIRED, so genuinely dead
+    # models stayed visible and every model looked mis-routed.
+    base = base.rstrip('/')
+    if route.startswith('/v1') and base.endswith('/v1'):
+        route = route[3:]
+    url = base + route
     if route == '/v1/embeddings':
         body = {'model': mid, 'input': [111, 222, 333],
                 'input_type': 'passage', 'encoding_format': 'float',

@@ -582,6 +582,72 @@ class TestTelemetryCpuSingleSample(unittest.TestCase):
         self.assertEqual(t['disk_percent'], 55.5)
 
 
+class TestProbeUrlJoin(unittest.TestCase):
+    """The /models sync recorded all 91 registry entries WRONG_EP because
+    _probe joined a base that already ends in /v1 with routes that also start
+    with /v1, producing /v1/v1/chat/completions. The nginx 404 that came back
+    did not match the retired-function body, so every model was misreported.
+    """
+
+    def _probe_url(self, base, route):
+        import model_health
+        captured = {}
+
+        class FakeResp:
+            status_code = 200
+            text = 'ok'
+
+        def fake_post(url, **kw):
+            captured['url'] = url
+            return FakeResp()
+
+        with patch.object(model_health.requests, 'post', staticmethod(fake_post)):
+            model_health._probe(base, 'k', 'vendor/model-x', route)
+        return captured['url']
+
+    def test_base_with_v1_and_route_with_v1_join_once(self):
+        self.assertEqual(
+            self._probe_url('https://integrate.api.nvidia.com/v1',
+                            '/v1/chat/completions'),
+            'https://integrate.api.nvidia.com/v1/chat/completions')
+
+    def test_base_without_v1_keeps_route_v1(self):
+        self.assertEqual(
+            self._probe_url('https://integrate.api.nvidia.com',
+                            '/v1/chat/completions'),
+            'https://integrate.api.nvidia.com/v1/chat/completions')
+
+    def test_special_routes_join_once(self):
+        for route in ('/v1/embeddings', '/v1/audio/speech',
+                      '/v1/audio/transcriptions', '/v1/images/generations'):
+            self.assertEqual(
+                self._probe_url('https://integrate.api.nvidia.com/v1', route),
+                'https://integrate.api.nvidia.com/v1' + route[3:], route)
+
+    def test_live_catalog_url_is_unchanged(self):
+        # The catalog fetch already built the right URL; it must not regress.
+        import model_health
+        captured = {}
+
+        class FakeResp:
+            status_code = 200
+
+            def json(self):
+                return {'data': [{'id': 'vendor/model-x'}]}
+
+        def fake_get(url, **kw):
+            captured['url'] = url
+            return FakeResp()
+
+        model_health._catalog_cache.update({'ids': set(), 'at': 0})
+        with patch.object(model_health.requests, 'get', staticmethod(fake_get)):
+            ids = model_health.live_catalog(
+                'https://integrate.api.nvidia.com/v1', 'k')
+        self.assertEqual(captured['url'],
+                         'https://integrate.api.nvidia.com/v1/models')
+        self.assertEqual(ids, {'vendor/model-x'})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
