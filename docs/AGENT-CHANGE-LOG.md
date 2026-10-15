@@ -204,6 +204,40 @@ Confirmed by reading current code + the existing regression suite
   (suspected nginx edge 404s from `integrate.api.nvidia.com` under load;
   `_probe` has no retry).
 
+## 2026-10-15 — gesture activation model (branch `fix/swipe-logs-desktop-mode`, merged to `main`)
+
+**Agent:** OpenCode (Step) · **Base:** `main` @ `259a595` · **Commit:** `7e639f0`
+
+### Problem 1 — swipe stole horizontal sliding on Logs
+On the Logs route, horizontal row sliding (provider inspection) was captured
+by the swipe-navigation gesture and dropped the user on the Models page.
+
+### Problem 2 — phone "Desktop site" mode broke the layout
+A phone browser in desktop mode reports a wide viewport but a small physical
+touch screen; the phone adaptations only applied at `<= 640px`, so the layout
+broke. Laptops (fine pointer) were unaffected.
+
+### Fix — triple-swipe activation (commit `7e639f0`)
+- Swipe navigation is OFF until deliberately activated: swipe 1 does nothing,
+  swipe 2 shows the feedback popup (no navigation), swipe 3 navigates.
+- 60 s after the first swipe the sequence auto-resets — an accidental swipe
+  can never arm the feature.
+- Logs: 50% swipe strength + 6 s gesture suppression after landing, so row
+  sliding is never stolen.
+- `armStage` lives in a ref so rapid swipes never read a stale stage.
+- Serial navigation queue kept: one navigation at a time, the next waits for
+  the route to actually load (a burst of 15 swipes reads as deliberate steps).
+- `mobile.css`: phone form-factor adaptations now also apply to
+  `(pointer: coarse) and (min-width: 641px)` — the phone-desktop-mode case.
+
+### Verification
+- `tests/test_gesture_navigation.py` rewritten for the model: single and
+  double swipes must NOT navigate, triple does; drawer/edge swipes unchanged.
+  **ALL GESTURE & DRAWER TESTS PASSED** (12 checks).
+- Full suite: 195 OK · lint 0 errors · build ok.
+- Deployed: `npm run build` + both services restarted; :5173 → 200,
+  :5174 → 200.
+
 ---
 
 *Next session: append below this line. Record the branch, the commits, the
