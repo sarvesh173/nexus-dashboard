@@ -11,6 +11,7 @@ Run: python3 tests/test_agent_stream.py
 """
 import json
 import os
+import sqlite3
 import sys
 import unittest
 
@@ -181,6 +182,60 @@ class TestCallLogLimits(unittest.TestCase):
         rows = a._read_calls(conn, None, 10_000)
         self.assertEqual(rows, [])
         conn.close()
+
+
+class TestSessionModelPrecedence(unittest.TestCase):
+    """#18: 'A or B if C else D' parses as '(A or B) if C else D'.
+
+    When session.model was a JSON string (the normal case: SQLite stores the
+    column as text), isinstance(model, dict) was False, so the whole model_id
+    expression took the else branch and the newest assistant message's
+    modelID was ignored — the console showed the stale session default.
+    """
+
+    def _seed(self, session_model, message_model):
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            'CREATE TABLE session (id TEXT, title TEXT, agent TEXT, model TEXT, '
+            'directory TEXT, cost REAL, tokens_input INT, tokens_output INT, '
+            'tokens_reasoning INT, time_created INT, time_updated INT)')
+        conn.execute(
+            'CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, '
+            'time_created INT)')
+        conn.execute('INSERT INTO session VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                     ('s1', 'title', 'build', session_model, '/x', 0.0,
+                      0, 0, 0, 1, a._ms_now()))
+        if message_model is not None:
+            payload = dict(message_model)
+            payload.setdefault('role', 'assistant')
+            conn.execute('INSERT INTO message VALUES (?,?,?,?)',
+                         ('m1', 's1', json.dumps(payload), a._ms_now()))
+        return conn
+
+    def test_message_model_wins_over_json_string_session_model(self):
+        conn = self._seed(
+            '{"id":"stale-session-model","providerID":"opencode"}',
+            {'modelID': 'fresh-message-model', 'providerID': 'opencode'})
+        rows = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(rows[0]['model_id'], 'fresh-message-model')
+        self.assertEqual(rows[0]['model_provider'], 'opencode')
+
+    def test_json_string_session_model_is_the_fallback(self):
+        conn = self._seed(
+            '{"id":"json-session-model","providerID":"opencode"}', None)
+        rows = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(rows[0]['model_id'], 'json-session-model')
+
+    def test_message_model_beats_a_second_json_session_model(self):
+        # The exact regression: message wins even when the session model
+        # would otherwise resolve fine on its own.
+        conn = self._seed(
+            '{"id":"session-default","providerID":"opencode"}',
+            {'modelID': 'switched-mid-session', 'providerID': 'opencode',
+             'variant': 'max'})
+        rows = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(rows[0]['model_id'], 'switched-mid-session')
+        self.assertEqual(rows[0]['model_variant'], 'max')
 
 
 if __name__ == '__main__':

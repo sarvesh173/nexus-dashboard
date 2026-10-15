@@ -22,6 +22,7 @@ import os
 import tempfile
 import time
 from paths import hermes_config_path, hermes_env_path, omniroute_env_path
+from models_payload import model_rows
 
 try:
     import requests
@@ -37,11 +38,15 @@ SYNC_INTERVAL = 900          # 15 min
 PROBE_TIMEOUT = 45           # generous: NVIDIA cold starts exceed 30s often
 PROBE_GAP = 2.0              # seconds between probes: NVIDIA soft-404s under load
 PROBE_RETRIES = 2            # retry a 404/5xx before believing it
-# Only models whose endpoint differs from /v1/chat/completions
+# Only models whose endpoint differs from /v1/chat/completions.
+# embedding: docs confirm POST /v1/embeddings on this host (OpenAI-shaped).
+# tts/stt were mapped to /v1/audio/speech and /v1/audio/transcriptions —
+# neither route exists on integrate.api.nvidia.com (verified live: 404 plain
+# text regardless of model or key), so every TTS/STT model was guaranteed a
+# false WRONG_EP. Those categories now probe the default route like text,
+# where an end-of-life model answers 410 -> RETIRED.
 SPECIAL_ROUTES = {
     'embedding': '/v1/embeddings',
-    'tts': '/v1/audio/speech',
-    'stt': '/v1/audio/transcriptions',
     'image-gen': '/v1/images/generations',
     'video': '/v1/video/generations',
 }
@@ -60,7 +65,9 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
             r = requests.get(base.rstrip('/') + '/models', timeout=15,
                              headers={'Authorization': 'Bearer {key}'.format(key=key)})
             if r.status_code == 200:
-                ids = {m.get('id') for m in r.json().get('data', []) if m.get('id')}
+                # Same shared shape guard as server.py/run_sync.py: array
+                # payloads and junk rows are skipped, never raise.
+                ids = {mid for mid, _row in model_rows(r.json())}
         except Exception:
             pass
     _catalog_cache.update({'ids': ids, 'at': time.time()})
@@ -155,7 +162,18 @@ def _probe(base, key, mid, route):
     if requests is None:
         return 'UNREACHABLE', 'requests_not_installed'
 
-    url = base.rstrip('/') + route
+    # Join without doubling the /v1 prefix. BASE ends in '/v1' and every route
+    # in SPECIAL_ROUTES also starts with '/v1', so base + route built
+    # '/v1/v1/chat/completions' — a path that exists on no host. nginx
+    # answered 404 page not found, the 404 branch did not recognise it as a
+    # retired-function body, and all 91 registry entries were recorded
+    # WRONG_EP while the same models answer correctly (410/200) on the
+    # single-/v1 URL. Auto-hide only fires on RETIRED, so genuinely dead
+    # models stayed visible and every model looked mis-routed.
+    base = base.rstrip('/')
+    if route.startswith('/v1') and base.endswith('/v1'):
+        route = route[3:]
+    url = base + route
     if route == '/v1/embeddings':
         body = {'model': mid, 'input': [111, 222, 333],
                 'input_type': 'passage', 'encoding_format': 'float',
@@ -226,8 +244,12 @@ def sync_models(model_specs, base='https://integrate.api.nvidia.com/v1'):
         # it is only cold — keep it visible and retry later.
         if status == 'UNREACHABLE' and catalog and mid in catalog:
             status, detail = 'SLOW', 'cold start (listed in catalog)'
-        # Gone from the catalog AND not answering -> genuinely retired.
-        elif status == 'UNREACHABLE' and catalog and mid not in catalog:
+        # Gone from the catalog AND not answering -> genuinely retired. This
+        # covers UNREACHABLE *and* a bare 404 on every route: NVIDIA answers
+        # an end-of-life model with a JSON 410, so a nginx 404 for a model the
+        # provider no longer lists means the model is gone, not mis-routed
+        # (12 such models sat as WRONG_EP after the 2026-10-15 sync).
+        elif status in ('UNREACHABLE', 'WRONG_EP') and catalog and mid not in catalog:
             status, detail = 'RETIRED', 'absent from provider catalog'
 
         rec = reg['models'].get(mid) or {}

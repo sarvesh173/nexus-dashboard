@@ -11,11 +11,24 @@ from datetime import datetime
 
 DASHBOARD_URL = "http://127.0.0.1:5173/"
 TELEMETRY_URL = "http://127.0.0.1:5174/api/health"
-LOG_FILE = "/home/kira/nexus-dashboard/cache/watchdog.log"
-STATUS_FILE = "/home/kira/nexus-dashboard/cache/watchdog_agents_status.json"
-WEBHOOK_PORT = 5178
+# Paths resolve from paths.py (NEXUS_DIR override honoured) — never a literal
+# home directory. scripts/ is one level below the repo root.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from paths import REPO_DIR  # noqa: E402
 
-os.makedirs("/home/kira/nexus-dashboard/cache", exist_ok=True)
+CACHE_DIR = os.path.join(REPO_DIR, "cache")
+LOG_FILE = os.path.join(CACHE_DIR, "watchdog.log")
+STATUS_FILE = os.path.join(CACHE_DIR, "watchdog_agents_status.json")
+WEBHOOK_PORT = 5178
+# vite preview needs ~5s to bind :5173 and the telemetry backend comparable
+# startup time; probing inside that window restarted services mid-boot in a
+# loop (59 restarts on 2026-10-15). The grace blocks the loop long enough for
+# a restarted service to bind before its failure counter can re-cross.
+RESTART_GRACE_SECONDS = 15
+FAIL_THRESHOLD = 2
+PROBE_INTERVAL = 5
+
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 agents_state = {}
 lock = threading.Lock()
@@ -104,6 +117,7 @@ def restart_service(service_name):
     res = subprocess.run(["systemctl", "--user", "restart", service_name], capture_output=True, text=True)
     if res.returncode == 0:
         log(f"SUCCESS: {service_name} restarted successfully.")
+        log(f"Giving {service_name} {RESTART_GRACE_SECONDS}s startup grace before resuming probes.")
     else:
         log(f"ERROR: Failed to restart {service_name}: {res.stderr}")
 
@@ -123,10 +137,10 @@ def main():
             else:
                 fail_count_dashboard += 1
                 log(f"Dashboard probe failed (consecutive failures: {fail_count_dashboard})")
-                if fail_count_dashboard >= 2:
+                if fail_count_dashboard >= FAIL_THRESHOLD:
                     restart_service("nexus-dashboard.service")
                     fail_count_dashboard = 0
-                    time.sleep(3)
+                    time.sleep(RESTART_GRACE_SECONDS)
 
             # Check backend telemetry
             telem_ok = check_url(TELEMETRY_URL)
@@ -135,15 +149,15 @@ def main():
             else:
                 fail_count_telemetry += 1
                 log(f"Telemetry probe failed (consecutive failures: {fail_count_telemetry})")
-                if fail_count_telemetry >= 2:
+                if fail_count_telemetry >= FAIL_THRESHOLD:
                     restart_service("nexus-telemetry.service")
                     fail_count_telemetry = 0
-                    time.sleep(3)
+                    time.sleep(RESTART_GRACE_SECONDS)
 
         except Exception as e:
             log(f"Watchdog internal loop error: {e}")
 
-        time.sleep(5)
+        time.sleep(PROBE_INTERVAL)
 
 if __name__ == "__main__":
     main()

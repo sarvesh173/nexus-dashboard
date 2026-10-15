@@ -1257,7 +1257,7 @@ export function OverviewFeature(props = {}) {
 
                       <div className="my-1">
                         <div className="overview-telemetry-figure text-3xl sm:text-4xl font-bold font-mono tracking-tight text-[var(--md-sys-color-on-surface)]">
-                          {hasRealTelemetry ? <>{smoothRamPercent}<span className="overview-unit">%</span></> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
+                          {hasRealTelemetry ? <>{smoothRamPercent}</> : <span className="overview-pending" aria-label="Waiting for live memory reading">—</span>}
                         </div>
                         <div className="text-xs text-[var(--md-sys-color-on-surface-variant)] font-mono mt-0.5">
                           {hasRealTelemetry ? <>{finiteNumber(smoothRamUsed)}M / {finiteNumber(telemetry?.ram_total_mb)}M physical</> : <span className="overview-pending-caption">waiting for live reading…</span>}

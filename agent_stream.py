@@ -481,8 +481,8 @@ def _read_sessions(conn, include_idle):
             # style provider and variant separately without re-parsing.
             'model': _session_model_text(model, message_model),
             'model_id': (message_model or {}).get('modelID')
-                        or (model or {}).get('id') if isinstance(model, dict)
-                        else _loads(model, {}).get('id'),
+                        or ((model or {}).get('id') if isinstance(model, dict)
+                            else _loads(model, {}).get('id')),
             'model_provider': (message_model or {}).get('providerID')
                               or (_loads(model, {}) or {}).get('providerID'),
             'model_variant': (message_model or {}).get('variant')

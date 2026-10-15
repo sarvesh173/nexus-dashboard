@@ -18,9 +18,11 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import live_sync  # noqa: E402
+from models_payload import model_rows  # noqa: E402
 
 
 def _stub_urlopen(payload):
@@ -303,6 +305,7 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
         import run_sync
 
         fake_requests = MagicMock()
+        fake_requests.get.return_value.status_code = 200
         fake_requests.get.return_value.json.return_value = {"data": []}
 
         with patch("model_health._api_key", return_value="dummy_key"), \
@@ -410,6 +413,364 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertIn("nvidia/model-a", model_ids)
 
 
+class TestModelRowsNormalisation(unittest.TestCase):
+    """#16/#21: /models payloads are normalised by the shared model_rows()
+    guard before any caller indexes them.
+
+    Before the guard, server.py:942, model_health.py:63 and run_sync.py all
+    called payload.get('data', []) directly. A top-level JSON array made .get
+    raise AttributeError (blanking the whole catalog), and a non-dict row or
+    non-string id crashed at .lower()/.split('/').
+    """
+
+    def test_documented_shape_passes_through(self):
+        rows = model_rows({"data": [{"id": "nvidia/model-a"}, {"id": "meta/llama-3"}]})
+        self.assertEqual([m for m, _ in rows], ["nvidia/model-a", "meta/llama-3"])
+
+    def test_top_level_list_is_accepted(self):
+        # The shape that used to raise: .get never existed on a list.
+        rows = model_rows([{"id": "nvidia/model-a"}])
+        self.assertEqual([m for m, _ in rows], ["nvidia/model-a"])
+
+    def test_non_dict_rows_are_skipped(self):
+        rows = model_rows({"data": ["rawstring", 42, None, {"id": "ok/model"}]})
+        self.assertEqual([m for m, _ in rows], ["ok/model"])
+
+    def test_non_string_ids_are_skipped(self):
+        rows = model_rows({"data": [{"id": 123}, {"id": None}, {"id": ""}, {"id": "good/x"}]})
+        self.assertEqual([m for m, _ in rows], ["good/x"])
+
+    def test_wrong_shapes_yield_empty_not_raise(self):
+        for payload in (None, "hi", 5, {"data": "str"}, {"data": {"k": 1}}, {"data": None}):
+            self.assertEqual(model_rows(payload), [], payload)
+
+
+class TestLiveSpecsNon200IsLoud(unittest.TestCase):
+    """run_sync._live_specs must not parse an error body, and a non-200 must
+    not publish as an empty-but-healthy catalog."""
+
+    def test_non_200_returns_empty(self):
+        import run_sync
+        resp = MagicMock()
+        resp.status_code = 503
+        resp.json.return_value = {"error": "unavailable"}
+        with patch("requests.get", return_value=resp):
+            self.assertEqual(run_sync._live_specs("https://x/v1", "k"), [])
+
+    def test_array_payload_is_parsed_not_crashed(self):
+        import run_sync
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = [{"id": "nvidia/model-a"}, "junk", {"id": 7}]
+        with patch("requests.get", return_value=resp):
+            specs = run_sync._live_specs("https://x/v1", "k")
+        self.assertEqual(specs, [("nvidia/model-a", "text")])
+
+
+
+
+class TestOpenRouterTopProviderNull(unittest.TestCase):
+    """#19: OpenRouter returns "top_provider": null for many models.
+
+    item.get('top_provider', {}) then returned the stored None, and the
+    chained .get('max_completion_tokens') raised inside do_GET's broad try —
+    silently killing the whole context lookup so a verified window fell
+    through to the stealth heuristic.
+    """
+
+    def _lookup(self, payload, model_id):
+        import server
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = payload
+        mock_req = MagicMock()
+        mock_req.get.return_value = resp
+        with patch("server.requests", mock_req):
+            return server._openrouter_lookup(model_id)
+
+    def test_null_top_provider_still_resolves_context(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'vendor/model-x', 'context_length': 128000,
+                       'top_provider': None}]},
+            'vendor/model-x')
+        self.assertEqual(ctx, 128000)
+        self.assertIsNone(out)
+        self.assertEqual(source, 'openrouter-verified')
+
+    def test_suffix_match_with_null_top_provider(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'openai/gpt-4o', 'context_length': 128000,
+                       'top_provider': None}]},
+            'gpt-4o')
+        self.assertEqual(ctx, 128000)
+        self.assertEqual(source, 'openrouter-verified')
+
+    def test_populated_top_provider_still_resolves(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'vendor/model-x', 'context_length': 128000,
+                       'top_provider': {'max_completion_tokens': 16384}}]},
+            'vendor/model-x')
+        self.assertEqual(ctx, 128000)
+        self.assertEqual(out, 16384)
+        self.assertEqual(source, 'openrouter-verified')
+
+    def test_missing_model_is_heuristic_not_crash(self):
+        ctx, out, source = self._lookup({'data': [{'id': 'other/model'}]},
+                                        'vendor/nope')
+        self.assertIsNone(ctx)
+        self.assertEqual(source, 'heuristic')
+
+    def test_array_catalog_is_parsed_not_crashed(self):
+        ctx, out, source = self._lookup(
+            [{'id': 'vendor/model-x', 'context_length': 4096,
+              'top_provider': None}, 'junk'],
+            'vendor/model-x')
+        self.assertEqual(ctx, 4096)
+        self.assertEqual(source, 'openrouter-verified')
+
+
+class TestTelemetryCpuSingleSample(unittest.TestCase):
+    """#5: the overall CPU figure came from a second back-to-back
+    cpu_percent(interval=None) call, which samples a ~0ms window and reads a
+    constant 0.0%. It is now the mean of the per-core list from ONE call.
+    """
+
+    def test_cpu_percent_is_mean_of_percpu(self):
+        import server
+
+        class FakePsutil:
+            @staticmethod
+            def virtual_memory():
+                class M:
+                    total = 8 * 1024 ** 3
+                    used = 4 * 1024 ** 3
+                    available = 4 * 1024 ** 3
+                    percent = 50.0
+                return M()
+
+            @staticmethod
+            def swap_memory():
+                class S:
+                    total = used = free = 0
+                    percent = 0.0
+                return S()
+
+            @staticmethod
+            def cpu_percent(interval=None, percpu=False):
+                # A second scalar call would sample a ~0ms window: the fix
+                # must use exactly one percpu call.
+                if not percpu:
+                    raise AssertionError('scalar cpu_percent call reintroduced')
+                return [10.0, 20.0]
+
+            @staticmethod
+            def disk_usage(path):
+                class D:
+                    percent = 55.5
+                return D()
+
+        def _no_systemctl(*a, **k):
+            raise FileNotFoundError('no systemctl in tests')
+
+        server._cached_data = None
+        server._last_poll_time = 0
+        with patch("server.psutil", FakePsutil), \
+             patch("server.subprocess.check_output", _no_systemctl):
+            t = server.get_telemetry()
+        self.assertEqual(t['cpu_percent'], 15.0)
+        self.assertEqual(t['cpu_cores'], [10.0, 20.0])
+        self.assertEqual(t['disk_percent'], 55.5)
+
+
+class TestSpecialRoutesExistOnHost(unittest.TestCase):
+    """tts/stt were mapped to /v1/audio/speech and /v1/audio/transcriptions —
+    neither route exists on integrate.api.nvidia.com (verified live: 404 plain
+    text regardless of model or key), so every TTS/STT model was guaranteed a
+    false WRONG_EP. They now probe the default route, where an end-of-life
+    model answers 410 -> RETIRED.
+    """
+
+    def test_audio_routes_are_not_probed(self):
+        import model_health
+        self.assertNotIn('tts', model_health.SPECIAL_ROUTES)
+        self.assertNotIn('stt', model_health.SPECIAL_ROUTES)
+
+    def test_embedding_route_is_kept(self):
+        import model_health
+        self.assertEqual(model_health.SPECIAL_ROUTES['embedding'], '/v1/embeddings')
+
+
+class TestOverviewMemoryBigNumberHasNoPercent(unittest.TestCase):
+    """2026-10-08 open loop: the user circled the Memory card's big-number %
+    in red. The CPU card and the Core 1/Core 2 sub-boxes keep their units;
+    only the Memory big number is bare.
+    """
+
+    def _memory_big_number_line(self):
+        src = (Path(__file__).resolve().parent.parent
+               / 'src' / 'features' / 'overview' / 'index.jsx').read_text(
+                   encoding='utf-8')
+        for line in src.splitlines():
+            if 'smoothRamPercent' in line and 'overview-telemetry-figure' not in line:
+                if 'hasRealTelemetry' in line and '<>' in line:
+                    return line
+        return None
+
+    def test_memory_big_number_has_no_unit_span(self):
+        line = self._memory_big_number_line()
+        self.assertIsNotNone(line, 'memory big-number render line not found')
+        self.assertNotIn('overview-unit', line,
+                         'Memory big number must render bare (no % span)')
+
+    def test_cpu_big_number_keeps_its_unit(self):
+        src = (Path(__file__).resolve().parent.parent
+               / 'src' / 'features' / 'overview' / 'index.jsx').read_text(
+                   encoding='utf-8')
+        cpu_lines = [l for l in src.splitlines()
+                     if 'smoothCpu' in l and 'overview-unit' in l]
+        self.assertTrue(cpu_lines, 'cpu big-number render line not found')
+
+    def test_core_sub_boxes_keep_their_percent(self):
+        src = (Path(__file__).resolve().parent.parent
+               / 'src' / 'features' / 'overview' / 'index.jsx').read_text(
+                   encoding='utf-8')
+        self.assertIn('core.value}%', src,
+                      'Core 1/Core 2 sub-boxes must keep their % labels')
+
+
+class TestProbeUrlJoin(unittest.TestCase):
+    """The /models sync recorded all 91 registry entries WRONG_EP because
+    _probe joined a base that already ends in /v1 with routes that also start
+    with /v1, producing /v1/v1/chat/completions. The nginx 404 that came back
+    did not match the retired-function body, so every model was misreported.
+    """
+
+    def _probe_url(self, base, route):
+        import model_health
+        captured = {}
+
+        class FakeResp:
+            status_code = 200
+            text = 'ok'
+
+        def fake_post(url, **kw):
+            captured['url'] = url
+            return FakeResp()
+
+        with patch.object(model_health.requests, 'post', staticmethod(fake_post)):
+            model_health._probe(base, 'k', 'vendor/model-x', route)
+        return captured['url']
+
+    def test_base_with_v1_and_route_with_v1_join_once(self):
+        self.assertEqual(
+            self._probe_url('https://integrate.api.nvidia.com/v1',
+                            '/v1/chat/completions'),
+            'https://integrate.api.nvidia.com/v1/chat/completions')
+
+    def test_base_without_v1_keeps_route_v1(self):
+        self.assertEqual(
+            self._probe_url('https://integrate.api.nvidia.com',
+                            '/v1/chat/completions'),
+            'https://integrate.api.nvidia.com/v1/chat/completions')
+
+    def test_special_routes_join_once(self):
+        for route in ('/v1/embeddings', '/v1/audio/speech',
+                      '/v1/audio/transcriptions', '/v1/images/generations'):
+            self.assertEqual(
+                self._probe_url('https://integrate.api.nvidia.com/v1', route),
+                'https://integrate.api.nvidia.com/v1' + route[3:], route)
+
+    def test_live_catalog_url_is_unchanged(self):
+        # The catalog fetch already built the right URL; it must not regress.
+        import model_health
+        captured = {}
+
+        class FakeResp:
+            status_code = 200
+
+            def json(self):
+                return {'data': [{'id': 'vendor/model-x'}]}
+
+        def fake_get(url, **kw):
+            captured['url'] = url
+            return FakeResp()
+
+        model_health._catalog_cache.update({'ids': set(), 'at': 0})
+        with patch.object(model_health.requests, 'get', staticmethod(fake_get)):
+            ids = model_health.live_catalog(
+                'https://integrate.api.nvidia.com/v1', 'k')
+        self.assertEqual(captured['url'],
+                         'https://integrate.api.nvidia.com/v1/models')
+        self.assertEqual(ids, {'vendor/model-x'})
+
+
+class TestCatalogAbsenceMeansRetired(unittest.TestCase):
+    """A model the provider no longer lists AND that answers nothing on any
+    route is gone, not mis-routed. NVIDIA answers an end-of-life model with a
+    JSON 410; a bare nginx 404 while absent from GET /v1/models means removed.
+    The old rule only fired for UNREACHABLE, so 12 models sat as WRONG_EP.
+    """
+
+    def _sync_one(self, probe_status, listed):
+        import model_health
+        calls = {'n': 0}
+
+        def fake_probe(base, key, mid, route):
+            calls['n'] += 1
+            return probe_status, '404 page not found'
+
+        # A non-empty catalog is what "the provider answered the catalog
+        # request" looks like; membership is the only variable here. An empty
+        # set means "catalog unavailable" and the code must fail soft.
+        def fake_catalog(base, key):
+            return {'vendor/model-x'} if listed else {'vendor/other-model'}
+
+        # Fresh registry per call: sync_models' recently-RETIRED skip guard
+        # otherwise reuses the previous test's verdict from the module cache.
+        model_health._registry = None
+        model_health._registry_mtime = [None]
+        with patch.object(model_health, '_probe', side_effect=fake_probe), \
+             patch.object(model_health, 'live_catalog', side_effect=fake_catalog), \
+             patch.object(model_health, '_api_key', return_value='k'), \
+             patch.object(model_health, '_save', lambda: None):
+            reg = model_health.sync_models([('vendor/model-x', 'text')],
+                                           'https://integrate.api.nvidia.com/v1')
+        return reg['models']['vendor/model-x']['status'], calls['n']
+
+    def test_404_absent_from_catalog_is_retired(self):
+        status, _ = self._sync_one('WRONG_EP', listed=False)
+        self.assertEqual(status, 'RETIRED')
+
+    def test_timeout_absent_from_catalog_is_retired(self):
+        status, _ = self._sync_one('UNREACHABLE', listed=False)
+        self.assertEqual(status, 'RETIRED')
+
+    def test_404_but_listed_stays_wrong_ep(self):
+        # Still advertised: the route question is real, do not hide it.
+        status, _ = self._sync_one('WRONG_EP', listed=True)
+        self.assertEqual(status, 'WRONG_EP')
+
+    def test_timeout_but_listed_is_slow_not_retired(self):
+        status, _ = self._sync_one('UNREACHABLE', listed=True)
+        self.assertEqual(status, 'SLOW')
+
+    def test_empty_catalog_fails_soft(self):
+        # Catalog fetch failed (empty set): keep the probe's own verdict,
+        # never reach for RETIRED on missing evidence.
+        import model_health
+
+        def fake_probe(base, key, mid, route):
+            return 'WRONG_EP', '404 page not found'
+
+        model_health._registry = None
+        model_health._registry_mtime = [None]
+        with patch.object(model_health, '_probe', side_effect=fake_probe), \
+             patch.object(model_health, 'live_catalog', return_value=set()), \
+             patch.object(model_health, '_api_key', return_value='k'), \
+             patch.object(model_health, '_save', lambda: None):
+            reg = model_health.sync_models([('vendor/model-x', 'text')],
+                                           'https://integrate.api.nvidia.com/v1')
+        self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
 if __name__ == "__main__":
