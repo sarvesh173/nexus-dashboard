@@ -217,18 +217,33 @@ A phone browser in desktop mode reports a wide viewport but a small physical
 touch screen; the phone adaptations only applied at `<= 640px`, so the layout
 broke. Laptops (fine pointer) were unaffected.
 
-### Fix — triple-swipe activation (commit `7e639f0`)
-- Swipe navigation is OFF until deliberately activated: swipe 1 does nothing,
-  swipe 2 shows the feedback popup (no navigation), swipe 3 navigates.
-- 60 s after the first swipe the sequence auto-resets — an accidental swipe
-  can never arm the feature.
+### Problem 3 — feedback animation on first swipe
+The gesture bar + popup appeared on the first swipe, which felt "always on"
+instead of deliberately activated.
+
+### Fix — triple-swipe activation + feedback polish (commits `7e639f0`, `68ccff3`)
+- Swipe navigation is OFF until deliberately activated:
+  - swipe 1: **completely silent** (no bar wake, no popup, no animation)
+  - swipe 2: **hint popup** with animated arrow + "Left and slide" / "Right
+    and slide" text — still no navigation
+  - swipe 3: **navigates**
+  - 60 s after the first swipe the sequence auto-resets — an accidental
+    swipe can never arm the feature
 - Logs: 50% swipe strength + 6 s gesture suppression after landing, so row
-  sliding is never stolen.
-- `armStage` lives in a ref so rapid swipes never read a stale stage.
+  sliding is never stolen
+- `armStage` lives in a ref so rapid swipes never read a stale stage
 - Serial navigation queue kept: one navigation at a time, the next waits for
-  the route to actually load (a burst of 15 swipes reads as deliberate steps).
+  the route to actually load (a burst of 15 swipes reads as deliberate steps)
 - `mobile.css`: phone form-factor adaptations now also apply to
-  `(pointer: coarse) and (min-width: 641px)` — the phone-desktop-mode case.
+  `(pointer: coarse) and (min-width: 641px)` — the phone-desktop-mode case
+
+### Feedback component (`GestureFeedback.jsx`)
+- Pehli swipe: **kuch nahi** (bar bhi nahi wake hota)
+- Doosri swipe: "Left and slide" / "Right and slide" animated popup aata
+  hai with animated arrow — navigation abhi nahi
+- Teesri swipe: navigation + page transition animation
+- `targetTitle` null hone par "Left and slide" / "Right and slide" dikhata
+  hai with animated arrow
 
 ### Verification
 - `tests/test_gesture_navigation.py` rewritten for the model: single and
