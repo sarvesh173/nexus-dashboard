@@ -53,6 +53,42 @@ export function GestureController() {
   const feedbackExitTimerRef = useRef(null);
   const barTimerRef = useRef(null);
 
+  // Serial navigation queue: one swipe navigates, waits for the route to
+  // actually load, then the next queued direction goes. Without this, a
+  // burst of rapid swipes fires every navigate() back-to-back and the page
+  // machine-guns through routes (Logs -> Overview -> ...). Each navigation
+  // also gets a small pre-delay so the transition reads as intentional.
+  const navQueueRef = useRef([]);
+  const navBusyRef = useRef(false);
+  const pendingPathRef = useRef(null);
+  const settleTimerRef = useRef(null);
+
+  // Triple-swipe activation: gesture navigation stays OFF until the user
+  // deliberately completes the sequence.
+  //   swipe 1 → nothing (must be intentional)
+  //   swipe 2 → feedback popup only, still no navigation
+  //   swipe 3 → navigates
+  // One minute after the first swipe the controller resets to OFF, so an
+  // accidental swipe can never activate the feature on its own.
+  // Ref (not state) so the touch handler always reads the live stage — a
+  // state dep in the listener effect would go stale between rapid swipes.
+  const armStageRef = useRef(0); // 0=off, 1=first seen, 2=second seen
+  const armResetTimerRef = useRef(null);
+  // On Logs the rows slide horizontally for provider inspection, so gestures
+  // are disabled for a few seconds after landing there.
+  const logsBlockUntilRef = useRef(0);
+
+  const ARM_RESET_MS = 60000; // auto-disable one minute after the first swipe
+  const LOGS_BLOCK_MS = 6000; // gestures suppressed this long after landing on Logs
+
+  const resetArm = useCallback(() => {
+    armStageRef.current = 0;
+    if (armResetTimerRef.current) {
+      clearTimeout(armResetTimerRef.current);
+      armResetTimerRef.current = null;
+    }
+  }, []);
+
   const currentIndex = resolveRouteIndex(location.pathname);
 
   // Wakes the gesture guide bar and starts an auto-hide countdown
@@ -98,26 +134,83 @@ export function GestureController() {
     wakeBar(2600);
   }, [showFeedback, wakeBar]);
 
+  const targetPathFor = useCallback(
+    (direction) => {
+      if (direction === 'left') {
+        return SWIPE_ROUTES[(currentIndex + 1) % SWIPE_ROUTES.length].path;
+      }
+      return SWIPE_ROUTES[(currentIndex - 1 + SWIPE_ROUTES.length) % SWIPE_ROUTES.length].path;
+    },
+    [currentIndex]
+  );
+
+  // One navigation at a time: pre-delay for intentionality, wait for the
+  // route to actually change (settle) before the next queued direction goes.
+  // A burst of rapid swipes therefore reads as deliberate steps, not a
+  // machine-gun through the routes.
+  const NAV_PRE_DELAY = 320; // ms before the first queued navigation fires
+  const NAV_SETTLE_GAP = 260; // ms pause between one route loading and the next
+  const NAV_SETTLE_TIMEOUT = 1200; // ms safety: unblock even if the route never matches
+
+  const settleNavigation = useCallback(() => {
+    pendingPathRef.current = null;
+    navBusyRef.current = false;
+    if (settleTimerRef.current) {
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+    setTimeout(() => processQueue(), NAV_SETTLE_GAP);
+  }, []);
+
+  const processQueue = useCallback(() => {
+    if (navBusyRef.current) return;
+    const direction = navQueueRef.current.shift();
+    if (!direction) return;
+    navBusyRef.current = true;
+    wakeBar(2600);
+    const path = targetPathFor(direction);
+    // Swiping towards the route we are already on: nothing to navigate,
+    // settle immediately and hand over to the next queued direction.
+    if (path === location.pathname) {
+      settleNavigation();
+      return;
+    }
+    pendingPathRef.current = path;
+    settleTimerRef.current = setTimeout(settleNavigation, NAV_SETTLE_TIMEOUT);
+    setTimeout(() => {
+      triggerPageTransition(direction);
+      navigate(path);
+      // Landing on Logs: suppress gestures briefly so horizontal row
+      // sliding (provider inspection) is never stolen by a navigation.
+      if (path.startsWith('/log')) {
+        logsBlockUntilRef.current = Date.now() + LOGS_BLOCK_MS;
+      }
+      const title =
+        direction === 'left'
+          ? SWIPE_ROUTES[(currentIndex + 1) % SWIPE_ROUTES.length]?.title
+          : SWIPE_ROUTES[(currentIndex - 1 + SWIPE_ROUTES.length) % SWIPE_ROUTES.length]?.title;
+      showFeedback(direction, title);
+    }, NAV_PRE_DELAY);
+  }, [currentIndex, location.pathname, navigate, showFeedback, triggerPageTransition, wakeBar, targetPathFor, settleNavigation]);
+
+  // When the pending route actually loads, the queue may advance.
+  useEffect(() => {
+    if (pendingPathRef.current && location.pathname === pendingPathRef.current) {
+      settleNavigation();
+    }
+  }, [location.pathname, settleNavigation]);
+
   const handleSwipe = useCallback(
     (direction) => {
-      wakeBar(2600);
-      if (direction === 'left') {
-        // Continuous circular loop navigation: Logs -> Overview
-        const nextIdx = (currentIndex + 1) % SWIPE_ROUTES.length;
-        const nextRoute = SWIPE_ROUTES[nextIdx];
-        triggerPageTransition('left');
-        navigate(nextRoute.path);
-        showFeedback('left', nextRoute.title);
-      } else if (direction === 'right') {
-        // Continuous circular loop navigation: Overview -> Logs
-        const prevIdx = (currentIndex - 1 + SWIPE_ROUTES.length) % SWIPE_ROUTES.length;
-        const prevRoute = SWIPE_ROUTES[prevIdx];
-        triggerPageTransition('right');
-        navigate(prevRoute.path);
-        showFeedback('right', prevRoute.title);
+      // Queue instead of navigating immediately. Consecutive duplicates are
+      // dropped so a burst of identical swipes cannot pile up in the queue.
+      const queued = navQueueRef.current;
+      if (queued[queued.length - 1] !== direction) {
+        queued.push(direction);
       }
+      processQueue();
     },
-    [currentIndex, navigate, showFeedback, triggerPageTransition, wakeBar]
+    [processQueue]
   );
 
   // Activity listeners to auto-dismiss gesture bar after inactivity
@@ -140,6 +233,8 @@ export function GestureController() {
       if (barTimerRef.current) clearTimeout(barTimerRef.current);
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
       if (feedbackExitTimerRef.current) clearTimeout(feedbackExitTimerRef.current);
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+      if (armResetTimerRef.current) clearTimeout(armResetTimerRef.current);
     };
   }, [wakeBar]);
 
@@ -160,9 +255,9 @@ export function GestureController() {
 
       // Route-sensitive strength: Logs rows are horizontally slideable (model /
       // provider inspection), so a normal-strength swipe there steals the
-      // gesture mid-scroll and drops the user on the Models page. Require a
-      // longer, more deliberate flick on Logs (~2.5x travel => ~36% rate).
-      const swipeStrength = currentIndex === 3 ? 0.36 : 1.0; // 3 = Logs
+      // gesture mid-scroll and drops the user on the Models page. Logs runs
+      // at 50% strength; every other route at 100%.
+      const swipeStrength = currentIndex === 3 ? 0.5 : 1.0; // 3 = Logs
       const minTravel = 35 / swipeStrength;
 
       if (Math.abs(dx) < minTravel) return;
@@ -190,7 +285,31 @@ export function GestureController() {
         return;
       }
 
-      // 3. Main views swipe navigation
+      // 2b. Logs just got here: suppress gestures for a few seconds so the
+      // user can slide rows horizontally without stealing navigations.
+      if (currentIndex === 3 && Date.now() < logsBlockUntilRef.current) return;
+
+      // 3. Main views swipe navigation — triple-swipe activation.
+      //    Swipe 1: nothing happens (must be deliberate). Swipe 2: the
+      //    feedback popup animates in, still no navigation. Swipe 3: the
+      //    navigation fires. One minute after the first swipe the whole
+      //    sequence resets, so an accidental swipe can never arm it.
+      if (armStageRef.current === 0) {
+        armStageRef.current = 1;
+        wakeBar(2600);
+        if (armResetTimerRef.current) clearTimeout(armResetTimerRef.current);
+        armResetTimerRef.current = setTimeout(() => { armStageRef.current = 0; }, ARM_RESET_MS);
+        return;
+      }
+      if (armStageRef.current === 1) {
+        armStageRef.current = 2;
+        wakeBar(2600);
+        showFeedback(dx < 0 ? 'left' : 'right', 'Swipe once more to navigate');
+        armResetTimerRef.current = setTimeout(() => { armStageRef.current = 0; }, ARM_RESET_MS);
+        return;
+      }
+      // armStageRef.current === 2 → third swipe navigates, then the controller resets.
+      resetArm();
       if (dx < 0) {
         handleSwipe('left');
       } else {
