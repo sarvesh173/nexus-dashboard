@@ -30,6 +30,7 @@ from paths import (
     omniroute_env_path,
     OMNI_BASE,
 )
+from models_payload import model_rows
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -243,8 +244,11 @@ def get_telemetry():
     if psutil is not None:
         mem = psutil.virtual_memory()
         swap = psutil.swap_memory()
+        # One non-blocking sample. Two back-to-back cpu_percent() calls meant
+        # the second measured a ~0ms window and reported a constant 0.0%; the
+        # overall figure is the mean of the per-core list instead.
         per_cpu = psutil.cpu_percent(interval=None, percpu=True)
-        cpu_pct = psutil.cpu_percent(interval=None)
+        cpu_pct = (sum(per_cpu) / len(per_cpu)) if per_cpu else 0.0
         disk = psutil.disk_usage('/')
         ram_total_mb = round(mem.total / (1024 * 1024))
         ram_used_mb = round(mem.used / (1024 * 1024))
@@ -941,9 +945,10 @@ def get_hermes_config_providers():
             else:
                 resp = None
             if resp is not None and resp.status_code == 200:
-                data = resp.json().get('data', [])
-                for item in data:
-                    mid = item.get('id', '')
+                # Payload shape is normalised by the shared guard: a top-level
+                # array, non-dict rows and non-string ids are skipped instead
+                # of raising AttributeError and blanking the whole catalog.
+                for mid, item in model_rows(resp.json()):
                     mname = mid.split('/')[-1].replace('-', ' ').title() if '/' in mid else mid
                     mid_lower = mid.lower()
 
@@ -1683,6 +1688,34 @@ def _encode_json(data):
     ).encode('utf-8')
 
 
+def _openrouter_lookup(model_id):
+    """(res_context, res_output, source) from OpenRouter's live catalog.
+
+    top_provider is null for many OpenRouter models: .get('top_provider', {})
+    returns the stored None and the chained .get used to raise inside the
+    caller's try, silently killing the whole context lookup. Split out of
+    do_GET so the guard is unit-testable; catalog shape goes through the
+    shared model_rows() guard.
+    """
+    if not model_id or requests is None:
+        return None, None, 'heuristic'
+    try:
+        clean_id = model_id.split('/')[-1].lower()
+        req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
+        if req.status_code != 200:
+            return None, None, 'heuristic'
+        for mid, item in model_rows(req.json()):
+            i_id = mid.lower()
+            if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
+                return (item.get('context_length'),
+                        (item.get('top_provider') or {}).get(
+                            'max_completion_tokens'),
+                        'openrouter-verified')
+    except Exception:
+        pass
+    return None, None, 'heuristic'
+
+
 class TelemetryHandler(BaseHTTPRequestHandler):
     def send_json(self, data, code=200):
         try:
@@ -1960,21 +1993,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             res_output = None
             source = 'heuristic'
 
-            if model_id and requests is not None:
-                try:
-                    clean_id = model_id.split('/')[-1].lower()
-                    req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
-                    if req.status_code == 200:
-                        or_data = req.json().get('data', [])
-                        for item in or_data:
-                            i_id = item.get('id', '').lower()
-                            if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
-                                res_context = item.get('context_length')
-                                res_output = item.get('top_provider', {}).get('max_completion_tokens')
-                                source = 'openrouter-verified'
-                                break
-                except Exception:
-                    pass
+            res_context, res_output, source = _openrouter_lookup(model_id)
 
             if not res_context and model_id:
                 s = model_id.lower()

@@ -18,9 +18,11 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import live_sync  # noqa: E402
+from models_payload import model_rows  # noqa: E402
 
 
 def _stub_urlopen(payload):
@@ -303,6 +305,7 @@ class TestRunSyncFetchSpecsImports(unittest.TestCase):
         import run_sync
 
         fake_requests = MagicMock()
+        fake_requests.get.return_value.status_code = 200
         fake_requests.get.return_value.json.return_value = {"data": []}
 
         with patch("model_health._api_key", return_value="dummy_key"), \
@@ -410,6 +413,173 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertIn("nvidia/model-a", model_ids)
 
 
+class TestModelRowsNormalisation(unittest.TestCase):
+    """#16/#21: /models payloads are normalised by the shared model_rows()
+    guard before any caller indexes them.
+
+    Before the guard, server.py:942, model_health.py:63 and run_sync.py all
+    called payload.get('data', []) directly. A top-level JSON array made .get
+    raise AttributeError (blanking the whole catalog), and a non-dict row or
+    non-string id crashed at .lower()/.split('/').
+    """
+
+    def test_documented_shape_passes_through(self):
+        rows = model_rows({"data": [{"id": "nvidia/model-a"}, {"id": "meta/llama-3"}]})
+        self.assertEqual([m for m, _ in rows], ["nvidia/model-a", "meta/llama-3"])
+
+    def test_top_level_list_is_accepted(self):
+        # The shape that used to raise: .get never existed on a list.
+        rows = model_rows([{"id": "nvidia/model-a"}])
+        self.assertEqual([m for m, _ in rows], ["nvidia/model-a"])
+
+    def test_non_dict_rows_are_skipped(self):
+        rows = model_rows({"data": ["rawstring", 42, None, {"id": "ok/model"}]})
+        self.assertEqual([m for m, _ in rows], ["ok/model"])
+
+    def test_non_string_ids_are_skipped(self):
+        rows = model_rows({"data": [{"id": 123}, {"id": None}, {"id": ""}, {"id": "good/x"}]})
+        self.assertEqual([m for m, _ in rows], ["good/x"])
+
+    def test_wrong_shapes_yield_empty_not_raise(self):
+        for payload in (None, "hi", 5, {"data": "str"}, {"data": {"k": 1}}, {"data": None}):
+            self.assertEqual(model_rows(payload), [], payload)
+
+
+class TestLiveSpecsNon200IsLoud(unittest.TestCase):
+    """run_sync._live_specs must not parse an error body, and a non-200 must
+    not publish as an empty-but-healthy catalog."""
+
+    def test_non_200_returns_empty(self):
+        import run_sync
+        resp = MagicMock()
+        resp.status_code = 503
+        resp.json.return_value = {"error": "unavailable"}
+        with patch("requests.get", return_value=resp):
+            self.assertEqual(run_sync._live_specs("https://x/v1", "k"), [])
+
+    def test_array_payload_is_parsed_not_crashed(self):
+        import run_sync
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = [{"id": "nvidia/model-a"}, "junk", {"id": 7}]
+        with patch("requests.get", return_value=resp):
+            specs = run_sync._live_specs("https://x/v1", "k")
+        self.assertEqual(specs, [("nvidia/model-a", "text")])
+
+
+
+
+class TestOpenRouterTopProviderNull(unittest.TestCase):
+    """#19: OpenRouter returns "top_provider": null for many models.
+
+    item.get('top_provider', {}) then returned the stored None, and the
+    chained .get('max_completion_tokens') raised inside do_GET's broad try —
+    silently killing the whole context lookup so a verified window fell
+    through to the stealth heuristic.
+    """
+
+    def _lookup(self, payload, model_id):
+        import server
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = payload
+        mock_req = MagicMock()
+        mock_req.get.return_value = resp
+        with patch("server.requests", mock_req):
+            return server._openrouter_lookup(model_id)
+
+    def test_null_top_provider_still_resolves_context(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'vendor/model-x', 'context_length': 128000,
+                       'top_provider': None}]},
+            'vendor/model-x')
+        self.assertEqual(ctx, 128000)
+        self.assertIsNone(out)
+        self.assertEqual(source, 'openrouter-verified')
+
+    def test_suffix_match_with_null_top_provider(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'openai/gpt-4o', 'context_length': 128000,
+                       'top_provider': None}]},
+            'gpt-4o')
+        self.assertEqual(ctx, 128000)
+        self.assertEqual(source, 'openrouter-verified')
+
+    def test_populated_top_provider_still_resolves(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'vendor/model-x', 'context_length': 128000,
+                       'top_provider': {'max_completion_tokens': 16384}}]},
+            'vendor/model-x')
+        self.assertEqual(ctx, 128000)
+        self.assertEqual(out, 16384)
+        self.assertEqual(source, 'openrouter-verified')
+
+    def test_missing_model_is_heuristic_not_crash(self):
+        ctx, out, source = self._lookup({'data': [{'id': 'other/model'}]},
+                                        'vendor/nope')
+        self.assertIsNone(ctx)
+        self.assertEqual(source, 'heuristic')
+
+    def test_array_catalog_is_parsed_not_crashed(self):
+        ctx, out, source = self._lookup(
+            [{'id': 'vendor/model-x', 'context_length': 4096,
+              'top_provider': None}, 'junk'],
+            'vendor/model-x')
+        self.assertEqual(ctx, 4096)
+        self.assertEqual(source, 'openrouter-verified')
+
+
+class TestTelemetryCpuSingleSample(unittest.TestCase):
+    """#5: the overall CPU figure came from a second back-to-back
+    cpu_percent(interval=None) call, which samples a ~0ms window and reads a
+    constant 0.0%. It is now the mean of the per-core list from ONE call.
+    """
+
+    def test_cpu_percent_is_mean_of_percpu(self):
+        import server
+
+        class FakePsutil:
+            @staticmethod
+            def virtual_memory():
+                class M:
+                    total = 8 * 1024 ** 3
+                    used = 4 * 1024 ** 3
+                    available = 4 * 1024 ** 3
+                    percent = 50.0
+                return M()
+
+            @staticmethod
+            def swap_memory():
+                class S:
+                    total = used = free = 0
+                    percent = 0.0
+                return S()
+
+            @staticmethod
+            def cpu_percent(interval=None, percpu=False):
+                # A second scalar call would sample a ~0ms window: the fix
+                # must use exactly one percpu call.
+                if not percpu:
+                    raise AssertionError('scalar cpu_percent call reintroduced')
+                return [10.0, 20.0]
+
+            @staticmethod
+            def disk_usage(path):
+                class D:
+                    percent = 55.5
+                return D()
+
+        def _no_systemctl(*a, **k):
+            raise FileNotFoundError('no systemctl in tests')
+
+        server._cached_data = None
+        server._last_poll_time = 0
+        with patch("server.psutil", FakePsutil), \
+             patch("server.subprocess.check_output", _no_systemctl):
+            t = server.get_telemetry()
+        self.assertEqual(t['cpu_percent'], 15.0)
+        self.assertEqual(t['cpu_cores'], [10.0, 20.0])
+        self.assertEqual(t['disk_percent'], 55.5)
 
 
 if __name__ == "__main__":

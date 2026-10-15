@@ -15,11 +15,50 @@ import sys
 import time
 
 from paths import REPO_DIR, hermes_config_path
+from models_payload import model_rows
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import model_health  # noqa: E402
 
 BASE = 'https://integrate.api.nvidia.com/v1'
+
+
+def _live_specs(base, key):
+    """(model_id, category) pairs from the live NVIDIA catalog.
+
+    A non-200 is reported and returns []: a degraded source must never look
+    like an empty-but-healthy catalog. Payload shape is normalised by the
+    shared model_rows() guard (top-level arrays and junk rows are skipped).
+    """
+    try:
+        import requests
+    except ImportError:
+        return []
+    r = requests.get(base.rstrip('/') + '/models', timeout=20,
+                     headers={'Authorization': 'Bearer {key}'.format(key=key)})
+    if r.status_code != 200:
+        print('[sync] models endpoint returned HTTP {}'.format(r.status_code))
+        return []
+    specs = []
+    for mid, m in model_rows(r.json()):
+        low = mid.lower()
+        cat = 'text'
+        if any(k in low for k in ('embed', 'retriever')):
+            cat = 'embedding'
+        elif any(k in low for k in ('diffusion', 'sdxl', 'flux', 'sana')):
+            cat = 'image-gen'
+        elif any(k in low for k in ('vision', 'fuyu', 'kosmos', 'neva',
+                                    'vila', '-vl-', 'vlm', 'paligemma')):
+            cat = 'vision'
+        elif any(k in low for k in ('tts', 'voice', 'magpie', 'chatterbox')):
+            cat = 'tts'
+        elif any(k in low for k in ('stt', 'whisper', 'parakeet', 'canary',
+                                    'riva-translate', 'asr')):
+            cat = 'stt'
+        elif any(k in low for k in ('reason', 'dbrx', 'thinking')):
+            cat = 'decision'
+        specs.append((mid, cat))
+    return specs
 
 
 def fetch_specs():
@@ -28,11 +67,6 @@ def fetch_specs():
         import yaml
     except ImportError:
         yaml = None
-
-    try:
-        import requests
-    except ImportError:
-        requests = None
 
     key = model_health._api_key()
     if not key:
@@ -67,27 +101,8 @@ def fetch_specs():
         print('[sync] server import failed ({}), falling back to keyword '
               'categorisation'.format(type(exc).__name__))
 
-    if not specs and requests is not None:
-        r = requests.get(base.rstrip('/') + '/models', timeout=20,
-                         headers={'Authorization': 'Bearer {key}'.format(key=key)})
-        for m in r.json().get('data', []):
-            mid = m.get('id', '').lower()
-            cat = 'text'
-            if any(k in mid for k in ('embed', 'retriever')):
-                cat = 'embedding'
-            elif any(k in mid for k in ('diffusion', 'sdxl', 'flux', 'sana')):
-                cat = 'image-gen'
-            elif any(k in mid for k in ('vision', 'fuyu', 'kosmos', 'neva',
-                                        'vila', '-vl-', 'vlm', 'paligemma')):
-                cat = 'vision'
-            elif any(k in mid for k in ('tts', 'voice', 'magpie', 'chatterbox')):
-                cat = 'tts'
-            elif any(k in mid for k in ('stt', 'whisper', 'parakeet', 'canary',
-                                        'riva-translate', 'asr')):
-                cat = 'stt'
-            elif any(k in mid for k in ('reason', 'dbrx', 'thinking')):
-                cat = 'decision'
-            specs.append((m['id'], cat))
+    if not specs:
+        specs = _live_specs(base, key)
 
     # dedupe, preserve order
     seen = set()

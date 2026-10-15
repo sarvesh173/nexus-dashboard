@@ -22,6 +22,7 @@ import os
 import tempfile
 import time
 from paths import hermes_config_path, hermes_env_path, omniroute_env_path
+from models_payload import model_rows
 
 try:
     import requests
@@ -60,7 +61,9 @@ def live_catalog(base='https://integrate.api.nvidia.com/v1', key=None):
             r = requests.get(base.rstrip('/') + '/models', timeout=15,
                              headers={'Authorization': 'Bearer {key}'.format(key=key)})
             if r.status_code == 200:
-                ids = {m.get('id') for m in r.json().get('data', []) if m.get('id')}
+                # Same shared shape guard as server.py/run_sync.py: array
+                # payloads and junk rows are skipped, never raise.
+                ids = {mid for mid, _row in model_rows(r.json())}
         except Exception:
             pass
     _catalog_cache.update({'ids': ids, 'at': time.time()})
