@@ -157,8 +157,16 @@ export function GestureController() {
 
       // Relaxed travel thresholds: 35px is enough to register a deliberate flick
       if (dt > 900) return;
-      if (Math.abs(dx) < 35) return;
-      if (Math.abs(dx) < Math.abs(dy) * 1.1) return;
+
+      // Route-sensitive strength: Logs rows are horizontally slideable (model /
+      // provider inspection), so a normal-strength swipe there steals the
+      // gesture mid-scroll and drops the user on the Models page. Require a
+      // longer, more deliberate flick on Logs (~2.5x travel => ~36% rate).
+      const swipeStrength = currentIndex === 3 ? 0.36 : 1.0; // 3 = Logs
+      const minTravel = 35 / swipeStrength;
+
+      if (Math.abs(dx) < minTravel) return;
+      if (Math.abs(dx) < Math.abs(dy) * (1.1 / swipeStrength)) return;
 
       // Only skip if user is actively typing in an input
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
