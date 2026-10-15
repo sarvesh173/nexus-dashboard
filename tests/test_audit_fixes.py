@@ -582,6 +582,62 @@ class TestTelemetryCpuSingleSample(unittest.TestCase):
         self.assertEqual(t['disk_percent'], 55.5)
 
 
+class TestSpecialRoutesExistOnHost(unittest.TestCase):
+    """tts/stt were mapped to /v1/audio/speech and /v1/audio/transcriptions —
+    neither route exists on integrate.api.nvidia.com (verified live: 404 plain
+    text regardless of model or key), so every TTS/STT model was guaranteed a
+    false WRONG_EP. They now probe the default route, where an end-of-life
+    model answers 410 -> RETIRED.
+    """
+
+    def test_audio_routes_are_not_probed(self):
+        import model_health
+        self.assertNotIn('tts', model_health.SPECIAL_ROUTES)
+        self.assertNotIn('stt', model_health.SPECIAL_ROUTES)
+
+    def test_embedding_route_is_kept(self):
+        import model_health
+        self.assertEqual(model_health.SPECIAL_ROUTES['embedding'], '/v1/embeddings')
+
+
+class TestOverviewMemoryBigNumberHasNoPercent(unittest.TestCase):
+    """2026-10-08 open loop: the user circled the Memory card's big-number %
+    in red. The CPU card and the Core 1/Core 2 sub-boxes keep their units;
+    only the Memory big number is bare.
+    """
+
+    def _memory_big_number_line(self):
+        src = (Path(__file__).resolve().parent.parent
+               / 'src' / 'features' / 'overview' / 'index.jsx').read_text(
+                   encoding='utf-8')
+        for line in src.splitlines():
+            if 'smoothRamPercent' in line and 'overview-telemetry-figure' not in line:
+                if 'hasRealTelemetry' in line and '<>' in line:
+                    return line
+        return None
+
+    def test_memory_big_number_has_no_unit_span(self):
+        line = self._memory_big_number_line()
+        self.assertIsNotNone(line, 'memory big-number render line not found')
+        self.assertNotIn('overview-unit', line,
+                         'Memory big number must render bare (no % span)')
+
+    def test_cpu_big_number_keeps_its_unit(self):
+        src = (Path(__file__).resolve().parent.parent
+               / 'src' / 'features' / 'overview' / 'index.jsx').read_text(
+                   encoding='utf-8')
+        cpu_lines = [l for l in src.splitlines()
+                     if 'smoothCpu' in l and 'overview-unit' in l]
+        self.assertTrue(cpu_lines, 'cpu big-number render line not found')
+
+    def test_core_sub_boxes_keep_their_percent(self):
+        src = (Path(__file__).resolve().parent.parent
+               / 'src' / 'features' / 'overview' / 'index.jsx').read_text(
+                   encoding='utf-8')
+        self.assertIn('core.value}%', src,
+                      'Core 1/Core 2 sub-boxes must keep their % labels')
+
+
 class TestProbeUrlJoin(unittest.TestCase):
     """The /models sync recorded all 91 registry entries WRONG_EP because
     _probe joined a base that already ends in /v1 with routes that also start

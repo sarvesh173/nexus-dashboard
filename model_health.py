@@ -38,11 +38,15 @@ SYNC_INTERVAL = 900          # 15 min
 PROBE_TIMEOUT = 45           # generous: NVIDIA cold starts exceed 30s often
 PROBE_GAP = 2.0              # seconds between probes: NVIDIA soft-404s under load
 PROBE_RETRIES = 2            # retry a 404/5xx before believing it
-# Only models whose endpoint differs from /v1/chat/completions
+# Only models whose endpoint differs from /v1/chat/completions.
+# embedding: docs confirm POST /v1/embeddings on this host (OpenAI-shaped).
+# tts/stt were mapped to /v1/audio/speech and /v1/audio/transcriptions —
+# neither route exists on integrate.api.nvidia.com (verified live: 404 plain
+# text regardless of model or key), so every TTS/STT model was guaranteed a
+# false WRONG_EP. Those categories now probe the default route like text,
+# where an end-of-life model answers 410 -> RETIRED.
 SPECIAL_ROUTES = {
     'embedding': '/v1/embeddings',
-    'tts': '/v1/audio/speech',
-    'stt': '/v1/audio/transcriptions',
     'image-gen': '/v1/images/generations',
     'video': '/v1/video/generations',
 }
