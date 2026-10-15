@@ -20,6 +20,23 @@ instructions):
 **Agent:** OpenCode (Step) · **Base:** `main` @ `508932e` · **Remote:**
 `git@github.com:sarvesh173/nexus-dashboard.git`
 
+### GitHub issue actions this session
+
+| Issue | Action |
+|---|---|
+| #5 (cpu telemetry) | **Fixed** by `82276f2`, closed with verification |
+| #16, #21 (payload shapes) | **Fixed** by `82276f2` + `7f6db69`, closed |
+| #18 (agent model precedence) | **Fixed** by `82276f2`, closed |
+| #19 (OpenRouter top_provider null) | **Fixed** by `82276f2`, closed |
+| #20, #22, #23 (offline test suite) | **Fixed** by `7f6db69`, closed |
+| #6, #7, #8, #9, #10, #11, #12, #17 (optional deps) | Verified already fixed in `main` (guards + `TestServerOptionalImportsGuard`/`TestRunSyncFetchSpecsImports`), closed with evidence |
+| #24 (probe URL doubled /v1, all models WRONG_EP) | Found + **fixed** by `b5640cf` this session, filed and closed |
+| #25 (watchdog hardcoded paths) | **Fixed** by `b39cc30`, closed |
+| #26 (watchdog restart loop) | **Fixed** by `b39cc30`, closed |
+| #27 (Memory card `%`) | **Fixed** by `b39cc30`, closed |
+| #28 (tts/stt probed routes that do not exist) | Found by research agent + **fixed** by `b39cc30`, filed and closed |
+| #29 (catalog-absent models stuck as WRONG_EP) | Found + **fixed** by `eb61fcb`, filed and closed |
+
 ### Commit 1 — `7f6db69` — test suite offline-safe (issues #20, #21, #22, #23)
 
 Problem: `python3 -m unittest discover -s tests` could not run. 
@@ -94,6 +111,67 @@ Verification (real output):
 - Standalone regression proof for #18: the old expression yields the stale
   session model (`'stale'`), the fixed one yields the message model
   (`'fresh'`) for a JSON-string session model.
+
+### Commit 3 — `b5640cf` — probe URL joined once (the 91-model WRONG_EP root cause)
+
+Problem: `_probe()` built `base.rstrip('/') + route`. `BASE` is
+`https://integrate.api.nvidia.com/v1` (already ends in `/v1`) and every route
+in `SPECIAL_ROUTES` starts with `/v1` → the probe hit
+`https://integrate.api.nvidia.com/v1/v1/chat/completions`, a path that exists
+on no host. nginx answered `404 page not found`; the 404 branch only maps a
+retired-function body to RETIRED, so **all 91 registry entries** were recorded
+`WRONG_EP`. Auto-hide fires only on RETIRED, so genuinely retired models stayed
+visible and the whole registry looked mis-routed.
+
+Fix: join once — when base ends in `/v1` and route starts with `/v1`, drop the
+route prefix. `live_catalog`'s URL is regression-tested unchanged.
+Tests: `+TestProbeUrlJoin` (4).
+
+Live proof (real env key, single-/v1 URL):
+- `meta/llama-3.1-8b-instruct` → `RETIRED` (410 Gone, EOL 2026-08-26)
+- `nvidia/nv-embedqa-e5-v5` on `/v1/embeddings` → `RETIRED` (410 Gone)
+
+Registry repair pass 1 (`run_sync.py`, 496 s, 89 models):
+`{"RETIRED": 52, "WRONG_EP": 12, "SLOW": 8, "ALIVE": 19}` — 52 retired models
+auto-hidden.
+
+Documentation-level confirmation (NVIDIA docs + live probes by a research
+agent): `POST /v1/chat/completions` on `integrate.api.nvidia.com` is the
+documented endpoint (401/410/200 depending on key/EOL); `/v1/v1/...` returns
+plain-text 404; no base-URL migration; EOL is `410 Gone` with the message in
+`detail`, and it fires before auth.
+
+### Commit 4 — `b39cc30` — watchdog paths + restart grace, memory unit, audio routes (#25, #26, #27, #28)
+
+- `scripts/nexus_watchdog.py` — cache paths resolve through `paths.py`
+  (`REPO_DIR`, honours `NEXUS_DIR`) instead of three literal `/home/kira/...`
+  strings. Force-added: the `scripts/` gitignore entry predates this tracked
+  file. Regression: `tests/test_watchdog_grace.py::TestWatchdogPaths`
+  (no `/home/` in source, cwd-independent import).
+- `scripts/nexus_watchdog.py` — startup grace after a restart. The 3 s pause
+  plus the 5 s loop meant the next probes landed before vite preview bound
+  :5173, re-crossing the 2-failure threshold mid-boot → **59 restarts** on
+  2026-10-15. `RESTART_GRACE_SECONDS = 15`, `FAIL_THRESHOLD`/`PROBE_INTERVAL`
+  named constants, grace logged. Regression: `TestWatchdogRestartGrace` runs
+  the real `main()` under virtual time.
+- `src/features/overview/index.jsx` — Memory card big number no longer renders
+  the `%` unit span (the 2026-10-08 open loop). Core 1/Core 2 sub-boxes and
+  the swap row keep their `%`. **The CPU big number currently does render `%`
+  again** (re-added during a later overhaul) — flagged to the user, not
+  changed, because the change-log entry names only the Memory card.
+- `model_health.py` — `tts`/`stt` removed from `SPECIAL_ROUTES`:
+  `/v1/audio/speech` and `/v1/audio/transcriptions` do not exist on this host
+  (live-verified 404 for any model/key; NVIDIA ships speech as self-hosted NIM
+  containers with Riva paths). `embedding` → `/v1/embeddings` kept (documented
+  and live-verified). Regression: `TestSpecialRoutesExistOnHost`.
+
+### Commit 5 — `eb61fcb` — catalog-absent 404 means RETIRED (#29)
+
+NVIDIA answers an EOL model with a JSON `410`; a bare nginx `404` for a model
+missing from `GET /v1/models` means the model is gone, not mis-routed. The
+catalog rule now also covers a 404 on every route. Preserved: listed + 404
+stays `WRONG_EP`, listed + timeout stays `SLOW`, empty/failed catalog fails
+soft. Regression: `+TestCatalogAbsenceMeansRetired` (5 cases).
 
 ### Verified already-fixed in `main` (issues closed-worthy, NOT re-fixed)
 
