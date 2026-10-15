@@ -14,3 +14,8 @@
 **Learning**: `server.py` imported `psutil` and `requests` inside `try...except ImportError` fallback blocks setting them to `None` when missing, but subsequent functions (`get_hermes_status`, `get_hermes_config_providers`, model test handling, model context lookup) called attributes/methods on `psutil` or `requests` without checking `if psutil is not None` or `if requests is not None`, causing `AttributeError: 'NoneType' object has no attribute 'Process'` / `'get'` / `'post'` / `'exceptions'`.
 **Action**: Added explicit `if psutil is not None` and `if requests is not None` checks before referencing `psutil.Process` or `requests.get()` / `requests.post()` / `requests.exceptions.Timeout` in `server.py`. Added unit tests in `tests/test_audit_fixes.py`.
 **Fingerprint**: server.py:513 - AttributeError: 'NoneType' object has no attribute 'Process'
+
+## 2026-10-15 - Guard test suite modules against offline execution during unittest discovery
+**Learning**: `tests/test_dashboard_mounts.py` executed Playwright top-level code on import, and `tests/test_model_connection.py` targeted a fixed port expecting a running server. This caused `python3 -m unittest discover tests/` to fail when services were offline.
+**Action**: Guarded `test_dashboard_mounts.py` execution inside `if __name__ == '__main__':` and added `setUpClass`/`tearDownClass` server lifecycle hooks to `test_model_connection.py`.
+**Fingerprint**: tests/test_model_connection.py:7 - ConnectionRefusedError: [Errno 111] Connection refused
