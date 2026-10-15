@@ -244,8 +244,12 @@ def sync_models(model_specs, base='https://integrate.api.nvidia.com/v1'):
         # it is only cold — keep it visible and retry later.
         if status == 'UNREACHABLE' and catalog and mid in catalog:
             status, detail = 'SLOW', 'cold start (listed in catalog)'
-        # Gone from the catalog AND not answering -> genuinely retired.
-        elif status == 'UNREACHABLE' and catalog and mid not in catalog:
+        # Gone from the catalog AND not answering -> genuinely retired. This
+        # covers UNREACHABLE *and* a bare 404 on every route: NVIDIA answers
+        # an end-of-life model with a JSON 410, so a nginx 404 for a model the
+        # provider no longer lists means the model is gone, not mis-routed
+        # (12 such models sat as WRONG_EP after the 2026-10-15 sync).
+        elif status in ('UNREACHABLE', 'WRONG_EP') and catalog and mid not in catalog:
             status, detail = 'RETIRED', 'absent from provider catalog'
 
         rec = reg['models'].get(mid) or {}

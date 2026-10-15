@@ -704,6 +704,75 @@ class TestProbeUrlJoin(unittest.TestCase):
         self.assertEqual(ids, {'vendor/model-x'})
 
 
+class TestCatalogAbsenceMeansRetired(unittest.TestCase):
+    """A model the provider no longer lists AND that answers nothing on any
+    route is gone, not mis-routed. NVIDIA answers an end-of-life model with a
+    JSON 410; a bare nginx 404 while absent from GET /v1/models means removed.
+    The old rule only fired for UNREACHABLE, so 12 models sat as WRONG_EP.
+    """
+
+    def _sync_one(self, probe_status, listed):
+        import model_health
+        calls = {'n': 0}
+
+        def fake_probe(base, key, mid, route):
+            calls['n'] += 1
+            return probe_status, '404 page not found'
+
+        # A non-empty catalog is what "the provider answered the catalog
+        # request" looks like; membership is the only variable here. An empty
+        # set means "catalog unavailable" and the code must fail soft.
+        def fake_catalog(base, key):
+            return {'vendor/model-x'} if listed else {'vendor/other-model'}
+
+        # Fresh registry per call: sync_models' recently-RETIRED skip guard
+        # otherwise reuses the previous test's verdict from the module cache.
+        model_health._registry = None
+        model_health._registry_mtime = [None]
+        with patch.object(model_health, '_probe', side_effect=fake_probe), \
+             patch.object(model_health, 'live_catalog', side_effect=fake_catalog), \
+             patch.object(model_health, '_api_key', return_value='k'), \
+             patch.object(model_health, '_save', lambda: None):
+            reg = model_health.sync_models([('vendor/model-x', 'text')],
+                                           'https://integrate.api.nvidia.com/v1')
+        return reg['models']['vendor/model-x']['status'], calls['n']
+
+    def test_404_absent_from_catalog_is_retired(self):
+        status, _ = self._sync_one('WRONG_EP', listed=False)
+        self.assertEqual(status, 'RETIRED')
+
+    def test_timeout_absent_from_catalog_is_retired(self):
+        status, _ = self._sync_one('UNREACHABLE', listed=False)
+        self.assertEqual(status, 'RETIRED')
+
+    def test_404_but_listed_stays_wrong_ep(self):
+        # Still advertised: the route question is real, do not hide it.
+        status, _ = self._sync_one('WRONG_EP', listed=True)
+        self.assertEqual(status, 'WRONG_EP')
+
+    def test_timeout_but_listed_is_slow_not_retired(self):
+        status, _ = self._sync_one('UNREACHABLE', listed=True)
+        self.assertEqual(status, 'SLOW')
+
+    def test_empty_catalog_fails_soft(self):
+        # Catalog fetch failed (empty set): keep the probe's own verdict,
+        # never reach for RETIRED on missing evidence.
+        import model_health
+
+        def fake_probe(base, key, mid, route):
+            return 'WRONG_EP', '404 page not found'
+
+        model_health._registry = None
+        model_health._registry_mtime = [None]
+        with patch.object(model_health, '_probe', side_effect=fake_probe), \
+             patch.object(model_health, 'live_catalog', return_value=set()), \
+             patch.object(model_health, '_api_key', return_value='k'), \
+             patch.object(model_health, '_save', lambda: None):
+            reg = model_health.sync_models([('vendor/model-x', 'text')],
+                                           'https://integrate.api.nvidia.com/v1')
+        self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
