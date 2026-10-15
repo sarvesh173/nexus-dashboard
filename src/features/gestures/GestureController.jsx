@@ -295,16 +295,20 @@ export function GestureController() {
       //    navigation fires. One minute after the first swipe the whole
       //    sequence resets, so an accidental swipe can never arm it.
       if (armStageRef.current === 0) {
+        // First swipe: completely silent — no bar wake, no popup, no
+        // animation. Nothing indicates the feature exists until the user
+        // deliberately swipes a second time.
         armStageRef.current = 1;
-        wakeBar(2600);
         if (armResetTimerRef.current) clearTimeout(armResetTimerRef.current);
         armResetTimerRef.current = setTimeout(() => { armStageRef.current = 0; }, ARM_RESET_MS);
         return;
       }
       if (armStageRef.current === 1) {
+        // Second swipe: the hint popup appears — direction text with an
+        // animated arrow ("Left and slide" / "Right and slide"). Still no
+        // navigation: one more swipe is needed.
         armStageRef.current = 2;
-        wakeBar(2600);
-        showFeedback(dx < 0 ? 'left' : 'right', 'Swipe once more to navigate');
+        showFeedback(dx < 0 ? 'left' : 'right', null);
         armResetTimerRef.current = setTimeout(() => { armStageRef.current = 0; }, ARM_RESET_MS);
         return;
       }

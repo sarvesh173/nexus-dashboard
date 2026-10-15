@@ -39,19 +39,41 @@ export function GestureFeedback({ gestureState }) {
               <M3GestureArrowLeft size={18} animate={true} />
             </span>
             <span>
-              Switched to{' '}
-              <strong className="text-[var(--md-sys-color-primary)] font-semibold">
-                {targetTitle}
-              </strong>
+              {targetTitle ? (
+                <>
+                  Switched to{' '}
+                  <strong className="text-[var(--md-sys-color-primary)] font-semibold">
+                    {targetTitle}
+                  </strong>
+                </>
+              ) : (
+                <>
+                  Left{' '}
+                  <strong className="text-[var(--md-sys-color-primary)] font-semibold">
+                    and slide
+                  </strong>
+                </>
+              )}
             </span>
           </>
         ) : (
           <>
             <span>
-              Switched to{' '}
-              <strong className="text-[var(--md-sys-color-primary)] font-semibold">
-                {targetTitle}
-              </strong>
+              {targetTitle ? (
+                <>
+                  Switched to{' '}
+                  <strong className="text-[var(--md-sys-color-primary)] font-semibold">
+                    {targetTitle}
+                  </strong>
+                </>
+              ) : (
+                <>
+                  Right{' '}
+                  <strong className="text-[var(--md-sys-color-primary)] font-semibold">
+                    and slide
+                  </strong>
+                </>
+              )}
             </span>
             <span className="text-[var(--md-sys-color-primary)]">
               <M3GestureArrowRight size={18} animate={true} />
