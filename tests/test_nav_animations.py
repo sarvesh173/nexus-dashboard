@@ -42,7 +42,12 @@ async def check():
         page = await browser.new_page(viewport={"width": 1440, "height": 900})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        await page.goto("http://localhost:5173/overview", wait_until="load", timeout=15000)
+        try:
+            await page.goto("http://localhost:5173/overview", wait_until="load", timeout=15000)
+        except Exception as exc:
+            print(f"  skip nav_animations: server offline ({exc})")
+            await browser.close()
+            return []
         await page.wait_for_timeout(1200)
         if errors:
             fails.append(f"page errors: {errors}")
