@@ -7,6 +7,7 @@ value reaches the DOM.
 Run: python3 tests/test_logs_detail.py
 """
 import asyncio
+import os
 import sys
 
 from playwright.async_api import async_playwright
@@ -25,10 +26,31 @@ async def open_logs(page):
     await page.wait_for_timeout(1500)
 
 
+def _is_server_up(url="http://localhost:5173/"):
+    import urllib.request
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Nexus-Test-Check'})
+        with urllib.request.urlopen(req, timeout=1):
+            return True
+    except Exception:
+        return False
+
 async def run():
+    if not _is_server_up("http://localhost:5173/"):
+        print("SKIP: dev server at http://localhost:5173/ is offline")
+        return []
+
     fails = []
     async with async_playwright() as p:
-        b = await p.chromium.launch(headless=True)
+        launch_kwargs = {"headless": True, "args": ["--no-sandbox"]}
+        if os.path.exists("/usr/bin/chromium"):
+            launch_kwargs["executable_path"] = "/usr/bin/chromium"
+        try:
+            b = await p.chromium.launch(**launch_kwargs)
+        except Exception as exc:
+            print(f"SKIP: browser launch failed ({exc})")
+            return []
+
         page = await b.new_page(viewport={"width": 1600, "height": 950})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)[:160]))
