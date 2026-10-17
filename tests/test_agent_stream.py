@@ -238,5 +238,68 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestOmniRouteLogsSqlFiltering(unittest.TestCase):
+    """Test SQL-level filtering in omniroute_logs.py."""
+
+    def setUp(self):
+        self.conn = sqlite3.connect(':memory:')
+        self.conn.execute(
+            'CREATE TABLE call_logs ('
+            'id TEXT, timestamp TEXT, model TEXT, requested_model TEXT, provider TEXT, duration INTEGER, '
+            'tokens_in INTEGER, tokens_out INTEGER, tokens_reasoning INTEGER, request_summary TEXT, status INTEGER, '
+            'account TEXT, api_key_id TEXT, api_key_name TEXT, correlation_id TEXT, combo_name TEXT, '
+            'cache_source TEXT, source_format TEXT, target_format TEXT, session_tag TEXT, '
+            'ttft_ms INTEGER, added_wait_ms INTEGER, added_wait_cause TEXT, model_pinned INTEGER, '
+            'resilience_actions TEXT, tokens_cache_read INTEGER, reasoning_effort_requested TEXT, '
+            'error_type TEXT, error_summary TEXT, detail_state TEXT, method TEXT, path TEXT)'
+        )
+        rows = [
+            ('c1', '2026-10-18T10:00:00Z', 'claude-3-5-sonnet', 'claude-3-5-sonnet', 'anthropic', 100, 10, 20, 0, 'sum1', 200, 'acc1', '', '', '', '', '', '', '', '', 10, 0, '', 0, '', 0, '', '', '', '', 'POST', '/v1/messages'),
+            ('c2', '2026-10-18T10:01:00Z', 'gpt-4o', 'gpt-4o', 'openai', 200, 15, 25, 0, 'sum2', 200, 'acc2', '', '', '', 'auto-router-combo', '', '', '', '', 20, 0, '', 0, '', 0, '', '', '', '', 'POST', '/v1/chat/completions'),
+            ('c3', '2026-10-18T10:02:00Z', 'claude-3-5-sonnet', 'claude-3-5-sonnet', 'anthropic', 150, 12, 22, 0, 'sum3', 500, 'acc1', '', '', '', '', '', '', '', '', 15, 0, '', 0, '', 0, '', 'server_error', 'err', '', 'POST', '/v1/messages'),
+            ('c4', '2026-10-18T10:03:00Z', 'gemini-1.5-pro', 'gemini-1.5-pro', 'google', 300, 30, 40, 0, 'sum4', 200, 'acc3', '', '', '', '', '', '', '', '', 30, 0, '', 0, '', 0, '', '', '', '', 'POST', '/v1/chat/completions'),
+        ]
+        self.conn.executemany(
+            'INSERT INTO call_logs VALUES (' + ','.join(['?'] * 32) + ')', rows
+        )
+
+    def tearDown(self):
+        self.conn.close()
+
+    def test_sql_filter_provider_and_pagination(self):
+        import omniroute_logs
+        rows, total = omniroute_logs._query_calls(
+            self.conn, limit=1, offset=0, filters={'provider': 'anthropic'}
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(total, 2)
+        self.assertEqual(rows[0]['provider'], 'anthropic')
+
+        # Offset 1 returns second anthropic row
+        rows_p2, total_p2 = omniroute_logs._query_calls(
+            self.conn, limit=1, offset=1, filters={'provider': 'anthropic'}
+        )
+        self.assertEqual(len(rows_p2), 1)
+        self.assertEqual(total_p2, 2)
+
+    def test_sql_filter_status_error(self):
+        import omniroute_logs
+        rows, total = omniroute_logs._query_calls(
+            self.conn, limit=10, offset=0, filters={'status': 'error'}
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(total, 1)
+        self.assertEqual(rows[0]['id'], 'c3')
+
+    def test_sql_filter_agent_claude_protocol(self):
+        import omniroute_logs
+        rows, total = omniroute_logs._query_calls(
+            self.conn, limit=10, offset=0, filters={'agent': 'claude-protocol'}
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(total, 2)
+        self.assertTrue(all(r['path'] == '/v1/messages' for r in rows))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
