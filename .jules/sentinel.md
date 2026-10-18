@@ -14,3 +14,8 @@
 **Learning**: `server.py` imported `psutil` and `requests` inside `try...except ImportError` fallback blocks setting them to `None` when missing, but subsequent functions (`get_hermes_status`, `get_hermes_config_providers`, model test handling, model context lookup) called attributes/methods on `psutil` or `requests` without checking `if psutil is not None` or `if requests is not None`, causing `AttributeError: 'NoneType' object has no attribute 'Process'` / `'get'` / `'post'` / `'exceptions'`.
 **Action**: Added explicit `if psutil is not None` and `if requests is not None` checks before referencing `psutil.Process` or `requests.get()` / `requests.post()` / `requests.exceptions.Timeout` in `server.py`. Added unit tests in `tests/test_audit_fixes.py`.
 **Fingerprint**: server.py:513 - AttributeError: 'NoneType' object has no attribute 'Process'
+
+## 2026-10-09 - SQLite query filtering for OmniRoute call log pagination
+**Learning**: In `omniroute_logs.py`, query parameters (model, provider, account, status, agent, search) must be filtered directly in SQLite SQL queries rather than in Python memory to preserve correct limit, offset pagination, and total count results.
+**Action**: Refactored `read_call_logs`, `_query_calls`, and `read_call_logs_page` in `omniroute_logs.py` to build parameterized SQL WHERE clauses, and added unit tests in `tests/test_omniroute_logs.py`.
+**Fingerprint**: omniroute_logs.py:750 - SQL filtering for call logs
