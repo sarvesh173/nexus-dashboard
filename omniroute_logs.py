@@ -227,7 +227,63 @@ def _source_state(path, error):
     }
 
 
-def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
+def _build_where(filters):
+    if not filters:
+        return '', []
+
+    where_clauses = []
+    params = []
+
+    model = filters.get('model')
+    if model:
+        where_clauses.append('(model = ? OR requested_model = ?)')
+        params.extend([model, model])
+
+    provider = filters.get('provider')
+    if provider:
+        where_clauses.append('provider = ?')
+        params.append(provider)
+
+    account = filters.get('account')
+    if account:
+        where_clauses.append('account = ?')
+        params.append(account)
+
+    status = filters.get('status')
+    if status == 'ok':
+        where_clauses.append('status = 200')
+    elif status == 'error':
+        where_clauses.append('status != 200')
+    elif status and str(status).isdigit():
+        where_clauses.append('status = ?')
+        params.append(int(status))
+
+    agent = filters.get('agent')
+    if agent == 'claude-protocol':
+        where_clauses.append("path = '/v1/messages'")
+    elif agent == 'auto-router':
+        where_clauses.append("(combo_name IS NOT NULL AND combo_name != '')")
+    elif agent == 'unknown':
+        where_clauses.append("((path IS NULL OR path != '/v1/messages') AND (combo_name IS NULL OR combo_name = ''))")
+
+    search = filters.get('search')
+    if search:
+        search_pat = '%%%s%%' % str(search).lower()
+        search_cols = [
+            'model', 'requested_model', 'provider', 'account',
+            'request_summary', 'error_summary', 'path', 'combo_name'
+        ]
+        clause = ' OR '.join(['LOWER(COALESCE(%s, \'\')) LIKE ?' % col for col in search_cols])
+        where_clauses.append('(%s)' % clause)
+        params.extend([search_pat] * len(search_cols))
+
+    if not where_clauses:
+        return '', []
+
+    return 'WHERE ' + ' AND '.join(where_clauses), params
+
+
+def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0, filters=None):
     """One page of the LLM call ledger, newest first.
 
     Pagination is offset-based because the table is ordered by an indexed
@@ -238,7 +294,8 @@ def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
     bounded_offset = _clamp_offset(offset)
     now = time.time()
 
-    key = (bounded_limit, bounded_offset)
+    filter_tuple = tuple(sorted((k, str(v)) for k, v in (filters or {}).items() if v))
+    key = (bounded_limit, bounded_offset, filter_tuple)
     cached = _list_cache['payload']
     if cached is not None and _list_cache['key'] == key:
         if now - _list_cache['at'] < _CACHE_TTL:
@@ -256,7 +313,7 @@ def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
         elif not _table_exists(conn, 'call_logs'):
             error = _NO_TABLE
         else:
-            calls, total = _query_calls(conn, bounded_limit, bounded_offset)
+            calls, total = _query_calls(conn, bounded_limit, bounded_offset, filters)
     except Exception as exc:  # noqa: BLE001 - reported as data, never raised
         calls = []
         total = 0
@@ -284,20 +341,21 @@ def read_call_logs(limit=CALLS_DEFAULT_LIMIT, offset=0):
     return payload
 
 
-def _query_calls(conn, limit, offset):
+def _query_calls(conn, limit, offset, filters=None):
     """Page the ledger. Returns (rows, total).
 
     One query for the page and one COUNT(*) for the total, in that order and no
     more: each extra round trip against a 490MB store is paid on every poll.
     """
     columns = '%s, %s' % (', '.join(_LIST_COLUMNS), _FALLBACK_COLUMNS)
+    where_sql, params = _build_where(filters)
     try:
-        rows = conn.execute(
-            'SELECT %s FROM call_logs %s LIMIT ? OFFSET ?' % (columns, _ORDER),
-            (limit, offset),
-        ).fetchall()
-        total = _as_int(
-            conn.execute('SELECT COUNT(*) FROM call_logs').fetchone()[0], 0)
+        sql = 'SELECT %s FROM call_logs %s %s LIMIT ? OFFSET ?' % (
+            columns, where_sql, _ORDER
+        )
+        rows = conn.execute(sql, params + [limit, offset]).fetchall()
+        count_sql = 'SELECT COUNT(*) FROM call_logs %s' % where_sql
+        total = _as_int(conn.execute(count_sql, params).fetchone()[0], 0)
     except sqlite3.Error:
         return [], 0
 
@@ -692,32 +750,16 @@ def read_call_logs_page(qs):
     limit = _clamp_limit(first('limit', '50'))
     offset = _clamp_offset(first('offset', '0'))
 
-    payload = read_call_logs(limit, offset)
+    filters = {}
+    for key in ('model', 'provider', 'account', 'status', 'agent', 'search'):
+        val = first(key)
+        if val:
+            filters[key] = val
+
+    payload = read_call_logs(limit, offset, filters=filters)
     calls = payload.get('calls') or []
 
-    model = first('model')
-    provider = first('provider')
-    account = first('account')
-    status = first('status')
-    agent = first('agent')
-    search = first('search').lower()
-
     rows = [_to_logger_row(c) for c in calls]
-
-    if model:
-        rows = [r for r in rows if r['model'] == model or r['requestedModel'] == model]
-    if provider:
-        rows = [r for r in rows if r['provider'] == provider]
-    if account:
-        rows = [r for r in rows if r['account'] == account]
-    if status == 'error':
-        rows = [r for r in rows if r['status'] != 200]
-    elif status == 'ok':
-        rows = [r for r in rows if r['status'] == 200]
-    if agent:
-        rows = [r for r in rows if r['agent'] == agent]
-    if search:
-        rows = [r for r in rows if search in json.dumps(r).lower()]
 
     # A bare array, not an envelope: the ported component does
     # `setLogs(await res.json())` and reads `data.length`. Returning
