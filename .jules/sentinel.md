@@ -14,3 +14,8 @@
 **Learning**: `server.py` imported `psutil` and `requests` inside `try...except ImportError` fallback blocks setting them to `None` when missing, but subsequent functions (`get_hermes_status`, `get_hermes_config_providers`, model test handling, model context lookup) called attributes/methods on `psutil` or `requests` without checking `if psutil is not None` or `if requests is not None`, causing `AttributeError: 'NoneType' object has no attribute 'Process'` / `'get'` / `'post'` / `'exceptions'`.
 **Action**: Added explicit `if psutil is not None` and `if requests is not None` checks before referencing `psutil.Process` or `requests.get()` / `requests.post()` / `requests.exceptions.Timeout` in `server.py`. Added unit tests in `tests/test_audit_fixes.py`.
 **Fingerprint**: server.py:513 - AttributeError: 'NoneType' object has no attribute 'Process'
+
+## 2026-10-07 - Safe sys.modules patching for optional requests module in test_audit_fixes
+**Learning**: Unit tests in `tests/test_audit_fixes.py` directly patched `"requests.get"` or `patch.object(model_health.requests, ...)` which failed with `ModuleNotFoundError` or `AttributeError` when `requests` was absent or set to `None`.
+**Action**: Patched `sys.modules` with a mock `requests` module and patched `model_health.requests` directly to allow offline unit tests to run cleanly regardless of dependency presence.
+**Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'

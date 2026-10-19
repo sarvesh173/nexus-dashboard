@@ -454,7 +454,9 @@ class TestLiveSpecsNon200IsLoud(unittest.TestCase):
         resp = MagicMock()
         resp.status_code = 503
         resp.json.return_value = {"error": "unavailable"}
-        with patch("requests.get", return_value=resp):
+        fake_requests = MagicMock()
+        fake_requests.get.return_value = resp
+        with patch.dict("sys.modules", {"requests": fake_requests}):
             self.assertEqual(run_sync._live_specs("https://x/v1", "k"), [])
 
     def test_array_payload_is_parsed_not_crashed(self):
@@ -462,7 +464,9 @@ class TestLiveSpecsNon200IsLoud(unittest.TestCase):
         resp = MagicMock()
         resp.status_code = 200
         resp.json.return_value = [{"id": "nvidia/model-a"}, "junk", {"id": 7}]
-        with patch("requests.get", return_value=resp):
+        fake_requests = MagicMock()
+        fake_requests.get.return_value = resp
+        with patch.dict("sys.modules", {"requests": fake_requests}):
             specs = run_sync._live_specs("https://x/v1", "k")
         self.assertEqual(specs, [("nvidia/model-a", "text")])
 
@@ -657,7 +661,12 @@ class TestProbeUrlJoin(unittest.TestCase):
             captured['url'] = url
             return FakeResp()
 
-        with patch.object(model_health.requests, 'post', staticmethod(fake_post)):
+        fake_requests = MagicMock()
+        fake_requests.post.side_effect = fake_post
+        fake_requests.Timeout = type("Timeout", (Exception,), {})
+
+        with patch.object(model_health, 'requests', fake_requests), \
+             patch.dict("sys.modules", {"requests": fake_requests}):
             model_health._probe(base, 'k', 'vendor/model-x', route)
         return captured['url']
 
@@ -695,8 +704,12 @@ class TestProbeUrlJoin(unittest.TestCase):
             captured['url'] = url
             return FakeResp()
 
+        fake_requests = MagicMock()
+        fake_requests.get.side_effect = fake_get
+
         model_health._catalog_cache.update({'ids': set(), 'at': 0})
-        with patch.object(model_health.requests, 'get', staticmethod(fake_get)):
+        with patch.object(model_health, 'requests', fake_requests), \
+             patch.dict("sys.modules", {"requests": fake_requests}):
             ids = model_health.live_catalog(
                 'https://integrate.api.nvidia.com/v1', 'k')
         self.assertEqual(captured['url'],
