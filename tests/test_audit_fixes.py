@@ -451,18 +451,22 @@ class TestLiveSpecsNon200IsLoud(unittest.TestCase):
 
     def test_non_200_returns_empty(self):
         import run_sync
+        fake_req = MagicMock()
         resp = MagicMock()
         resp.status_code = 503
         resp.json.return_value = {"error": "unavailable"}
-        with patch("requests.get", return_value=resp):
+        fake_req.get.return_value = resp
+        with patch.dict("sys.modules", {"requests": fake_req}):
             self.assertEqual(run_sync._live_specs("https://x/v1", "k"), [])
 
     def test_array_payload_is_parsed_not_crashed(self):
         import run_sync
+        fake_req = MagicMock()
         resp = MagicMock()
         resp.status_code = 200
         resp.json.return_value = [{"id": "nvidia/model-a"}, "junk", {"id": 7}]
-        with patch("requests.get", return_value=resp):
+        fake_req.get.return_value = resp
+        with patch.dict("sys.modules", {"requests": fake_req}):
             specs = run_sync._live_specs("https://x/v1", "k")
         self.assertEqual(specs, [("nvidia/model-a", "text")])
 
@@ -485,7 +489,7 @@ class TestOpenRouterTopProviderNull(unittest.TestCase):
         resp.json.return_value = payload
         mock_req = MagicMock()
         mock_req.get.return_value = resp
-        with patch("server.requests", mock_req):
+        with patch.object(server, "requests", mock_req):
             return server._openrouter_lookup(model_id)
 
     def test_null_top_provider_still_resolves_context(self):
@@ -657,7 +661,9 @@ class TestProbeUrlJoin(unittest.TestCase):
             captured['url'] = url
             return FakeResp()
 
-        with patch.object(model_health.requests, 'post', staticmethod(fake_post)):
+        fake_req = MagicMock()
+        fake_req.post = staticmethod(fake_post)
+        with patch.dict("sys.modules", {"requests": fake_req}), patch.object(model_health, "requests", fake_req):
             model_health._probe(base, 'k', 'vendor/model-x', route)
         return captured['url']
 
@@ -695,8 +701,10 @@ class TestProbeUrlJoin(unittest.TestCase):
             captured['url'] = url
             return FakeResp()
 
+        fake_req = MagicMock()
+        fake_req.get = staticmethod(fake_get)
         model_health._catalog_cache.update({'ids': set(), 'at': 0})
-        with patch.object(model_health.requests, 'get', staticmethod(fake_get)):
+        with patch.dict("sys.modules", {"requests": fake_req}), patch.object(model_health, "requests", fake_req):
             ids = model_health.live_catalog(
                 'https://integrate.api.nvidia.com/v1', 'k')
         self.assertEqual(captured['url'],
