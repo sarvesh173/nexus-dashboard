@@ -29,3 +29,18 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Safely handle raw string session model values in agent stream
+**Learning**: In `agent_stream.py`, `_read_sessions` parsed `session_model_dict` using `_loads(model, {})`. When `model` was stored as a bare model string (e.g. `'claude-3-5-sonnet'`) rather than a JSON dictionary string, `_loads` failed to parse a dict, setting `session_model_dict` to `{}` and causing `model_id` to resolve as `None`.
+**Action**: Updated `_read_sessions` to construct `{'id': model}` when `model` is a non-empty string and does not parse into a JSON object, matching `format_model` behavior. Added regression test `test_raw_string_session_model_resolves_id` in `tests/test_agent_stream.py`.
+**Fingerprint**: agent_stream.py:473 - LogicError: raw string session model resolves to None model_id
+
+## 2026-10-21 - Guard non-dict JSON responses and state stores across backend modules
+**Learning**: `hermes_gateway.py`, `visibility.py`, and `server.py` assumed JSON payloads loaded from HTTP endpoints or local files were dictionaries. When `/models` endpoints returned top-level JSON lists or when `hidden_store.json`/`gateway_state.json` contained non-dict JSON payloads (e.g., `[...]`), calls to `data.get()` raised unhandled `AttributeError: 'list' object has no attribute 'get'`.
+**Action**: Utilized `models_payload.model_rows` in `hermes_gateway.py` and added explicit `isinstance(data, dict)` checks in `visibility.py` and `server.py` before dictionary accesses. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:67 - AttributeError: 'list' object has no attribute 'get'
+
+## 2026-10-21 - Optimize router keyword check in server.py and test _table_exists error path in omniroute_logs.py
+**Learning**: In `server.py`, `get_all_config_providers` redundantly converted and lowercased `base` and `pid` inside generator expressions for each router keyword check. In `omniroute_logs.py`, `_table_exists` lacked tests for `sqlite3.Error` and unhandled `None` connection.
+**Action**: Hoisted `base_lower = str(base).lower()` and `pid_lower = pid.lower()` before the `any(...)` evaluation in `server.py`. Added `if conn is None: return False` to `_table_exists` in `omniroute_logs.py` and added `TestTableExists` test suite in `tests/test_omniroute_logs.py`.
+**Fingerprint**: server.py:1428 - Perf: redundant string operations in loop / omniroute_logs.py:148 - Untested error path

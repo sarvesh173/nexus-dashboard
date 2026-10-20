@@ -106,6 +106,8 @@ def _load_cost_ledger():
     try:
         with open(_COST_LEDGER_FILE, 'r', encoding='utf-8') as ledger_file:
             saved = json.load(ledger_file)
+        if not isinstance(saved, dict):
+            return _empty_cost_ledger()
         ledger = _empty_cost_ledger()
         for key in ledger:
             if key in saved:
@@ -505,6 +507,8 @@ def get_hermes_status():
     try:
         with open(hermes_gateway_state_path(), 'r', encoding='utf-8') as fh:
             state = json.load(fh) or {}
+        if not isinstance(state, dict):
+            state = {}
     except FileNotFoundError:
         state_error = 'gateway_state.json not found - gateway has never started'
     except Exception as exc:  # noqa: BLE001
@@ -1425,7 +1429,9 @@ def get_all_config_providers():
         if not isinstance(p, dict):
             continue
         base = p.get('base_url') or ''
-        is_router = any(k in str(base).lower() or k in pid.lower()
+        base_lower = str(base).lower()
+        pid_lower = pid.lower()
+        is_router = any(k in base_lower or k in pid_lower
                         for k in ('router', 'rout.my', 'literouter', 'apmix',
                                   'freetheai', 'tokenrouter', 'blazeapi', 'crax'))
         models = p.get('models') or {}
@@ -1955,6 +1961,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 try:
                     with open(active_file, 'r', encoding='utf-8') as af:
                         active_data = json.load(af)
+                    if isinstance(active_data, dict):
                         active_model = active_data.get('model', '')
                 except Exception:
                     pass

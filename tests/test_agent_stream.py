@@ -237,6 +237,14 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_id'], 'switched-mid-session')
         self.assertEqual(rows[0]['model_variant'], 'max')
 
+    def test_raw_string_session_model_resolves_id(self):
+        # A session stored with a bare model identifier string must resolve
+        # its model_id field instead of emitting None.
+        conn = self._seed('claude-3-5-sonnet', None)
+        rows = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(rows[0]['model_id'], 'claude-3-5-sonnet')
+        self.assertEqual(rows[0]['model'], 'claude-3-5-sonnet')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

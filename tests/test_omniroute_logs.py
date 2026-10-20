@@ -661,5 +661,32 @@ class TestProfileFilteredFeed(unittest.TestCase):
         self.assertEqual(payload['source'], 'gateway')
 
 
+class TestTableExists(unittest.TestCase):
+    """Direct tests for _table_exists error and success paths (Google Jules finding)."""
+
+    def test_table_exists_returns_true_when_table_present(self):
+        conn = sqlite3.connect(':memory:')
+        try:
+            conn.execute('CREATE TABLE sample (id INT)')
+            self.assertTrue(o._table_exists(conn, 'sample'))
+        finally:
+            conn.close()
+
+    def test_table_exists_returns_false_when_table_absent(self):
+        conn = sqlite3.connect(':memory:')
+        try:
+            self.assertFalse(o._table_exists(conn, 'nonexistent'))
+        finally:
+            conn.close()
+
+    def test_table_exists_handles_sqlite3_error_gracefully(self):
+        conn = sqlite3.connect(':memory:')
+        conn.close()
+        self.assertFalse(o._table_exists(conn, 'sample'))
+
+    def test_table_exists_handles_none_connection(self):
+        self.assertFalse(o._table_exists(None, 'sample'))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

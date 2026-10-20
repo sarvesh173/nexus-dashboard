@@ -146,6 +146,8 @@ def _connect_ro(path):
 
 
 def _table_exists(conn, name):
+    if conn is None:
+        return False
     try:
         row = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",

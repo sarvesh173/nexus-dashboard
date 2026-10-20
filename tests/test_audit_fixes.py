@@ -18,7 +18,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, mock_open
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import live_sync  # noqa: E402
@@ -779,6 +779,71 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
             reg = model_health.sync_models([('vendor/model-x', 'text')],
                                            'https://integrate.api.nvidia.com/v1')
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
+
+
+class TestShapeResilienceFixes(unittest.TestCase):
+    """Regression tests for non-dict JSON or list response handling across backend modules."""
+
+    def test_hermes_gateway_list_models_handles_list_payload(self):
+        import hermes_gateway
+        with patch('hermes_gateway._get', return_value=[{'id': 'm1'}, {'id': 'm2'}, 'junk_item']):
+            res = hermes_gateway.list_models(force=True)
+            self.assertEqual(res, ['m1', 'm2'])
+
+    def test_visibility_read_handles_non_dict_store(self):
+        import visibility
+        with tempfile.NamedTemporaryFile('w', delete=False) as fh:
+            fh.write('["bad", "list", "payload"]')
+            tmp_path = fh.name
+
+        orig_store = visibility.STORE
+        try:
+            visibility.STORE = tmp_path
+            visibility._cache['at'] = 0.0
+            data = visibility._read()
+            self.assertEqual(data, {'providers': [], 'models': []})
+        finally:
+            visibility.STORE = orig_store
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    def test_server_get_hermes_status_handles_non_dict_state(self):
+        import server
+        with patch('builtins.open', mock_open(read_data='["not_a_dict"]')):
+            with patch('server.hermes_gateway_state_path', return_value='/tmp/fake_state.json'):
+                with patch.object(server, '_hermes_state_cache', {'at': 0.0, 'payload': None}):
+                    res = server.get_hermes_status()
+                    self.assertIsInstance(res, dict)
+                    self.assertIn('ok', res)
+
+    def test_server_load_cost_ledger_handles_non_dict(self):
+        import server
+        with patch('builtins.open', mock_open(read_data='["not", "a", "dict"]')):
+            ledger = server._load_cost_ledger()
+            self.assertIsInstance(ledger, dict)
+            self.assertIn('total_accrued_usd', ledger)
+
+
+class TestConfigProvidersOptimization(unittest.TestCase):
+    """Test get_all_config_providers router classification and loop efficiency."""
+
+    def test_get_all_config_providers_router_classification(self):
+        import server
+        fake_cfg = {
+            'providers': {
+                'my-router': {'base_url': 'https://api.my-router.com/v1', 'enabled': True},
+                'anthropic': {'base_url': 'https://api.anthropic.com/v1', 'enabled': True},
+                'custom-apmix': {'base_url': 'https://api.custom.com/v1', 'enabled': True},
+            }
+        }
+        with patch('server.hermes_config_path', return_value='/tmp/hermes_cfg.yaml'):
+            with patch('builtins.open', mock_open(read_data='')):
+                with patch('server.yaml.safe_load', return_value=fake_cfg):
+                    providers = server.get_all_config_providers()
+                    by_id = {p['id']: p for p in providers}
+                    self.assertEqual(by_id['my-router']['kind'], 'router')
+                    self.assertEqual(by_id['custom-apmix']['kind'], 'router')
+                    self.assertEqual(by_id['anthropic']['kind'], 'direct')
 
 
 if __name__ == "__main__":
