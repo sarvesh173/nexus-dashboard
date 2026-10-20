@@ -167,6 +167,27 @@ class TestReadCacheShape(unittest.TestCase):
         self.assertEqual(live_sync.read_cache(self.path), {})
 
 
+class TestVisibilityReadShape(unittest.TestCase):
+    """BUG: visibility._read loaded non-dict JSON and called .get() directly."""
+
+    def test_non_dict_json_returns_blank(self):
+        import visibility
+        old_store = visibility.STORE
+        try:
+            for text in ('"hi"', "5", "[]", "null", "true", '["a"]'):
+                with self.subTest(text=text):
+                    d = tempfile.mkdtemp()
+                    p = os.path.join(d, "hidden_store.json")
+                    with open(p, "w", encoding="utf-8") as fh:
+                        fh.write(text)
+                    visibility.STORE = p
+                    visibility._cache = {'at': 0.0, 'data': {'providers': [], 'models': []}}
+                    res = visibility._read()
+                    self.assertEqual(res, {'providers': [], 'models': []})
+        finally:
+            visibility.STORE = old_store
+
+
 class TestWriteCachePathHandling(unittest.TestCase):
     """BUG: os.makedirs(os.path.dirname(path)) raised on a bare relative name."""
 
