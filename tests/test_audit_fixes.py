@@ -781,6 +781,61 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestHermesGatewayListModelsShapeGuard(unittest.TestCase):
+    """Guard hermes_gateway.list_models against AttributeError on top-level JSON list payloads."""
+
+    def test_list_payload_does_not_raise(self):
+        import hermes_gateway
+
+        with patch.object(hermes_gateway, '_get', return_value=[{"id": "vendor/model-a"}]):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ["vendor/model-a"])
+
+    def test_non_dict_and_invalid_items_skipped(self):
+        import hermes_gateway
+
+        payload = [{"id": "vendor/model-b"}, "junk", {"id": None}, 42]
+        with patch.object(hermes_gateway, '_get', return_value=payload):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ["vendor/model-b"])
+
+
+class TestLiveSyncPathResolution(unittest.TestCase):
+    """Ensure live_sync respects hermes_config_path and omniroute_env_path from paths.py."""
+
+    def test_fetch_hermes_config_uses_paths_helper(self):
+        import live_sync
+
+        tmp_dir = tempfile.mkdtemp()
+        cfg_path = os.path.join(tmp_dir, "custom_config.yaml")
+        with open(cfg_path, "w", encoding="utf-8") as fh:
+            fh.write("providers:\n  custom_prov:\n    enabled: true\n    models:\n      - m1\n")
+
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {
+            "providers": {"custom_prov": {"enabled": True, "models": ["m1"]}}
+        }
+
+        with patch("live_sync.hermes_config_path", return_value=cfg_path), \
+             patch.dict("sys.modules", {"yaml": fake_yaml}):
+            provs, err = live_sync.fetch_hermes_config()
+            self.assertIsNone(err)
+            self.assertIn("custom_prov", provs)
+            self.assertEqual(provs["custom_prov"]["models"], [{"id": "m1", "name": "m1"}])
+
+    def test_omniroute_endpoint_uses_paths_helper(self):
+        import live_sync
+
+        tmp_dir = tempfile.mkdtemp()
+        env_path = os.path.join(tmp_dir, "custom_omniroute.env")
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write("OMNIROUTE_API_KEY=test_secret_key\n")
+
+        with patch("live_sync.omniroute_env_path", return_value=env_path):
+            ep = live_sync.omniroute_endpoint()
+            self.assertEqual(ep.get("api_key"), "test_secret_key")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
