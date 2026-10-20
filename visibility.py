@@ -36,6 +36,8 @@ def _read():
     try:
         with open(STORE, encoding='utf-8') as fh:
             data = json.load(fh)
+        if not isinstance(data, dict):
+            data = _blank()
         for k in _blank():
             if not isinstance(data.get(k), list):
                 data[k] = []
