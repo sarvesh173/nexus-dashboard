@@ -619,7 +619,7 @@ export function ModelConfigModal({ model, currentConfig, onSave, onReset, onClos
   const handleAutoDetect = async () => {
     setIsFetchingAuto(true);
     try {
-      const data = await onAutoDetect(model);
+      const data = typeof onAutoDetect === 'function' ? await onAutoDetect(model) : null;
       if (data) {
         const fmt = data.formatted_context || '200k';
         if (fmt.includes('1M') || fmt.includes('1.0M') || data.raw_context >= 1000000) {
@@ -636,7 +636,7 @@ export function ModelConfigModal({ model, currentConfig, onSave, onReset, onClos
         setAutoResolvedBadge({
           context: fmt,
           tokens: data.max_output_tokens,
-          source: data.source
+          source: data.source || 'catalog'
         });
       } else {
         // Fallback to local 9Router algorithmic resolver
@@ -686,11 +686,11 @@ export function ModelConfigModal({ model, currentConfig, onSave, onReset, onClos
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md transition-opacity duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-[28px] bg-[var(--md-sys-color-surface-container)]/95 backdrop-blur-3xl border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4.5 p-6 sm:p-7"
+        className="w-full max-w-lg rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] shadow-2xl overflow-hidden text-[var(--md-sys-color-on-surface)] space-y-4 p-6 sm:p-7 transition-transform duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

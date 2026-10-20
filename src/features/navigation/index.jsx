@@ -1955,18 +1955,16 @@ export function NavigationFeature(props) {
             <span>Logs</span>
           </button>
 
-          {/* Top Navbar Playground Button with Apple Micro-Animated SVG */}
+          {/* Top Navbar Playground Button with Apple Micro-Animated SVG (Disabled while scratch rebuilding) */}
           <button
             type="button"
-            onClick={() => navigate('/playground')}
+            disabled
+            onClick={(e) => { e.preventDefault(); }}
+            title="Playground is currently undergoing a scratch rebuild"
             {...motionProps('playground')}
             {...navVisibility(SHOW_PLAYGROUND_IN_TOP_NAV)}
             aria-current={isPlaygroundNavActive ? 'page' : undefined}
-            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative transition-all duration-300 ${navHiddenClass(SHOW_PLAYGROUND_IN_TOP_NAV)} ${
-              isPlaygroundNavActive
-                ? 'nav-playground-active bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs font-semibold'
-                : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-primary)]/[0.04]'
-            }`}
+            className={`nav-tab nav-playground-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 group relative opacity-50 cursor-not-allowed ${navHiddenClass(SHOW_PLAYGROUND_IN_TOP_NAV)} text-[var(--md-sys-color-on-surface-variant)]`}
           >
             <NavigationIcon tab="playground" iconStyle={tabMotions.playground.iconStyle} />
             <span>Playground</span>

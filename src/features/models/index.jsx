@@ -107,56 +107,55 @@ export function ModelsFeature(props) {
                           <span>All Providers</span>
                         </button>
                       )}
-                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
-                        <Boxes size={22} className="text-[var(--md-sys-color-primary)]" />
-                        {selectedProviderId ? (isProviderNotFound ? 'Provider Not Found (404)' : `${getProviderDisplayName(currentProvider, providerOverrides)} Models`) : 'Model Providers & Infrastructure'}
-                      </h1>
-                      {selectedProviderId && !isProviderNotFound && currentProvider && (
-                        <div className="flex items-center gap-1.5 ml-1">
-                          {/* Edit Provider Button with subtle pen-tilt SVG animation */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
-                              setEditingProvider(currentProvider);
-                            }}
-                            className="pa-action pa-edit group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)] flex items-center gap-2">
+                          <Boxes size={22} className="text-[var(--md-sys-color-primary)] shrink-0" />
+                          <span>{selectedProviderId ? (isProviderNotFound ? 'Provider Not Found (404)' : `${getProviderDisplayName(currentProvider, providerOverrides)} Models`) : 'Model Providers & Infrastructure'}</span>
+                        </h1>
+                        {selectedProviderId && !isProviderNotFound && currentProvider && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Edit Provider Button with subtle pen-tilt SVG animation */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                nexusLog('ACTION', `Opened Edit modal for provider: ${currentProvider.id}`);
+                                setEditingProvider(currentProvider);
+                              }}
+                              className="pa-action pa-edit group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer select-none"
+                            >
+                              <Edit2 size={13} className="theme-icon-edit" />
+                              <span>Edit Provider</span>
+                            </button>
 
-                          >
-                            <Edit2 size={13} className="theme-icon-edit" />
-                            <span>Edit Provider</span>
-                          </button>
+                            {/* Fetch Button with subtle theme SVG animation */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                nexusLog('ACTION', `Opened Fetch Models dialog for ${currentProvider.id}`);
+                                setIsFetchModalOpen(true);
+                              }}
+                              data-syncing={isSyncingNow ? 'true' : 'false'}
+                              className="pa-action pa-fetch flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer select-none"
+                            >
+                              <DownloadCloud size={13} className="theme-icon-fetch pa-fetch-glyph" />
+                              <span>Fetch</span>
+                            </button>
 
-                          {/* Fetch Button with subtle theme SVG animation */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              nexusLog('ACTION', `Opened Fetch Models dialog for ${currentProvider.id}`);
-                              setIsFetchModalOpen(true);
-                            }}
-                            data-syncing={isSyncingNow ? 'true' : 'false'}
-                            className="pa-action pa-fetch flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-cyan-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
-
-                          >
-                            <DownloadCloud size={13} className="theme-icon-fetch pa-fetch-glyph" />
-                            <span>Fetch</span>
-                          </button>
-
-                          {/* Add Button with subtle theme SVG animation */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              nexusLog('ACTION', `Opened Add Custom Model dialog for ${currentProvider.id}`);
-                              setIsAddModalOpen(true);
-                            }}
-                            className="pa-action pa-add flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer"
-
-                          >
-                            <Plus size={13} className="theme-icon-add pa-add-glyph" />
-                            <span>Add</span>
-                          </button>
-                        </div>
-                      )}
+                            {/* Add Button with subtle theme SVG animation */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                nexusLog('ACTION', `Opened Add Custom Model dialog for ${currentProvider.id}`);
+                                setIsAddModalOpen(true);
+                              }}
+                              className="pa-action pa-add flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-surface-container-high)] text-emerald-400 border border-[var(--md-sys-color-outline-variant)] shadow-xs cursor-pointer select-none"
+                            >
+                              <Plus size={13} className="theme-icon-add pa-add-glyph" />
+                              <span>Add Model</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
                       {selectedProviderId
@@ -1448,41 +1447,29 @@ export function ModelsFeature(props) {
                                     {item.category || '—'}
                                   </span>
                                   {/* Interactive Active Model Toggle */}
-                                  {(activeModel === item.id || item.configured_in_hermes) ? (
+                                  {item.configured_in_hermes && (
                                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] font-mono font-bold shadow-[0_0_12px_var(--md-sys-color-primary)]/40 flex items-center gap-1 select-none">
                                       <span>★ Active in Hermes</span>
                                     </span>
-                                  ) : (
+                                  )}
+                                  {!item.configured_in_hermes && activeModel === item.id && (
+                                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold border border-cyan-500/40 flex items-center gap-1 select-none">
+                                      <span>Selected</span>
+                                    </span>
+                                  )}
+                                  {!item.configured_in_hermes && activeModel !== item.id && (
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         selectActiveModel(item.id, currentProvider?.id);
                                       }}
-                                      className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] hover:border-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] font-mono font-medium transition-all active:scale-95 cursor-pointer"
-                                      title="Set this model as active for Hermes and Playground"
+                                      className="text-[10px] px-2.5 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-primary)] hover:border-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] font-mono font-medium transition-all active:scale-95 cursor-pointer"
+                                      title="Set this model as active for Hermes"
                                     >
                                       Set Active
                                     </button>
                                   )}
-
-                                  {/* Quick Playground Handoff Button */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      selectActiveModel(item.id, currentProvider?.id);
-                                      window.location.hash = '/playground';
-                                      if (typeof props.onSelectPlaygroundModel === 'function') {
-                                        props.onSelectPlaygroundModel(item.id);
-                                      }
-                                    }}
-                                    className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-cyan-400 hover:border-cyan-500/40 border border-[var(--md-sys-color-outline-variant)] font-mono transition-all active:scale-95 cursor-pointer flex items-center gap-1"
-                                    title="Open directly in prompt playground"
-                                  >
-                                    <span>Playground</span>
-                                    <ExternalLink size={10} />
-                                  </button>
                                 </div>
                                 <span className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-mono">
                                   <span className="break-all">{item.id ?? '—'}</span>

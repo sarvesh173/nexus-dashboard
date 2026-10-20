@@ -359,7 +359,26 @@ export function NavDrawer({
           </div>
           {navItems.map((item, idx) => {
             const Icon = item.icon;
-            const isActive = currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path));
+            const isPlayground = item.path === '/playground';
+            const isActive = !isPlayground && (currentPath === item.path || (item.path !== '/' && currentPath.startsWith(item.path)));
+
+            if (isPlayground) {
+              return (
+                <div
+                  key={item.path}
+                  aria-disabled="true"
+                  title="Playground is being rebuilt from scratch"
+                  className="drawer-row w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium opacity-40 cursor-not-allowed select-none border border-transparent"
+                >
+                  <Icon size={16} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]">
+                    Soon
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <button
                 key={item.path}

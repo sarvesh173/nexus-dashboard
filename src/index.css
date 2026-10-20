@@ -1796,24 +1796,35 @@ button:hover > .theme-icon-config {
   100% { transform: rotate(90deg) scale(1.1); }
 }
 
-/* ── 10. Context limit badge — elevation shift ──────────────────────────────── */
-/* M3 elevation is a shadow step. Changing only box-shadow raises and lowers
-   the badge without touching its box, which is why this can never jitter the
-   metadata row it sits in. */
+/* ── 10. Context limit badge — elevation shift & micro-animation ─────────────── */
 .pa-context {
   --pa-accent: #f59e0b;
+  position: relative;
+  transform: scale(1);
+  transform-origin: center;
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms ease-out,
+    border-color 160ms ease-out,
+    background-color 160ms ease-out,
+    color 160ms ease-out;
   box-shadow: 0 1px 2px -1px color-mix(in srgb, var(--pa-accent) 30%, transparent);
 }
 @media (hover: hover) and (pointer: fine) {
   .pa-context:hover:not(:disabled) {
-    transform: scale(1.03);
+    transform: translateY(-1px) scale(1.02);
     box-shadow:
       0 0 0 1px color-mix(in srgb, var(--pa-accent) 32%, transparent),
-      0 8px 20px -6px color-mix(in srgb, var(--pa-accent) 46%, transparent),
+      0 6px 16px -4px color-mix(in srgb, var(--pa-accent) 46%, transparent),
       inset 0 1px 0 color-mix(in srgb, var(--pa-accent) 18%, transparent);
+  }
+  .pa-context:hover:not(:disabled) .theme-icon-config {
+    transform: rotate(45deg);
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 .pa-context:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: scale(0.96) !important;
+  transition-duration: 80ms;
   box-shadow: 0 1px 1px -1px color-mix(in srgb, var(--pa-accent) 22%, transparent);
 }
