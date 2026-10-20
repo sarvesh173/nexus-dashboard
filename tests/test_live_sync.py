@@ -140,5 +140,38 @@ class TestWriteCacheMaths(unittest.TestCase):
         self.assertLessEqual(unique, total)
 
 
+class TestPathHelpers(unittest.TestCase):
+    def test_fetch_hermes_config_uses_path_helper(self):
+        import tempfile
+        from unittest.mock import MagicMock, patch
+        mock_yaml = MagicMock()
+        mock_yaml.safe_load.return_value = {"providers": {"testp": {"enabled": True, "models": ["m1"]}}}
+        with tempfile.NamedTemporaryFile("w+", suffix=".yaml") as tmp:
+            tmp.write("providers:\n  testp:\n    enabled: true\n    models:\n      - m1\n")
+            tmp.flush()
+            old_env = live_sync.hermes_config_path
+            try:
+                live_sync.hermes_config_path = lambda: tmp.name
+                with patch.dict("sys.modules", {"yaml": mock_yaml}):
+                    res, err = live_sync.fetch_hermes_config()
+                self.assertIsNone(err)
+                self.assertIn("testp", res)
+            finally:
+                live_sync.hermes_config_path = old_env
+
+    def test_omniroute_endpoint_uses_path_helper(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("w+", suffix=".env") as tmp:
+            tmp.write("OMNIROUTE_API_KEY=test_key_123\n")
+            tmp.flush()
+            old_env = live_sync.omniroute_env_path
+            try:
+                live_sync.omniroute_env_path = lambda: tmp.name
+                ep = live_sync.omniroute_endpoint()
+                self.assertEqual(ep.get("api_key"), "test_key_123")
+            finally:
+                live_sync.omniroute_env_path = old_env
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

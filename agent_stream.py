@@ -473,9 +473,16 @@ def _read_sessions(conn, include_idle):
         prompts = _read_prompts(conn, sid)
         events = _read_stream(conn, sid) if live else []
 
-        session_model_dict = model if isinstance(model, dict) else (_loads(model, {}) or {})
-        if not isinstance(session_model_dict, dict):
-            session_model_dict = {}
+        if isinstance(model, dict):
+            session_model_dict = model
+        else:
+            parsed = _loads(model, None) if isinstance(model, str) else None
+            if isinstance(parsed, dict):
+                session_model_dict = parsed
+            elif isinstance(model, str) and model.strip():
+                session_model_dict = {'id': model.strip()}
+            else:
+                session_model_dict = {}
 
         agents.append({
             'id': sid,
