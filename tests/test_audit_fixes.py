@@ -484,6 +484,7 @@ class TestOpenRouterTopProviderNull(unittest.TestCase):
 
     def _lookup(self, payload, model_id):
         import server
+        server._openrouter_cache = {'at': 0.0, 'rows': []}
         resp = MagicMock()
         resp.status_code = 200
         resp.json.return_value = payload
@@ -531,6 +532,23 @@ class TestOpenRouterTopProviderNull(unittest.TestCase):
             'vendor/model-x')
         self.assertEqual(ctx, 4096)
         self.assertEqual(source, 'openrouter-verified')
+
+    def test_openrouter_lookup_caches_results(self):
+        import server
+        server._openrouter_cache = {'at': 0.0, 'rows': []}
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {'data': [{'id': 'vendor/model-cached', 'context_length': 8192, 'top_provider': None}]}
+        mock_req = MagicMock()
+        mock_req.get.return_value = resp
+
+        with patch("server.requests", mock_req):
+            ctx1, _, _ = server._openrouter_lookup('vendor/model-cached')
+            ctx2, _, _ = server._openrouter_lookup('vendor/model-cached')
+            self.assertEqual(ctx1, 8192)
+            self.assertEqual(ctx2, 8192)
+            # requests.get should only be called ONCE due to caching
+            self.assertEqual(mock_req.get.call_count, 1)
 
 
 class TestTelemetryCpuSingleSample(unittest.TestCase):
@@ -844,6 +862,42 @@ class TestConfigProvidersOptimization(unittest.TestCase):
                     self.assertEqual(by_id['my-router']['kind'], 'router')
                     self.assertEqual(by_id['custom-apmix']['kind'], 'router')
                     self.assertEqual(by_id['anthropic']['kind'], 'direct')
+
+
+class TestLiveSyncPathResolution(unittest.TestCase):
+    """Ensure live_sync respects hermes_config_path and omniroute_env_path from paths.py."""
+
+    def test_fetch_hermes_config_uses_paths_helper(self):
+        import live_sync
+
+        tmp_dir = tempfile.mkdtemp()
+        cfg_path = os.path.join(tmp_dir, "custom_config.yaml")
+        with open(cfg_path, "w", encoding="utf-8") as fh:
+            fh.write("providers:\n  custom_prov:\n    enabled: true\n    models:\n      - m1\n")
+
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {
+            "providers": {"custom_prov": {"enabled": True, "models": ["m1"]}}
+        }
+
+        with patch("live_sync.hermes_config_path", return_value=cfg_path), \
+             patch.dict("sys.modules", {"yaml": fake_yaml}):
+            provs, err = live_sync.fetch_hermes_config()
+            self.assertIsNone(err)
+            self.assertIn("custom_prov", provs)
+            self.assertEqual(provs["custom_prov"]["models"], [{"id": "m1", "name": "m1"}])
+
+    def test_omniroute_endpoint_uses_paths_helper(self):
+        import live_sync
+
+        tmp_dir = tempfile.mkdtemp()
+        env_path = os.path.join(tmp_dir, "custom_omniroute.env")
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write("OMNIROUTE_API_KEY=test_secret_key\n")
+
+        with patch("live_sync.omniroute_env_path", return_value=env_path):
+            ep = live_sync.omniroute_endpoint()
+            self.assertEqual(ep.get("api_key"), "test_secret_key")
 
 
 if __name__ == "__main__":

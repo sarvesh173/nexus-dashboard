@@ -245,6 +245,19 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_id'], 'claude-3-5-sonnet')
         self.assertEqual(rows[0]['model'], 'claude-3-5-sonnet')
 
+    def test_session_fallback_reason_detected_on_switch(self):
+        # When assistant message switched model mid-run, fallback_reason must be 'Switched'
+        conn = self._seed('claude-3-5-sonnet', {'modelID': 'gpt-4o', 'providerID': 'openai'})
+        rows = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(rows[0]['fallback_reason'], 'Switched')
+
+    def test_format_fallback_reason_helper(self):
+        self.assertEqual(a._format_fallback_reason('gpt-4o', 'gpt-4o-mini', added_wait_cause='rate_limit_429'), 'Fallback: 429')
+        self.assertEqual(a._format_fallback_reason('gpt-4o', 'gpt-4o-mini', added_wait_cause='latency_spike'), 'Fallback: Latency')
+        self.assertEqual(a._format_fallback_reason('gpt-4o', 'gpt-4o-mini', status=429), 'Fallback: 429')
+        self.assertEqual(a._format_fallback_reason('gpt-4o', 'gpt-4o-mini', status=503), 'Fallback: 503')
+        self.assertEqual(a._format_fallback_reason('gpt-4o', 'gpt-4o'), None)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

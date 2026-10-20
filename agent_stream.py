@@ -481,6 +481,15 @@ def _read_sessions(conn, include_idle):
         else:
             session_model_dict = {}
 
+        session_req_id = (session_model_dict.get('modelID')
+                          or session_model_dict.get('id')
+                          or (model if isinstance(model, str) else ''))
+        message_actual_id = (message_model or {}).get('modelID')
+        session_fallback = None
+        if (session_req_id and message_actual_id and
+                str(session_req_id).strip().lower() != str(message_actual_id).strip().lower()):
+            session_fallback = 'Switched'
+
         agents.append({
             'id': sid,
             'title': title or 'Untitled session',
@@ -495,6 +504,7 @@ def _read_sessions(conn, include_idle):
                               or session_model_dict.get('providerID'),
             'model_variant': (message_model or {}).get('variant')
                              or session_model_dict.get('variant'),
+            'fallback_reason': session_fallback,
             'directory': _rel_dir(directory),
             'state': 'running' if live else 'idle',
             'last_active_ms': age_ms,
@@ -587,13 +597,75 @@ def read_agent_logs(session_id=None, limit=CALL_LIMIT):
     }
 
 
+def _format_fallback_reason(requested_model, actual_model, status=None, added_wait_cause=None, resilience_actions=None):
+    """Format compact indicator pill text (e.g. 'Fallback: 429', 'Fallback: Latency')."""
+    cause = str(added_wait_cause or '').lower().strip()
+    if '429' in cause or 'rate' in cause:
+        return 'Fallback: 429'
+    if 'latency' in cause or 'slow' in cause or 'lag' in cause:
+        return 'Fallback: Latency'
+    if 'timeout' in cause:
+        return 'Fallback: Timeout'
+    if '503' in cause:
+        return 'Fallback: 503'
+    if cause:
+        return f'Fallback: {str(added_wait_cause).strip()[:10]}'
+
+    try:
+        code = int(status or 0)
+        if code == 429:
+            return 'Fallback: 429'
+        if code in (502, 503, 504):
+            return f'Fallback: {code}'
+    except (TypeError, ValueError):
+        pass
+
+    actions = []
+    if isinstance(resilience_actions, list):
+        actions = resilience_actions
+    elif isinstance(resilience_actions, str) and resilience_actions:
+        try:
+            parsed = json.loads(resilience_actions)
+            if isinstance(parsed, list):
+                actions = parsed
+        except Exception:
+            actions = [resilience_actions]
+
+    for act in actions:
+        act_l = str(act).lower()
+        if '429' in act_l or 'rate' in act_l:
+            return 'Fallback: 429'
+        if 'latency' in act_l or 'spike' in act_l:
+            return 'Fallback: Latency'
+        if 'failover' in act_l or 'fallback' in act_l:
+            return 'Fallback: Failover'
+
+    if requested_model and actual_model:
+        r_str = str(requested_model).strip().lower()
+        a_str = str(actual_model).strip().lower()
+        if r_str and a_str and r_str != a_str and not r_str.startswith('auto/'):
+            return 'Fallback'
+
+    return None
+
+
 def _read_calls(conn, session_id, limit):
     if not _table_exists(conn, 'call_logs'):
         return []
     bounded = max(1, min(int(limit or CALL_LIMIT), 300))
 
+    has_resilience = False
+    try:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(call_logs)")}
+        has_resilience = 'added_wait_cause' in cols and 'resilience_actions' in cols
+    except sqlite3.Error:
+        pass
+
     columns = 'id, timestamp, model, requested_model, provider, status, duration, '
     columns += 'tokens_in, tokens_out, tokens_reasoning, error_summary, session_tag'
+    if has_resilience:
+        columns += ', added_wait_cause, resilience_actions'
+
     try:
         if session_id:
             rows = conn.execute(
@@ -611,8 +683,21 @@ def _read_calls(conn, session_id, limit):
 
     out = []
     for row in rows:
-        (cid, ts, model, requested, provider, status, duration,
-         tin, tout, treason, error_summary, tag) = row
+        cid = row[0]
+        ts = row[1]
+        model = row[2]
+        requested = row[3]
+        provider = row[4]
+        status = row[5]
+        duration = row[6]
+        tin = row[7]
+        tout = row[8]
+        treason = row[9]
+        error_summary = row[10]
+        tag = row[11]
+        added_wait = row[12] if has_resilience and len(row) > 12 else ''
+        res_actions = row[13] if has_resilience and len(row) > 13 else ''
+        fallback = _format_fallback_reason(requested, model, status, added_wait, res_actions)
         out.append({
             'id': cid,
             'at': ts,
@@ -629,5 +714,6 @@ def _read_calls(conn, session_id, limit):
             },
             'error': _clip(error_summary, 200) or None,
             'session_tag': tag or '',
+            'fallback_reason': fallback,
         })
     return out

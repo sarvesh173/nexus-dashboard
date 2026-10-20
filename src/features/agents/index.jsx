@@ -83,7 +83,7 @@ const STREAM_TONE = {
  * format uses '/' and ':' as load-bearing delimiters and a proportional font
  * makes them ambiguous next to a hyphenated model id.
  */
-function ModelBadge({ model, live }) {
+function ModelBadge({ model, live, fallbackReason }) {
   if (!model) {
     // A missing model is '--', never an empty pill. See tokens.md §4.
     return (
@@ -93,17 +93,28 @@ function ModelBadge({ model, live }) {
     );
   }
   return (
-    <span
-      title={model}
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[11px] truncate border ${
-        live
-          ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border-[var(--md-sys-color-primary)]/40'
-          : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)]'
-      }`}
-    >
-      {live && <CircleDot size={10} className="shrink-0 animate-pulse" />}
-      <span className="truncate">{model}</span>
-    </span>
+    <div className="inline-flex items-center gap-1.5 flex-wrap">
+      <span
+        title={model}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[11px] truncate border ${
+          live
+            ? 'bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] border-[var(--md-sys-color-primary)]/40'
+            : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline-variant)]'
+        }`}
+      >
+        {live && <CircleDot size={10} className="shrink-0 animate-pulse" />}
+        <span className="truncate">{model}</span>
+      </span>
+      {fallbackReason && (
+        <span
+          title={`Routing failover: ${fallbackReason}`}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10px] font-semibold tracking-wide uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30"
+        >
+          <Zap size={10} className="shrink-0 text-amber-400" />
+          <span>{fallbackReason}</span>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -225,6 +236,15 @@ function CallLedger({ calls, sourceError, sessionId }) {
           <span className="font-mono text-[11px] text-[var(--md-sys-color-primary)] truncate" title={call.requested_model || call.model}>
             {call.model || '--'}
           </span>
+          {call.fallback_reason && (
+            <span
+              title={`Routing failover: ${call.fallback_reason}`}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded font-mono text-[9px] font-semibold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0"
+            >
+              <Zap size={9} className="shrink-0 text-amber-400" />
+              <span>{call.fallback_reason}</span>
+            </span>
+          )}
           <span className="font-mono text-[10px] text-[var(--md-sys-color-on-surface-variant)] ml-auto shrink-0">
             {compactCount(call.tokens?.input)} in / {compactCount(call.tokens?.output)} out
           </span>
@@ -338,7 +358,7 @@ export function AgentSessionView({ navigate, liveAgents, liveCount, sourceError,
               {agent && <StatusChip state={agent.state} liveCount={liveCount} />}
             </div>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {agent && <ModelBadge model={agent.model} live={agent.state === 'running'} />}
+              {agent && <ModelBadge model={agent.model} live={agent.state === 'running'} fallbackReason={agent.fallback_reason} />}
               {agent && (
                 <span className="text-[10px] font-mono text-[var(--md-sys-color-on-surface-variant)]">
                   {agent.directory || '--'} · {formatAge(agent.last_active_ms)}
@@ -701,7 +721,7 @@ export function AgentsFeature({ isAgentsNavActive, agents, navigate, isAgentCliA
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <ModelBadge model={agent.model} live={running} />
+                        <ModelBadge model={agent.model} live={running} fallbackReason={agent.fallback_reason} />
                       </div>
 
                       {agent.prompt_excerpt && (

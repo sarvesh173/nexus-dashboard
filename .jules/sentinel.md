@@ -44,3 +44,18 @@
 **Learning**: In `server.py`, `get_all_config_providers` redundantly converted and lowercased `base` and `pid` inside generator expressions for each router keyword check. In `omniroute_logs.py`, `_table_exists` lacked tests for `sqlite3.Error` and unhandled `None` connection.
 **Action**: Hoisted `base_lower = str(base).lower()` and `pid_lower = pid.lower()` before the `any(...)` evaluation in `server.py`. Added `if conn is None: return False` to `_table_exists` in `omniroute_logs.py` and added `TestTableExists` test suite in `tests/test_omniroute_logs.py`.
 **Fingerprint**: server.py:1428 - Perf: redundant string operations in loop / omniroute_logs.py:148 - Untested error path
+
+## 2026-10-21 - Cache OpenRouter model catalog lookups with TTL in server.py
+**Learning**: In `server.py:1704`, `_openrouter_lookup` unconditionally performed a synchronous network request to OpenRouter's `/api/v1/models` without caching, which blocked HTTP worker threads on every model context resolution.
+**Action**: Added `_openrouter_cache` with a 1-hour TTL (`_OPENROUTER_CACHE_TTL`) and stale-cache serving fallback in `_get_openrouter_models()`, turning repetitive lookups into in-memory operations. Added regression test `test_openrouter_lookup_caches_results` in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1704 - Perf: synchronous un-cached OpenRouter catalog requests
+
+## 2026-10-21 - Use paths.py helpers for live_sync configuration and environment paths
+**Learning**: `live_sync.py` hardcoded `~/.hermes/config.yaml` and `~/.omniroute/.env`, ignoring configuration overrides set via `paths.py` and environment variables.
+**Action**: Replaced hardcoded paths in `fetch_hermes_config` and `omniroute_endpoint` with `hermes_config_path()` and `omniroute_env_path()`. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: live_sync.py:99 - PathResolution: hardcoded paths override paths.py
+
+## 2026-10-21 - Add routing failover fallback indicator pill next to active model badges
+**Learning**: When OmniRoute performs mid-run model switches or latency/429 failovers, runs feel slow but the UI provided no indication of the routing decision.
+**Action**: Added `fallback_reason` parsing across `agent_stream.py` (`_format_fallback_reason`) checking `resilience_actions`, `added_wait_cause`, status codes, and model switch mismatches. Rendered a compact amber `Fallback: 429` / `Fallback: Latency` pill next to `ModelBadge` and in `CallLedger` in `src/features/agents/index.jsx`. Added unit tests in `tests/test_agent_stream.py`.
+**Fingerprint**: agent_stream.py:600 - UI/UX: visible routing failover indicator next to model badge

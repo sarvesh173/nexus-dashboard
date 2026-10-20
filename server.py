@@ -1694,6 +1694,29 @@ def _encode_json(data):
     ).encode('utf-8')
 
 
+_OPENROUTER_CACHE_TTL = 3600.0  # 1 hour TTL
+_openrouter_cache = {'at': 0.0, 'rows': []}
+
+
+def _get_openrouter_models(force=False):
+    """Fetch and cache OpenRouter models catalog to prevent blocking synchronous calls."""
+    now = time.time()
+    if not force and _openrouter_cache['rows'] and now - _openrouter_cache['at'] < _OPENROUTER_CACHE_TTL:
+        return _openrouter_cache['rows']
+    if requests is None:
+        return []
+    try:
+        req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
+        if req.status_code == 200:
+            rows = model_rows(req.json())
+            _openrouter_cache['rows'] = rows
+            _openrouter_cache['at'] = now
+            return rows
+    except Exception:
+        pass
+    return _openrouter_cache['rows'] or []
+
+
 def _openrouter_lookup(model_id):
     """(res_context, res_output, source) from OpenRouter's live catalog.
 
@@ -1701,16 +1724,14 @@ def _openrouter_lookup(model_id):
     returns the stored None and the chained .get used to raise inside the
     caller's try, silently killing the whole context lookup. Split out of
     do_GET so the guard is unit-testable; catalog shape goes through the
-    shared model_rows() guard.
+    shared model_rows() guard and response is cached to prevent blocking threads.
     """
     if not model_id or requests is None:
         return None, None, 'heuristic'
     try:
         clean_id = model_id.split('/')[-1].lower()
-        req = requests.get("https://openrouter.ai/api/v1/models", timeout=3)
-        if req.status_code != 200:
-            return None, None, 'heuristic'
-        for mid, item in model_rows(req.json()):
+        rows = _get_openrouter_models()
+        for mid, item in rows:
             i_id = mid.lower()
             if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
                 return (item.get('context_length'),
