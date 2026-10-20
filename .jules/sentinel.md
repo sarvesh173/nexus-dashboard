@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Safely handle raw string session model values in agent stream
+**Learning**: In `agent_stream.py`, `_read_sessions` parsed `session_model_dict` using `_loads(model, {})`. When `model` was stored as a bare model string (e.g. `'claude-3-5-sonnet'`) rather than a JSON dictionary string, `_loads` failed to parse a dict, setting `session_model_dict` to `{}` and causing `model_id` to resolve as `None`.
+**Action**: Updated `_read_sessions` to construct `{'id': model}` when `model` is a non-empty string and does not parse into a JSON object, matching `format_model` behavior. Added regression test `test_raw_string_session_model_resolves_id` in `tests/test_agent_stream.py`.
+**Fingerprint**: agent_stream.py:473 - LogicError: raw string session model resolves to None model_id
