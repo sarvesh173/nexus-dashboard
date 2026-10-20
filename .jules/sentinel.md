@@ -29,3 +29,9 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Normalise gateway model list responses and resolve live sync env paths
+**Learning**: `hermes_gateway.list_models()` directly called `data.get('data', [])` on raw `/models` JSON output, which raised `AttributeError` when a gateway or proxy returned a top-level JSON array `[...]`. Furthermore, `live_sync.py` imported `hermes_config_path` and `omniroute_env_path` from `paths.py` but used hardcoded home-directory fallback strings instead, ignoring environment variable overrides.
+**Action**: Normalised gateway model list responses using `model_rows(data)` in `hermes_gateway.py` and updated `live_sync.py` to open `hermes_config_path()` and `omniroute_env_path()`. Added unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:73 - AttributeError: 'list' object has no attribute 'get'
+**Fingerprint**: live_sync.py:99 - PathResolution: hardcoded home directory paths override paths.py
