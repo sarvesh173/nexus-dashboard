@@ -18,7 +18,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, mock_open
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import live_sync  # noqa: E402
@@ -779,6 +779,42 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
             reg = model_health.sync_models([('vendor/model-x', 'text')],
                                            'https://integrate.api.nvidia.com/v1')
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
+
+
+class TestShapeResilienceFixes(unittest.TestCase):
+    """Regression tests for non-dict JSON or list response handling across backend modules."""
+
+    def test_hermes_gateway_list_models_handles_list_payload(self):
+        import hermes_gateway
+        with patch('hermes_gateway._get', return_value=[{'id': 'm1'}, {'id': 'm2'}, 'junk_item']):
+            res = hermes_gateway.list_models(force=True)
+            self.assertEqual(res, ['m1', 'm2'])
+
+    def test_visibility_read_handles_non_dict_store(self):
+        import visibility
+        with tempfile.NamedTemporaryFile('w', delete=False) as fh:
+            fh.write('["bad", "list", "payload"]')
+            tmp_path = fh.name
+
+        orig_store = visibility.STORE
+        try:
+            visibility.STORE = tmp_path
+            visibility._cache['at'] = 0.0
+            data = visibility._read()
+            self.assertEqual(data, {'providers': [], 'models': []})
+        finally:
+            visibility.STORE = orig_store
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    def test_server_get_hermes_status_handles_non_dict_state(self):
+        import server
+        with patch('builtins.open', mock_open(read_data='["not_a_dict"]')):
+            with patch('server.hermes_gateway_state_path', return_value='/tmp/fake_state.json'):
+                with patch.object(server, '_hermes_state_cache', {'at': 0.0, 'payload': None}):
+                    res = server.get_hermes_status()
+                    self.assertIsInstance(res, dict)
+                    self.assertIn('ok', res)
 
 
 if __name__ == "__main__":

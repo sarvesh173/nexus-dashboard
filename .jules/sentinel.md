@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Guard non-dict JSON responses and state stores across backend modules
+**Learning**: `hermes_gateway.py`, `visibility.py`, and `server.py` assumed JSON payloads loaded from HTTP endpoints or local files were dictionaries. When `/models` endpoints returned top-level JSON lists or when `hidden_store.json`/`gateway_state.json` contained non-dict JSON payloads (e.g., `[...]`), calls to `data.get()` raised unhandled `AttributeError: 'list' object has no attribute 'get'`.
+**Action**: Utilized `models_payload.model_rows` in `hermes_gateway.py` and added explicit `isinstance(data, dict)` checks in `visibility.py` and `server.py` before dictionary accesses. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:67 - AttributeError: 'list' object has no attribute 'get'
