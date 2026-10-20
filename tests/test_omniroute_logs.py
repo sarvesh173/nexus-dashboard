@@ -387,6 +387,40 @@ class TestReadCallLogs(unittest.TestCase):
         plain = o._shape_call(_row(None))
         self.assertEqual(o.classify_agent(plain), 'unknown')
 
+    def test_sql_filter_by_model(self):
+        payload = o.read_call_logs(limit=10, filters={'model': 'model-a'})
+        self.assertEqual(payload['count'], 1)
+        self.assertEqual(payload['total'], 1)
+        self.assertEqual(payload['calls'][0]['id'], CALL_ID)
+
+    def test_sql_filter_by_status(self):
+        err_payload = o.read_call_logs(limit=10, filters={'status': 'error'})
+        self.assertEqual(err_payload['count'], 1)
+        self.assertEqual(err_payload['calls'][0]['id'], FAILED_CALL_ID)
+
+        ok_payload = o.read_call_logs(limit=10, filters={'status': 'ok'})
+        self.assertEqual(ok_payload['count'], 2)
+
+    def test_sql_filter_by_agent(self):
+        claude_payload = o.read_call_logs(limit=10, filters={'agent': 'claude-protocol'})
+        self.assertEqual(claude_payload['count'], 1)
+        self.assertEqual(claude_payload['calls'][0]['id'], FAILED_CALL_ID)
+
+        auto_payload = o.read_call_logs(limit=10, filters={'agent': 'auto-router'})
+        self.assertEqual(auto_payload['count'], 1)
+        self.assertEqual(auto_payload['calls'][0]['id'], CALL_ID)
+
+    def test_sql_filter_by_search(self):
+        search_payload = o.read_call_logs(limit=10, filters={'search': 'weather'})
+        self.assertEqual(search_payload['count'], 1)
+        self.assertEqual(search_payload['calls'][0]['id'], NO_ARTIFACT_CALL_ID)
+
+    def test_read_call_logs_page_filters_and_paginates_in_sql(self):
+        qs = {'model': ['model-b'], 'limit': ['5'], 'offset': ['0']}
+        rows = o.read_call_logs_page(qs)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['id'], FAILED_CALL_ID)
+
 
 class TestReadDetail(unittest.TestCase):
     """The detail route: one artifact, bounded on the way out."""
