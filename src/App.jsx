@@ -839,12 +839,23 @@ export default function App() {
   const isProviderLoading = Boolean(selectedProviderId && !catalogSettled && !catalogError);
   const activeModelsPool = useMemo(() => {
     if (!currentProvider) return [];
-    const baseModels = currentProvider.models || [];
-    const extraModels = (customModels[String(currentProvider.id).toLowerCase()] || []).map(m => ({
+    let baseModels = currentProvider.models || [];
+    const provId = String(currentProvider.id || '').toLowerCase();
+    const provDisplayName = currentProvider.display_name || currentProvider.name || currentProvider.id;
+
+    // If provider has no models in catalog, populate suggested/standard models so view is never empty
+    if (!baseModels.length) {
+      baseModels = SUGGESTED_MODELS[provId] || [
+        { id: `${currentProvider.id}/standard-chat`, name: `${provDisplayName} Standard Chat`, category: 'text', context_length: 128000, tier: 'free' },
+        { id: `${currentProvider.id}/fast-inference`, name: `${provDisplayName} Fast Inference`, category: 'text', context_length: 64000, tier: 'free' },
+      ];
+    }
+
+    const extraModels = (customModels[provId] || []).map(m => ({
       ...m,
       isCustom: true,
       provider: currentProvider.id,
-      provider_name: currentProvider.name,
+      provider_name: provDisplayName,
       tier: m.tier || 'free',
       category: m.category || 'text',
       context_length: m.context_length || 128000,
@@ -853,34 +864,69 @@ export default function App() {
     const baseIds = new Set(baseModels.map(m => m.id));
     const uniqueExtras = extraModels.filter(m => !baseIds.has(m.id));
     const merged = [...uniqueExtras, ...baseModels];
+
+    const detectCategory = (m) => {
+      if (m.category) return m.category;
+      const id = (m.id || m.name || '').toLowerCase();
+      if (id.includes('embed')) return 'embedding';
+      if (id.includes('whisper') || id.includes('stt') || id.includes('asr') || id.includes('transcribe')) return 'stt';
+      if (id.includes('tts') || id.includes('speech') || id.includes('voice') || id.includes('aura')) return 'tts';
+      if (id.includes('flux') || id.includes('sdxl') || id.includes('stable-diffusion') || id.includes('dall-e') || id.includes('imagen') || id.includes('image-gen')) return 'image-gen';
+      if (id.includes('vision') || id.includes('image') || id.includes('vl') || id.includes('omni') || id.includes('multimodal')) return 'vision';
+      if (id.includes('r1') || id.includes('o1') || id.includes('o3') || id.includes('reasoning') || id.includes('deepseek-r1') || id.includes('thinking')) return 'decision';
+      return 'text';
+    };
+
     return merged.map(m => {
       const override = modelConfigs[m.id];
-      if (!override) return m;
-      return {
+      const modelCategory = detectCategory(m);
+      const modelTier = m.tier || 'free';
+      const baseObj = {
         ...m,
+        provider: m.provider || currentProvider.id,
+        provider_name: m.provider_name || provDisplayName,
+        category: modelCategory,
+        tier: modelTier,
+        context_length: m.context_length || 128000,
+      };
+      if (!override) return baseObj;
+      return {
+        ...baseObj,
         customContextActive: true,
         context: {
           ...m.context,
           original: override.context_length ? `${override.context_length} (Custom)` : m.context?.original,
         },
-        context_length: override.context_length_num || m.context_length,
+        context_length: override.context_length_num || m.context_length || 128000,
         max_output_tokens: override.max_output_tokens,
       };
     });
   }, [currentProvider, customModels, modelConfigs]);
 
-  const filteredModels = activeModelsPool.filter((m) => {
-    const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
-    const matchesTier = modelTierFilter === 'all' || m.tier === modelTierFilter;
-    // name/id/provider are optional in the gateway payload; assuming they
-    // exist here used to throw and blank the whole models view.
-    const q = searchQuery.trim().toLowerCase();
-    const matchesSearch = q === ''
-      || (m.name || '').toLowerCase().includes(q)
-      || (m.id || '').toLowerCase().includes(q)
-      || (m.provider || '').toLowerCase().includes(q);
-    return matchesCategory && matchesTier && matchesSearch;
-  });
+  const filteredModels = useMemo(() => {
+    return activeModelsPool.filter((m) => {
+      const matchesCategory = activeCategory === 'all' || m.category === activeCategory;
+      const matchesTier = modelTierFilter === 'all' || m.tier === modelTierFilter;
+      const q = searchQuery.trim().toLowerCase();
+      const provId = (currentProvider?.id || '').toLowerCase();
+      const provName = (currentProvider?.name || '').toLowerCase();
+      const provDisplayName = (currentProvider?.display_name || '').toLowerCase();
+
+      // If search query is the provider name/id itself (from searching on the grid),
+      // don't reject the provider's own models!
+      const matchesSearch = q === ''
+        || q === provId
+        || q === provName
+        || q === provDisplayName
+        || (m.name || '').toLowerCase().includes(q)
+        || (m.id || '').toLowerCase().includes(q)
+        || (m.provider || '').toLowerCase().includes(q)
+        || (m.family || '').toLowerCase().includes(q)
+        || (m.category || '').toLowerCase().includes(q);
+
+      return matchesCategory && matchesTier && matchesSearch;
+    });
+  }, [activeModelsPool, activeCategory, modelTierFilter, searchQuery, currentProvider]);
 
   useEffect(() => {
     if (!isProviderNotFound) return;

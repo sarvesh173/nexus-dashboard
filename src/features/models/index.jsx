@@ -599,7 +599,12 @@ export function ModelsFeature(props) {
                                                       model={topModel}
                                                       telemetry={tel}
                                                       align={leaderAlign === "auto" ? null : leaderAlign}
-                                                      onSelect={() => setSelectedProviderId(p.id)}
+                                                      onSelect={() => {
+                                                        setSearchQuery('');
+                                                        setActiveCategory('all');
+                                                        setModelTierFilter('all');
+                                                        setSelectedProviderId(p.id);
+                                                      }}
                                                     />
                                                   </div>
                                                 </div>
@@ -738,7 +743,12 @@ export function ModelsFeature(props) {
                                                         model={topModel}
                                                         telemetry={tel}
                                                         align={leaderAlign === "auto" ? null : leaderAlign}
-                                                        onSelect={() => setSelectedProviderId(p.id)}
+                                                        onSelect={() => {
+                                                        setSearchQuery('');
+                                                        setActiveCategory('all');
+                                                        setModelTierFilter('all');
+                                                        setSelectedProviderId(p.id);
+                                                      }}
                                                       />
                                                     </div>
                                                   </div>
@@ -923,11 +933,17 @@ export function ModelsFeature(props) {
                             }
                             // In normal mode: single tap OR double tap opens the provider models view directly!
                             nexusLog('NAVIGATION', `Clicked provider card "${prov.id}" -> opening models view`);
+                            setSearchQuery('');
+                            setActiveCategory('all');
+                            setModelTierFilter('all');
                             setSelectedProviderId(prov.id);
                           }}
                           onDoubleClick={(e) => {
                             e.stopPropagation();
                             nexusLog('NAVIGATION', `Double-clicked provider card "${prov.id}" -> opening models view`);
+                            setSearchQuery('');
+                            setActiveCategory('all');
+                            setModelTierFilter('all');
                             setSelectedProviderId(prov.id);
                           }}
                           className={`provider-card pa-provider group p-4 rounded-3xl border transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] active:scale-[0.99] active:duration-100 cursor-pointer relative flex flex-col justify-between select-none min-w-0 backdrop-blur-2xl ${
@@ -1091,7 +1107,12 @@ export function ModelsFeature(props) {
                                         <InteractiveActiveModelsBadge
                                           provider={prov}
                                           totalCount={totalCount}
-                                          onSelect={() => setSelectedProviderId(prov.id)}
+                                          onSelect={() => {
+                                            setSearchQuery('');
+                                            setActiveCategory('all');
+                                            setModelTierFilter('all');
+                                            setSelectedProviderId(prov.id);
+                                          }}
                                         />
                                       </div>
                                       <div className="grid gap-1.5 w-full min-w-0" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 112px), 1fr))' }}>
@@ -1104,7 +1125,12 @@ export function ModelsFeature(props) {
                                               key={idx}
                                               model={m}
                                               telemetry={telemetry}
-                                              onSelect={() => setSelectedProviderId(prov.id)}
+                                              onSelect={() => {
+                                                setSearchQuery('');
+                                                setActiveCategory('all');
+                                                setModelTierFilter('all');
+                                                setSelectedProviderId(prov.id);
+                                              }}
                                             />
                                           );
                                         })}
@@ -1577,6 +1603,52 @@ export function ModelsFeature(props) {
 
                         </div>
                       );})}
+                      {filteredModels.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-16 px-4 rounded-3xl bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] text-center space-y-3">
+                          <div className="w-12 h-12 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
+                            <Search size={22} />
+                          </div>
+                          <div className="space-y-1">
+                            <h3 className="font-bold text-sm text-[var(--md-sys-color-on-surface)]">
+                              No models match current filters
+                            </h3>
+                            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] max-w-sm">
+                              {searchQuery
+                                ? `No models found matching "${searchQuery}".`
+                                : `No models currently match the active "${activeCategory}" filter.`}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 pt-2">
+                            {(searchQuery || activeCategory !== 'all' || modelTierFilter !== 'all') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSearchQuery('');
+                                  setActiveCategory('all');
+                                  setModelTierFilter('all');
+                                }}
+                                className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-xs active:scale-95 transition-all cursor-pointer"
+                              >
+                                Reset Filters
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={onOpenAddModel}
+                              className="px-4 py-1.5 rounded-full text-xs font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] active:scale-95 transition-all cursor-pointer"
+                            >
+                              + Add Model
+                            </button>
+                            <button
+                              type="button"
+                              onClick={onOpenFetchModels}
+                              className="px-4 py-1.5 rounded-full text-xs font-medium bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-primary)] border border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-primary)] active:scale-95 transition-all cursor-pointer"
+                            >
+                              Fetch from API
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {filteredModels.length > modelRenderLimit && (
                       <div className="pt-2 pb-6 flex justify-center">
