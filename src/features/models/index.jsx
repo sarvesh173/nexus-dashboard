@@ -1407,11 +1407,16 @@ export function ModelsFeature(props) {
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] p-1.5 flex items-center justify-center shrink-0 shadow-xs">
                                 <img
-                                  src={getModelLogo(item.id)}
+                                  src={getModelLogo(item.id) || getProviderLogoUrl(currentProvider, providerOverrides) || '/nexus-logo.png'}
                                   alt={item.name ?? '—'}
                                   className="w-full h-full object-contain"
                                   onError={(e) => {
-                                    e.currentTarget.src = '/logos/nvidia.svg';
+                                    const provLogo = getProviderLogoUrl(currentProvider, providerOverrides);
+                                    if (provLogo && e.currentTarget.src !== provLogo) {
+                                      e.currentTarget.src = provLogo;
+                                    } else {
+                                      e.currentTarget.src = '/nexus-logo.png';
+                                    }
                                   }}
                                 />
                               </div>
