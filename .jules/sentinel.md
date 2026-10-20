@@ -29,3 +29,9 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-20 - Dynamic path helper resolution in live sync and raw session model string handling
+**Learning**: In `live_sync.py`, `fetch_hermes_config` and `omniroute_endpoint` read static constants `HERMES_CONFIG` and `OMNIROUTE_ENV` (which evaluated `os.path.expanduser("~")` at module load time) instead of calling `hermes_config_path()` and `omniroute_env_path()`, ignoring environment variable overrides. In `agent_stream.py`, `_read_sessions` evaluated `_loads` on raw model strings which returned `{}` on `JSONDecodeError`, causing `model_id` to resolve as `None`.
+**Action**: Updated `live_sync.py` to invoke `hermes_config_path()` and `omniroute_env_path()`, and updated `agent_stream.py` to wrap raw string models into `{'id': model.strip()}`. Added regression unit tests in `tests/test_live_sync.py` and `tests/test_agent_stream.py`.
+**Fingerprint**: live_sync.py:99 - PathOverrideIgnored: hardcoded HERMES_CONFIG and OMNIROUTE_ENV
+**Fingerprint**: agent_stream.py:476 - LogicError: raw model string in session row yields model_id None

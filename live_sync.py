@@ -95,10 +95,10 @@ def fetch_gateway():
 
 # ── source 1: Hermes config ────────────────────────────────────────────────
 def fetch_hermes_config():
-    """Read providers + models straight from ~/.hermes/config.yaml. Read-only."""
+    """Read providers + models straight from config.yaml. Read-only."""
     try:
         import yaml
-        with open(HERMES_CONFIG, encoding="utf-8") as fh:
+        with open(hermes_config_path(), encoding="utf-8") as fh:
             cfg = yaml.safe_load(fh) or {}
     except Exception as exc:                       # missing file, bad YAML, no PyYAML
         return {}, f"hermes config unavailable: {type(exc).__name__}"
@@ -127,7 +127,7 @@ def fetch_hermes_config():
 # ── source 2: OmniRoute ────────────────────────────────────────────────────
 def omniroute_endpoint():
     """base_url + api_key for the local OmniRoute. Key is never returned to callers."""
-    env = _read_env_file(OMNIROUTE_ENV)
+    env = _read_env_file(omniroute_env_path())
     key = env.get("OMNIROUTE_API_KEY", "")
     if not key:
         return {}

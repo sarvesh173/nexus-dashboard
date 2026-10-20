@@ -237,6 +237,11 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_id'], 'switched-mid-session')
         self.assertEqual(rows[0]['model_variant'], 'max')
 
+    def test_raw_string_session_model_is_the_fallback(self):
+        conn = self._seed('claude-3-5-sonnet', None)
+        rows = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(rows[0]['model_id'], 'claude-3-5-sonnet')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
