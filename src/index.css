@@ -1159,81 +1159,69 @@ button:hover > svg.lucide-trash-2 {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   Modality Filter Pills — gliding indicator, tactile lift, accent glow
-   Every animated property here is transform / opacity / shadow / colour, so the
-   pill row keeps identical geometry in every state and never reflows.
+   Modality Filter Tabs — Tactile Hardware-Level Micro-Interactions
+   Calm, zero-jitter transitions for LLM, Vision, Audio (TTS/STT), and Embedding.
+   Every property is GPU-composited (transform, opacity, color, box-shadow).
    ═══════════════════════════════════════════════════════════════════════════════ */
 .modality-tab {
   --pill-accent: var(--md-sys-color-primary);
-  --pill-accent-soft: color-mix(in srgb, var(--pill-accent) 16%, transparent);
-  --pill-accent-glow: color-mix(in srgb, var(--pill-accent) 38%, transparent);
+  --pill-accent-soft: color-mix(in srgb, var(--pill-accent) 14%, transparent);
+  --pill-accent-glow: color-mix(in srgb, var(--pill-accent) 28%, transparent);
   color: var(--md-sys-color-on-surface-variant);
+  border-radius: 12px;
   transform: translateY(0) scale(1);
   transition:
-    transform 180ms cubic-bezier(0.2, 0, 0, 1),
-    color 180ms ease-out,
-    background-color 200ms cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 240ms cubic-bezier(0.2, 0, 0, 1),
-    border-color 200ms ease-out;
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 160ms ease-out,
+    background-color 160ms ease-out,
+    box-shadow 200ms ease-out,
+    border-color 160ms ease-out;
 }
 
 .modality-tab:focus-visible {
   outline: 2px solid var(--pill-accent);
   outline-offset: 2px;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
-/* Tactile hover lift + accent glow. transform keeps the layout box untouched. */
 @media (hover: hover) and (pointer: fine) {
   .modality-tab:hover {
-    transform: translateY(-1.5px);
+    transform: translateY(-1px);
     color: var(--md-sys-color-on-surface);
-    background-color: color-mix(in srgb, var(--pill-accent) 9%, transparent);
-    box-shadow: 0 4px 14px -2px var(--pill-accent-glow);
-  }
-  .modality-tab:hover .modality-tab-icon {
-    transform: scale(1.12);
-    color: var(--pill-accent);
-    filter: drop-shadow(0 0 5px var(--pill-accent-glow));
+    background-color: color-mix(in srgb, var(--pill-accent) 10%, transparent);
+    box-shadow: 0 4px 12px -2px var(--pill-accent-glow);
   }
 }
 
-/* Press state: the pill compresses rather than sinking. */
 .modality-tab:active {
-  transform: translateY(-1.5px) scale(0.95);
-  box-shadow: 0 1px 4px -1px var(--pill-accent-glow);
+  transform: scale(0.96) !important;
+  transition-duration: 80ms;
 }
 
 .modality-tab[data-active='true'] {
   color: var(--pill-accent);
   font-weight: 700;
   background-color: var(--pill-accent-soft);
-  border-bottom-color: var(--pill-accent);
+  border-color: color-mix(in srgb, var(--pill-accent) 35%, transparent);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--pill-accent) 22%, transparent),
-    0 6px 18px -6px var(--pill-accent-glow);
-}
-
-.modality-tab[data-active='true'] .modality-tab-icon {
-  color: var(--pill-accent);
-  filter: drop-shadow(0 0 6px var(--pill-accent-glow));
+    inset 0 0 0 1px color-mix(in srgb, var(--pill-accent) 22%, transparent),
+    0 4px 14px -3px var(--pill-accent-glow);
 }
 
 .modality-tab-icon {
   flex-shrink: 0;
   transition:
-    transform 220ms cubic-bezier(0.38, 1.21, 0.22, 1),
-    color 180ms ease-out,
-    filter 220ms ease-out;
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 160ms ease-out,
+    filter 180ms ease-out;
 }
 
 .modality-tab-count {
   background-color: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface-variant);
   transition:
-    background-color 200ms cubic-bezier(0.2, 0, 0, 1),
-    color 200ms ease-out,
-    transform 220ms cubic-bezier(0.38, 1.21, 0.22, 1);
+    background-color 160ms ease-out,
+    color 160ms ease-out;
 }
 
 .modality-tab[data-active='true'] .modality-tab-count,
@@ -1242,58 +1230,105 @@ button:hover > svg.lucide-trash-2 {
   color: var(--pill-accent);
 }
 
-/* Gliding selection indicator — absolutely positioned, so it never affects flow. */
-.modality-tab-indicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 0;
-  border-radius: 12px;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--pill-accent) 26%, transparent) 0%,
-      color-mix(in srgb, var(--pill-accent) 10%, transparent) 100%
-    );
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--pill-accent) 34%, transparent),
-    0 6px 20px -6px var(--pill-accent-glow);
+/* ── 1. LLM Modality: Thought generation luminescence ── */
+.modality-tab[data-modality-pill='text'][data-active='true'] .modality-tab-icon,
+.modality-tab[data-modality-pill='text']:hover .modality-tab-icon {
+  animation: modality-llm-sheen 2.2s ease-in-out infinite;
+}
+
+@keyframes modality-llm-sheen {
+  0%, 100% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 3px color-mix(in srgb, #fbbf24 60%, transparent));
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 7px color-mix(in srgb, #fbbf24 90%, transparent));
+  }
+}
+
+/* ── 2. Audio Modalities (TTS & STT): Harmonic acoustic waveform resonance ── */
+.modality-tab[data-modality-pill='tts'][data-active='true'] .modality-tab-icon,
+.modality-tab[data-modality-pill='tts']:hover .modality-tab-icon,
+.modality-tab[data-modality-pill='stt'][data-active='true'] .modality-tab-icon,
+.modality-tab[data-modality-pill='stt']:hover .modality-tab-icon {
+  animation: modality-audio-wave 1.6s ease-in-out infinite;
+}
+
+@keyframes modality-audio-wave {
+  0%, 100% {
+    transform: scale(1.04) scaleY(1);
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--pill-accent) 60%, transparent));
+  }
+  30% {
+    transform: scale(1.12) scaleY(1.15);
+  }
+  60% {
+    transform: scale(1.06) scaleY(0.92);
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--pill-accent) 85%, transparent));
+  }
+}
+
+/* ── 3. Embedding Modality: Vector dimension phase constellation ── */
+.modality-tab[data-modality-pill='embedding'][data-active='true'] .modality-tab-icon,
+.modality-tab[data-modality-pill='embedding']:hover .modality-tab-icon {
+  animation: modality-embed-phase 2.0s ease-in-out infinite;
+}
+
+@keyframes modality-embed-phase {
+  0%, 100% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 3px color-mix(in srgb, #22d3ee 60%, transparent));
+  }
+  50% {
+    transform: scale(1.15) rotate(4deg);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, #22d3ee 90%, transparent));
+  }
+}
+
+/* ── Modality Stat Card Animations in Provider Headers ── */
+[data-modality-stat] {
   transition:
-    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 260ms ease-out,
-    box-shadow 260ms ease-out;
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    box-shadow 180ms ease-out;
 }
 
-/* One-shot accent ring on select — scale pulse, opacity only. */
-.modality-tab-pulse {
-  position: absolute;
-  inset: -2px;
-  border-radius: 12px;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1.5px var(--pill-accent);
-  opacity: 0;
-  transform: scale(1);
-  animation: modality-tab-pulse 520ms cubic-bezier(0.2, 0, 0, 1) forwards;
+@media (hover: hover) and (pointer: fine) {
+  [data-modality-stat]:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  }
+  [data-modality-stat='llm']:hover {
+    border-color: color-mix(in srgb, #fbbf24 60%, transparent);
+    box-shadow: 0 4px 14px -2px color-mix(in srgb, #fbbf24 25%, transparent);
+  }
+  [data-modality-stat='embed']:hover {
+    border-color: color-mix(in srgb, #22d3ee 60%, transparent);
+    box-shadow: 0 4px 14px -2px color-mix(in srgb, #22d3ee 25%, transparent);
+  }
+  [data-modality-stat='stt']:hover,
+  [data-modality-stat='tts']:hover {
+    border-color: color-mix(in srgb, #c084fc 60%, transparent);
+    box-shadow: 0 4px 14px -2px color-mix(in srgb, #c084fc 25%, transparent);
+  }
 }
 
-@keyframes modality-tab-pulse {
-  0%   { opacity: 0.85; transform: scale(0.86); }
-  55%  { opacity: 0.45; transform: scale(1.06); }
-  100% { opacity: 0;    transform: scale(1.14); }
+[data-modality-stat]:active {
+  transform: scale(0.96) !important;
+  transition-duration: 80ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .modality-tab,
   .modality-tab-icon,
   .modality-tab-count,
-  .modality-tab-indicator {
-    transition: color 120ms linear, background-color 120ms linear, border-color 120ms linear;
+  [data-modality-stat] {
+    transition: color 100ms linear, background-color 100ms linear, border-color 100ms linear;
     transform: none !important;
+    animation: none !important;
   }
-  .modality-tab-pulse { animation: none; opacity: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

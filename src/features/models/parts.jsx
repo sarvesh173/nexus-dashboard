@@ -90,71 +90,12 @@ export const MODALITY_ACCENTS = Object.freeze(
 );
 
 /**
- * Modality filter pills with a gliding active indicator.
- *
- * The indicator is absolutely positioned and measured from the live DOM, so the
- * pill row never reflows while the indicator travels — the only geometry the
- * browser recomputes is transform/width on an out-of-flow element.
+ * Modality filter pills with hardware-calibrated active states and bespoke micro-animations.
+ * Clean, lightweight, and zero-layout-shift architecture.
  */
 export function ModalityFilterTabs({ counts, activeCategory, onSelect, className = '' }) {
-  const containerRef = useRef(null);
-  const tabRefs = useRef(new Map());
-  const pulseCounter = useRef(0);
-  const [indicator, setIndicator] = useState(null);
-  const [pulse, setPulse] = useState({ id: null, token: 0 });
-
-  const activeAccent = MODALITY_ACCENTS[activeCategory] || 'var(--md-sys-color-primary)';
-
-  const measure = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const tab = tabRefs.current.get(activeCategory);
-    if (!tab) return;
-    setIndicator({ x: tab.offsetLeft, w: tab.offsetWidth });
-  }, [activeCategory]);
-
-  useLayoutEffect(() => { measure(); }, [measure]);
-
-  useEffect(() => {
-    measure();
-    const container = containerRef.current;
-    if (!container || typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(() => measure());
-    observer.observe(container);
-    for (const tab of tabRefs.current.values()) observer.observe(tab);
-    window.addEventListener('resize', measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [measure]);
-
-  const handleSelect = (id) => {
-    pulseCounter.current += 1;
-    setPulse({ id, token: pulseCounter.current });
-    onSelect?.(id);
-  };
-
-  const registerTab = (id) => (node) => {
-    if (node) tabRefs.current.set(id, node);
-    else tabRefs.current.delete(id);
-  };
-
   return (
-    <div className={`relative flex items-center gap-1 ${className}`}>
-      {indicator && (
-        <span
-          aria-hidden="true"
-          data-modality-indicator="true"
-          className="modality-tab-indicator"
-          style={{
-            width: `${indicator.w}px`,
-            transform: `translate3d(${indicator.x}px, 0, 0)`,
-            '--pill-accent': activeAccent,
-          }}
-        />
-      )}
-
+    <div className={`relative flex items-center gap-1.5 ${className}`}>
       {MODALITY_FILTER_TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeCategory === tab.id;
@@ -166,25 +107,15 @@ export function ModalityFilterTabs({ counts, activeCategory, onSelect, className
             role="tab"
             aria-selected={isActive}
             title={tab.hint}
-            ref={registerTab(tab.id)}
-            onClick={() => handleSelect(tab.id)}
+            onClick={() => onSelect?.(tab.id)}
             data-modality-pill={tab.id}
             data-active={isActive ? 'true' : 'false'}
-            className="modality-tab relative z-10 flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 border-transparent whitespace-nowrap cursor-pointer"
+            className="modality-tab relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-transparent whitespace-nowrap cursor-pointer select-none"
             style={{ '--pill-accent': tab.accent }}
           >
             <Icon size={13} className="modality-tab-icon" />
             <span>{tab.label}</span>
-            <span className="modality-tab-count text-[10px] px-1.5 py-0.2 rounded-full">{count}</span>
-            {isActive && pulse.id === tab.id && (
-              <span
-                key={pulse.token}
-                aria-hidden="true"
-                className="modality-tab-pulse"
-                style={{ '--pill-accent': tab.accent }}
-                onAnimationEnd={() => setPulse((p) => (p.id === tab.id ? { id: null, token: 0 } : p))}
-              />
-            )}
+            <span className="modality-tab-count text-[10px] px-1.5 py-0.2 rounded-full font-mono">{count}</span>
           </button>
         );
       })}
@@ -272,17 +203,10 @@ export const InteractiveStatValue = React.memo(function InteractiveStatValue({
     <div
       ref={containerRef}
       tabIndex={boxLabel ? 0 : undefined}
+      data-modality-stat={boxLabel ? boxLabel.toLowerCase() : undefined}
       aria-label={boxLabel ? `${providerName}: ${numVal} ${label}` : undefined}
       aria-describedby={coords ? tooltipId : undefined}
-      onMouseMove={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const relY = (e.clientY - rect.top) / rect.height;
-        if (relY >= 0.20 && relY <= 0.85) {
-          if (!coords) showTooltip();
-        } else {
-          if (coords) setCoords(null);
-        }
-      }}
+      onMouseEnter={showTooltip}
       onMouseLeave={(event) => {
         if (!event.currentTarget.contains(document.activeElement)) setCoords(null);
       }}
@@ -296,9 +220,9 @@ export const InteractiveStatValue = React.memo(function InteractiveStatValue({
       }}
       className={`relative inline-flex items-center justify-center cursor-default select-none ${coords ? 'z-50' : ''} ${
         boxLabel
-          ? `min-w-0 p-1.5 rounded-xl border text-center flex-col transition-colors duration-250 ease-[cubic-bezier(0.2,0,0,1)] focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords
-              ? 'bg-[var(--md-sys-color-primary)]/15 border-[var(--md-sys-color-primary)]'
-              : 'bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)]'}`
+          ? `min-w-0 p-1.5 rounded-xl border text-center flex-col transition-all duration-200 ease-out focus-visible:outline-2 focus-visible:outline-[var(--md-sys-color-primary)] ${coords
+              ? 'bg-[var(--md-sys-color-primary)]/15 border-[var(--md-sys-color-primary)] shadow-sm'
+              : 'bg-[var(--md-sys-color-surface-container-high)] border-[var(--md-sys-color-outline-variant)] hover:border-[var(--md-sys-color-outline)]'}`
           : ''
       }`}
     >
@@ -430,7 +354,7 @@ export function InteractiveModelPill({ model, telemetry, onSelect, align = null 
   return (
     <div
       ref={pillRef}
-      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         e.stopPropagation();
