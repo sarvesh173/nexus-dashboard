@@ -781,6 +781,47 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestDynamicPathResolution(unittest.TestCase):
+    """BUG: live_sync.py and model_health.py hardcoded home paths instead of
+    calling hermes_config_path() / omniroute_env_path(), ignoring env overrides.
+    """
+
+    def test_live_sync_fetch_hermes_config_uses_path_helper(self):
+        from unittest.mock import mock_open
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {"providers": {"p1": {"enabled": True}}}
+        m_open = mock_open(read_data="dummy")
+        with patch.dict("sys.modules", {"yaml": fake_yaml}), \
+             patch("live_sync.hermes_config_path", return_value="/nonexistent/custom.yaml"), \
+             patch("builtins.open", m_open):
+            res, err = live_sync.fetch_hermes_config()
+            m_open.assert_called_once_with("/nonexistent/custom.yaml", encoding="utf-8")
+            self.assertIsNone(err)
+            self.assertIn("p1", res)
+
+    def test_live_sync_omniroute_endpoint_uses_path_helper(self):
+        from unittest.mock import mock_open
+        m_open = mock_open(read_data="OMNIROUTE_API_KEY=testkey123\n")
+        with patch("live_sync.omniroute_env_path", return_value="/nonexistent/custom.env"), \
+             patch("builtins.open", m_open):
+            ep = live_sync.omniroute_endpoint()
+            m_open.assert_called_once_with("/nonexistent/custom.env", encoding="utf-8", errors="ignore")
+            self.assertEqual(ep.get("api_key"), "testkey123")
+
+    def test_model_health_api_key_uses_path_helper(self):
+        from unittest.mock import mock_open
+        import model_health
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {"providers": {"nvidia": {"api_key": "nv-key-123"}}}
+        m_open = mock_open(read_data="dummy")
+        with patch.dict("sys.modules", {"yaml": fake_yaml}), \
+             patch("model_health.hermes_config_path", return_value="/nonexistent/custom.yaml"), \
+             patch("builtins.open", m_open):
+            key = model_health._api_key()
+            m_open.assert_called_with("/nonexistent/custom.yaml")
+            self.assertEqual(key, "nv-key-123")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

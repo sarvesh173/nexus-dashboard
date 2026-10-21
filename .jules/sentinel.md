@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Dynamic path resolution for Hermes and OmniRoute configuration
+**Learning**: `live_sync.py` and `model_health.py` defined top-level module constants or directly opened hardcoded home directory paths (`~/.hermes/config.yaml`, `~/.omniroute/.env`) rather than dynamically invoking path helpers (`hermes_config_path()`, `omniroute_env_path()`), ignoring `HERMES_CONFIG`, `HERMES_HOME`, and `OMNIROUTE_HOME` environment variable overrides.
+**Action**: Replaced top-level static constants with dynamic calls to `hermes_config_path()` and `omniroute_env_path()` inside `live_sync.fetch_hermes_config()`, `live_sync.omniroute_endpoint()`, and `model_health._api_key()`. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: live_sync.py:96 - LogicError: bypassed path helper function overrides
