@@ -32,7 +32,6 @@ except ImportError:
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'model_health.json'
 )
-CONFIG_PATH = hermes_config_path()
 
 SYNC_INTERVAL = 900          # 15 min
 PROBE_TIMEOUT = 45           # generous: NVIDIA cold starts exceed 30s often
@@ -138,7 +137,7 @@ def is_hidden(mid):
 def _api_key():
     try:
         import yaml
-        with open(CONFIG_PATH) as fh:
+        with open(hermes_config_path()) as fh:
             cfg = yaml.safe_load(fh) or {}
         n = (cfg.get('providers') or {}).get('nvidia') or {}
         key = n.get('api_key')
