@@ -413,6 +413,30 @@ class TestServerOptionalImportsGuard(unittest.TestCase):
             self.assertIn("nvidia/model-a", model_ids)
 
 
+class TestHermesGatewayListModels(unittest.TestCase):
+    """Test hermes_gateway.list_models handling of diverse /models payload shapes."""
+
+    def test_top_level_list_handling(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value=[{'id': 'test/model-a'}, {'id': 'test/model-b'}]):
+            res = hermes_gateway.list_models(force=True)
+            self.assertEqual(res, ['test/model-a', 'test/model-b'])
+
+    def test_dict_data_list_handling(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value={'data': [{'id': 'vendor/m1'}, {'id': 'vendor/m2'}]}):
+            res = hermes_gateway.list_models(force=True)
+            self.assertEqual(res, ['vendor/m1', 'vendor/m2'])
+
+    def test_non_dict_items_and_non_dict_payload_safely_handled(self):
+        import hermes_gateway
+        for payload in ("not json", 123, None, [{"id": "ok/m"}, "invalid", 42]):
+            with self.subTest(payload=payload):
+                with patch.object(hermes_gateway, '_get', return_value=payload):
+                    res = hermes_gateway.list_models(force=True)
+                    self.assertIsInstance(res, list)
+
+
 class TestModelRowsNormalisation(unittest.TestCase):
     """#16/#21: /models payloads are normalised by the shared model_rows()
     guard before any caller indexes them.
