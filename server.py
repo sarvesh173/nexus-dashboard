@@ -504,7 +504,11 @@ def get_hermes_status():
     state_error = None
     try:
         with open(hermes_gateway_state_path(), 'r', encoding='utf-8') as fh:
-            state = json.load(fh) or {}
+            loaded_state = json.load(fh)
+            if isinstance(loaded_state, dict):
+                state = loaded_state
+            else:
+                state_error = 'gateway_state.json content is not a dict'
     except FileNotFoundError:
         state_error = 'gateway_state.json not found - gateway has never started'
     except Exception as exc:  # noqa: BLE001

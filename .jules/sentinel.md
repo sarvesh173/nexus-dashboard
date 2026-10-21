@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-25 - Handle non-dict JSON files in visibility store and gateway status readers
+**Learning**: `visibility._read()` and `server.get_hermes_status()` called `.get()` directly on `json.load()` results without validating that the returned JSON object was a dictionary. If `hidden_store.json` or `gateway_state.json` contained non-dict JSON (e.g. list `[1, 2, 3]`, boolean, number, string), an unhandled `AttributeError: 'list' object has no attribute 'get'` was raised.
+**Action**: Added `isinstance(data, dict)` checks in `visibility._read()` and `server.get_hermes_status()`, safely falling back to default empty dicts and setting an informative error message. Added regression unit tests in `TestNonDictJSONHandledGracefully`.
+**Fingerprint**: visibility.py:38 - AttributeError: 'list' object has no attribute 'get'
