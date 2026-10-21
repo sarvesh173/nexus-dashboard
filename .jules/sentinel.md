@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Normalize ISO 8601 timestamps before time.strptime parsing
+**Learning**: In `server.py`, `build_console_log_entries` passed ISO 8601 timestamp strings containing `'T'` (e.g. `2026-10-21T12:00:00Z`) directly to `time.strptime(..., '%Y-%m-%d %H:%M:%S')`, raising `ValueError`. `sort_key` caught the exception and returned fallback `(1, 0)` for all entries, destroying chronological sorting in console logs.
+**Action**: Normalized `'T'` to `' '` in `e['timestamp'][:19]` prior to `time.strptime`, and dynamically resolved path helpers in `live_sync.py` and `model_health.py`. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time.strptime ISO timestamp T separator

@@ -631,7 +631,8 @@ def build_console_log_entries(limit='500', level='all'):
     # the last row rather than the first.
     def sort_key(e):
         try:
-            return (0, -time.mktime(time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')))
+            ts = str(e.get('timestamp') or '')[:19].replace('T', ' ')
+            return (0, -time.mktime(time.strptime(ts, '%Y-%m-%d %H:%M:%S')))
         except Exception:
             return (1, 0)
 
@@ -2210,6 +2211,11 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             limit = qs.get('limit', [str(omniroute_logs.CALLS_DEFAULT_LIMIT)])[0] \
                 if omniroute_logs else 40
             offset = qs.get('offset', ['0'])[0] if omniroute_logs else 0
+            filters = {}
+            for key in ('model', 'provider', 'account', 'status', 'agent', 'search'):
+                val = (qs.get(key, [''])[0] or '').strip()
+                if val:
+                    filters[key] = val
             try:
                 if omniroute_logs is None:
                     # The reader is missing. Say so with a status rather than
@@ -2224,7 +2230,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                     }, code=503)
                 # The reader is total: an unreadable store comes back as data with
                 # source.ok false, so this calls straight through.
-                return self.send_json(omniroute_logs.read_call_logs(limit, offset))
+                return self.send_json(omniroute_logs.read_call_logs(limit, offset, filters=filters if filters else None))
             except Exception as exc:  # noqa: BLE001
                 print(f'[omniroute] call-logs failed: {type(exc).__name__}: {exc}', flush=True)
                 return self.send_json({

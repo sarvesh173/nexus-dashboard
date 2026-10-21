@@ -781,6 +781,49 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogsIsoTimestampSorting(unittest.TestCase):
+    """Test that ISO 8601 timestamps containing 'T' are parsed and sorted correctly."""
+
+    def test_build_console_log_entries_sorts_iso_timestamps(self):
+        import server
+        with patch.object(server, 'get_hermes_logs', return_value={'logs': [{'time': '2026-10-21T10:00:00Z', 'level': 'info', 'logger': 'test', 'message': 'first'}]}), \
+             patch.object(server, 'omniroute_logs', MagicMock(read_call_logs=lambda limit, offset: {'calls': [{'at': '2026-10-21T12:00:00.123Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'm1', 'provider': 'p1'}]})):
+            entries = server.build_console_log_entries(limit=10, level='all')
+            self.assertEqual(len(entries), 2)
+            # Newest first: 12:00 should come before 10:00
+            self.assertIn('12:00', entries[0]['timestamp'])
+            self.assertIn('10:00', entries[1]['timestamp'])
+
+
+class TestDynamicPathHelperResolution(unittest.TestCase):
+    """Test that live_sync and model_health resolve path helpers dynamically."""
+
+    def test_live_sync_uses_hermes_config_path_env_override(self):
+        with patch.dict("os.environ", {"HERMES_CONFIG": "/custom/config.yaml"}):
+            self.assertEqual(live_sync.hermes_config_path(), "/custom/config.yaml")
+
+    def test_model_health_api_key_reads_dynamic_hermes_config_path(self):
+        import model_health
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {'providers': {'nvidia': {'api_key': 'nv_key_123'}}}
+
+        with patch("model_health.hermes_config_path", return_value="/tmp/dynamic_hermes.yaml"), \
+             patch("builtins.open", unittest.mock.mock_open(read_data="dummy")), \
+             patch.dict("sys.modules", {"yaml": fake_yaml}):
+            self.assertEqual(model_health._api_key(), 'nv_key_123')
+
+
+class TestOmnirouteCallLogsFilterForwarding(unittest.TestCase):
+    """Test that /api/omniroute/call-logs forwards filter query parameters."""
+
+    def test_filters_are_extracted_and_passed(self):
+        import omniroute_logs
+        with patch.object(omniroute_logs, 'read_call_logs', return_value={'ok': True, 'calls': [], 'total': 0}) as mock_read:
+            res = omniroute_logs.read_call_logs_page({'model': ['gpt-4'], 'provider': ['openai']})
+            self.assertEqual(res, [])
+            mock_read.assert_called_once_with(50, 0, filters={'model': 'gpt-4', 'provider': 'openai'})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

@@ -138,7 +138,7 @@ def is_hidden(mid):
 def _api_key():
     try:
         import yaml
-        with open(CONFIG_PATH) as fh:
+        with open(hermes_config_path()) as fh:
             cfg = yaml.safe_load(fh) or {}
         n = (cfg.get('providers') or {}).get('nvidia') or {}
         key = n.get('api_key')
