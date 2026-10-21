@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Safely parse array payloads in hermes_gateway list_models and guard route test discovery
+**Learning**: `hermes_gateway.list_models()` assumed `/models` responses were dictionaries with a `'data'` key and called `data.get('data', [])`, raising `AttributeError` on top-level JSON list responses. Additionally, `tests/audit_server_routes.py` ran HTTP server setup and route calls at top-level with `sys.exit()`, breaking `python3 -m unittest discover`.
+**Action**: Used `model_rows(data)` from `models_payload.py` in `hermes_gateway.py` to safely extract model IDs from both list and dict payloads, wrapped `tests/audit_server_routes.py` execution in `main()` behind `if __name__ == '__main__':`, and added unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:72 - AttributeError: 'list' object has no attribute 'get'

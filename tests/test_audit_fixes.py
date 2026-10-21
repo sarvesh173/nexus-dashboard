@@ -781,6 +781,28 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestHermesGatewayListModelsArrayPayload(unittest.TestCase):
+    """hermes_gateway.list_models() must parse array responses from /models
+    without raising AttributeError or storing an error in cache.
+    """
+
+    def test_top_level_list_response(self):
+        import hermes_gateway
+        payload = [{'id': 'provider/model-a'}, {'id': 'provider/model-b'}, 'junk']
+        with patch('hermes_gateway._get', return_value=payload):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ['provider/model-a', 'provider/model-b'])
+            self.assertIsNone(hermes_gateway._cache.get('error'))
+
+    def test_standard_dict_response(self):
+        import hermes_gateway
+        payload = {'data': [{'id': 'provider/model-1'}]}
+        with patch('hermes_gateway._get', return_value=payload):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ['provider/model-1'])
+            self.assertIsNone(hermes_gateway._cache.get('error'))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
