@@ -781,6 +781,44 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestNonDictJSONHandledGracefully(unittest.TestCase):
+    """Ensure non-dict JSON in state/store files does not raise AttributeError."""
+
+    def test_visibility_read_handles_non_dict_json(self):
+        import visibility
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "hidden_store.json")
+        visibility.STORE = path
+        visibility._cache['at'] = 0.0
+
+        for content in ("[1, 2, 3]", '"string"', "42", "true", "null"):
+            with self.subTest(content=content):
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(content)
+                visibility._cache['at'] = 0.0
+                res = visibility._read()
+                self.assertIsInstance(res, dict)
+                self.assertIn("providers", res)
+                self.assertIn("models", res)
+
+    def test_server_hermes_status_handles_non_dict_json(self):
+        import server
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "gateway_state.json")
+        server._hermes_state_cache['payload'] = None
+
+        with patch("server.hermes_gateway_state_path", return_value=path):
+            for content in ("[1, 2, 3]", '"string"', "42", "true"):
+                with self.subTest(content=content):
+                    with open(path, "w", encoding="utf-8") as fh:
+                        fh.write(content)
+                    server._hermes_state_cache['payload'] = None
+                    res = server.get_hermes_status()
+                    self.assertIsInstance(res, dict)
+                    self.assertFalse(res['available'])
+                    self.assertIn("gateway_state.json content is not a dict", res['state_error'])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
