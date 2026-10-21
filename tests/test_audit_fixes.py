@@ -762,6 +762,36 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         status, _ = self._sync_one('UNREACHABLE', listed=True)
         self.assertEqual(status, 'SLOW')
 
+class TestHermesGatewayListModels(unittest.TestCase):
+    """Test hermes_gateway.list_models with various payload shapes.
+
+    `list_models` used to assume `data` was a dict and called `data.get('data', [])`.
+    A top-level JSON list or non-dict response raised AttributeError.
+    """
+
+    def test_list_payload_does_not_raise(self):
+        import hermes_gateway
+        hermes_gateway._cache['models'] = []
+        with patch.object(hermes_gateway, '_get', return_value=[{'id': 'b-model'}, {'id': 'a-model'}]):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ['a-model', 'b-model'])
+
+    def test_standard_dict_payload_works(self):
+        import hermes_gateway
+        hermes_gateway._cache['models'] = []
+        with patch.object(hermes_gateway, '_get', return_value={'data': [{'id': 'm1'}, {'id': 'm2'}]}):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ['m1', 'm2'])
+
+    def test_non_dict_non_list_payload_returns_empty(self):
+        import hermes_gateway
+        hermes_gateway._cache['models'] = []
+        for bad in ("string response", 123, None):
+            with patch.object(hermes_gateway, '_get', return_value=bad):
+                models = hermes_gateway.list_models(force=True)
+                self.assertEqual(models, [])
+
+
     def test_empty_catalog_fails_soft(self):
         # Catalog fetch failed (empty set): keep the probe's own verdict,
         # never reach for RETIRED on missing evidence.
