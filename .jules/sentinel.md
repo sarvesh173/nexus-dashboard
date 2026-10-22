@@ -27,5 +27,15 @@
 
 ## 2026-10-20 - Safely patch optional requests module in unit test suite
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
-**Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
+**Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-22 - Remove duplicate route handler for /api/stats
+**Learning**: In `server.py`, `do_GET` contained an unguarded `if self.path == '/api/stats':` route handler near the top of `do_GET` that shadowed a lower `elif self.path == '/api/stats':` handler containing `try...except` protection against `psutil` procfs read races.
+**Action**: Removed the upper duplicate route check so `/api/stats` is handled safely by the lower guarded block. Added regression test in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1941 - LogicError: shadowed duplicate route handler
+
+## 2026-10-22 - Filter text parts in agent_stream prompt query
+**Learning**: In `agent_stream.py`, `_read_prompts` queried user message parts without filtering on `json_extract(p.data, '$.type') = 'text'`. Multi-part user messages returned empty string prompts for non-text parts and prematurely truncated subsequent prompts under the SQL `LIMIT`.
+**Action**: Added `AND json_extract(p.data, '$.type') = 'text'` to the SQL query. Added regression test in `tests/test_audit_fixes.py`.
+**Fingerprint**: agent_stream.py:239 - LogicError: missing part type filter in prompt query

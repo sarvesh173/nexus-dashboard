@@ -781,6 +781,84 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestStatsRouteExceptionGuarded(unittest.TestCase):
+    """BUG: /api/stats had a duplicate un-guarded route handler at line 1941 that shadowed
+    the guarded try...except handler at line 2334. An exception in get_telemetry()
+    crashed do_GET instead of returning a 500 JSON error response.
+    """
+
+    def test_stats_route_catches_get_telemetry_exception(self):
+        import server
+        handler = MagicMock(spec=server.TelemetryHandler)
+        handler.path = '/api/stats'
+        sent_json = []
+
+        def fake_send_json(data, code=200):
+            sent_json.append((data, code))
+
+        handler.send_json = fake_send_json
+
+        with patch('server.get_telemetry', side_effect=RuntimeError('procfs read race')):
+            server.TelemetryHandler.do_GET(handler)
+
+        self.assertEqual(len(sent_json), 1)
+        payload, status_code = sent_json[0]
+        self.assertEqual(status_code, 500)
+        self.assertFalse(payload.get('ok'))
+        self.assertIn('procfs read race', payload.get('error', ''))
+
+
+class TestAgentStreamPromptsFilterTextParts(unittest.TestCase):
+    """BUG: agent_stream._read_prompts joined message and part without filtering on
+    json_extract(p.data, '$.type') = 'text'. Non-text parts created blank prompt entries
+    and prematurely truncated real user prompt history.
+    """
+
+    def test_read_prompts_filters_non_text_parts(self):
+        import sqlite3
+        import agent_stream
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            "CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, data TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE part (id TEXT PRIMARY KEY, message_id TEXT, session_id TEXT, time_created INTEGER, data TEXT)"
+        )
+
+        session_id = 'sess-1'
+        # Message 1 has a step-start part and a text part
+        conn.execute(
+            "INSERT INTO message VALUES ('m1', ?, 100, ?)",
+            (session_id, json.dumps({'role': 'user'})),
+        )
+        conn.execute(
+            "INSERT INTO part VALUES ('p1-1', 'm1', ?, 100, ?)",
+            (session_id, json.dumps({'type': 'step-start'})),
+        )
+        conn.execute(
+            "INSERT INTO part VALUES ('p1-2', 'm1', ?, 101, ?)",
+            (session_id, json.dumps({'type': 'text', 'text': 'First prompt text'})),
+        )
+
+        # Message 2 has only a text part
+        conn.execute(
+            "INSERT INTO message VALUES ('m2', ?, 200, ?)",
+            (session_id, json.dumps({'role': 'user'})),
+        )
+        conn.execute(
+            "INSERT INTO part VALUES ('p2-1', 'm2', ?, 200, ?)",
+            (session_id, json.dumps({'type': 'text', 'text': 'Second prompt text'})),
+        )
+
+        prompts = agent_stream._read_prompts(conn, session_id)
+        conn.close()
+
+        self.assertEqual(len(prompts), 2)
+        self.assertEqual(prompts[0]['text'], 'First prompt text')
+        self.assertEqual(prompts[1]['text'], 'Second prompt text')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

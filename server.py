@@ -1938,9 +1938,6 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 'providers': sorted(visibility.hidden_providers()),
                 'models': sorted(visibility.hidden_models()),
             })
-        if self.path == '/api/stats':
-            data = get_telemetry()
-            return self.send_json(data)
         elif self.path == '/api/cost-overview':
             return self.send_json(get_cost_overview())
         elif self.path == '/api/providers':
