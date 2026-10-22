@@ -781,6 +781,31 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestHermesGatewayListModelsShapeGuard(unittest.TestCase):
+    """hermes_gateway.list_models must handle top-level list, non-dict elements,
+    and missing/null fields without crashing or raising uncaught exceptions."""
+
+    def _run(self, payload):
+        import hermes_gateway
+        hermes_gateway._cache = {'models': [], 'at': 0, 'error': None}
+        with patch.object(hermes_gateway, '_get', return_value=payload):
+            return hermes_gateway.list_models(force=True)
+
+    def test_top_level_list_payload(self):
+        models = self._run([{"id": "vendor/model-a"}, {"id": "vendor/model-b"}])
+        self.assertEqual(models, ["vendor/model-a", "vendor/model-b"])
+
+    def test_mixed_junk_items_in_list(self):
+        models = self._run({"data": [None, "junk", 42, {"id": "vendor/model-c"}]})
+        self.assertEqual(models, ["vendor/model-c"])
+
+    def test_non_dict_json_payloads_do_not_raise(self):
+        for payload in (None, "hi", 123, True):
+            with self.subTest(payload=payload):
+                models = self._run(payload)
+                self.assertEqual(models, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
