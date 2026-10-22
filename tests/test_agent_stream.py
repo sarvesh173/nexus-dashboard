@@ -238,5 +238,28 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestReadPrompts(unittest.TestCase):
+    """_read_prompts must only extract non-empty text parts and not duplicate prompt entries."""
+
+    def test_multi_part_user_message_filters_text(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute('CREATE TABLE message (id TEXT, session_id TEXT, time_created INT, data TEXT)')
+        conn.execute('CREATE TABLE part (id TEXT, message_id TEXT, session_id TEXT, time_created INT, data TEXT)')
+
+        # User message with step-start and text parts
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)', ('m1', 's1', 1000, json.dumps({'role': 'user'})))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p1', 'm1', 's1', 1000, json.dumps({'type': 'step-start'})))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p2', 'm1', 's1', 1001, json.dumps({'type': 'text', 'text': 'First prompt'})))
+
+        # Second user message
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)', ('m2', 's1', 2000, json.dumps({'role': 'user'})))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p3', 'm2', 's1', 2000, json.dumps({'type': 'text', 'text': 'Second prompt'})))
+
+        prompts = a._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 2)
+        self.assertEqual(prompts[0]['text'], 'First prompt')
+        self.assertEqual(prompts[1]['text'], 'Second prompt')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
