@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Non-dict type guards for store/config readers and gateway endpoints
+**Learning**: Modules reading JSON/YAML stores or model catalog payloads (`visibility.py`, `hermes_gateway.py`, `server.py`, `run_sync.py`) assumed dictionary structures when calling `.get()`. Non-dict payloads (arrays, numbers, strings) or network failures caused unhandled `AttributeError` or process crashes.
+**Action**: Added explicit `isinstance(..., dict)` guards before calling `.get()`, normalized model catalog payloads with `models_payload.model_rows()`, and wrapped live spec network/JSON calls in `try...except Exception`. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: visibility.py:36 - AttributeError: 'list' object has no attribute 'get'

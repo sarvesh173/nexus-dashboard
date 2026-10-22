@@ -510,6 +510,9 @@ def get_hermes_status():
     except Exception as exc:  # noqa: BLE001
         state_error = f'{type(exc).__name__}: {exc}'
 
+    if not isinstance(state, dict):
+        state = {}
+
     pid = state.get('pid')
     alive = False
     uptime_sec = None
@@ -922,7 +925,12 @@ def get_hermes_config_providers():
     except Exception as e:
         cfg = {}
 
+    if not isinstance(cfg, dict):
+        cfg = {}
+
     providers_raw = cfg.get('providers', {})
+    if not isinstance(providers_raw, dict):
+        providers_raw = {}
     result_providers = []
 
     # Process NVIDIA provider specifically
@@ -1419,6 +1427,9 @@ def get_all_config_providers():
     except Exception:
         cfg = {}
 
+    if not isinstance(cfg, dict):
+        cfg = {}
+
     providers_raw = cfg.get('providers', {}) or {}
     out = []
     for pid, p in (providers_raw or {}).items():
@@ -1614,7 +1625,10 @@ def config_provider_map():
         if yaml is not None:
             with open(hermes_config_path(), 'r') as f:
                 cfg = yaml.safe_load(f) or {}
-            pm = cfg.get('providers', {}) or {}
+            if isinstance(cfg, dict):
+                pm = cfg.get('providers', {}) or {}
+            else:
+                pm = {}
         else:
             pm = {}
     except Exception:
@@ -1955,7 +1969,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 try:
                     with open(active_file, 'r', encoding='utf-8') as af:
                         active_data = json.load(af)
-                        active_model = active_data.get('model', '')
+                        if isinstance(active_data, dict):
+                            active_model = active_data.get('model', '')
                 except Exception:
                     pass
             last_sync = meta.get('synced_at', 0)

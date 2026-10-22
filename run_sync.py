@@ -34,13 +34,21 @@ def _live_specs(base, key):
         import requests
     except ImportError:
         return []
-    r = requests.get(base.rstrip('/') + '/models', timeout=20,
-                     headers={'Authorization': 'Bearer {key}'.format(key=key)})
-    if r.status_code != 200:
-        print('[sync] models endpoint returned HTTP {}'.format(r.status_code))
+    if requests is None:
         return []
+    try:
+        r = requests.get(base.rstrip('/') + '/models', timeout=20,
+                         headers={'Authorization': 'Bearer {key}'.format(key=key)})
+        if r.status_code != 200:
+            print('[sync] models endpoint returned HTTP {}'.format(r.status_code))
+            return []
+        data = r.json()
+    except Exception as exc:
+        print('[sync] failed to fetch live specs: {}'.format(exc))
+        return []
+
     specs = []
-    for mid, m in model_rows(r.json()):
+    for mid, m in model_rows(data):
         low = mid.lower()
         cat = 'text'
         if any(k in low for k in ('embed', 'retriever')):
