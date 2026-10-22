@@ -781,6 +781,37 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestBuildConsoleLogEntriesIsoTimestampParsing(unittest.TestCase):
+    """Test that build_console_log_entries in server.py handles ISO 8601 timestamps with 'T' correctly."""
+
+    def test_iso_8601_timestamps_are_parsed_and_sorted(self):
+        import server
+        from unittest.mock import patch, MagicMock
+
+        mock_hermes_logs = {
+            'logs': [
+                {'time': '2026-10-06 23:10:00', 'level': 'INFO', 'logger': 'gateway', 'message': 'hermes entry'}
+            ]
+        }
+        mock_call_logs = {
+            'calls': [
+                {'at': '2026-10-06T23:15:00.123Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat/completions', 'model': 'gpt-4o', 'provider': 'openai'}
+            ]
+        }
+
+        mock_omniroute = MagicMock()
+        mock_omniroute.read_call_logs.return_value = mock_call_logs
+
+        with patch('server.get_hermes_logs', return_value=mock_hermes_logs), \
+             patch('server.omniroute_logs', mock_omniroute):
+            entries = server.build_console_log_entries(limit=10, level='all')
+
+        self.assertEqual(len(entries), 2)
+        # Newest first: 23:15 call log entry should be first, 23:10 hermes log entry second
+        self.assertEqual(entries[0]['timestamp'], '2026-10-06T23:15:00.123Z')
+        self.assertEqual(entries[1]['timestamp'], '2026-10-06 23:10:00')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
