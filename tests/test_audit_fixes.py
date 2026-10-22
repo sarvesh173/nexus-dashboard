@@ -781,6 +781,95 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityNonDictStore(unittest.TestCase):
+    """BUG: visibility._read() raised AttributeError when hidden_store.json was non-dict JSON."""
+
+    def test_non_dict_json_store_handled_softly(self):
+        import visibility
+        d = tempfile.mkdtemp()
+        store_path = os.path.join(d, "hidden_store.json")
+
+        for payload in ('["p1", "p2"]', '123', '"string"', 'null'):
+            with self.subTest(payload=payload):
+                with open(store_path, 'w', encoding='utf-8') as fh:
+                    fh.write(payload)
+                with patch.object(visibility, 'STORE', store_path):
+                    visibility._cache['at'] = 0.0
+                    visibility._cache['data'] = {}
+                    res = visibility._read()
+                    self.assertIsInstance(res, dict)
+                    self.assertEqual(res, {'providers': [], 'models': []})
+
+
+class TestHermesGatewayTopLevelList(unittest.TestCase):
+    """BUG: hermes_gateway.list_models() raised AttributeError on top-level list or non-dict payloads."""
+
+    def test_top_level_list_and_non_dict_payload_in_hermes_gateway(self):
+        import hermes_gateway
+        for payload in ([{"id": "vendor/model-a"}], "junk", 123, None):
+            with self.subTest(payload=payload):
+                hermes_gateway._cache['models'] = []
+                hermes_gateway._cache['at'] = 0
+                with patch.object(hermes_gateway, '_get', return_value=payload):
+                    ids = hermes_gateway.list_models(force=True)
+                    self.assertIsInstance(ids, list)
+                    if isinstance(payload, list) and payload:
+                        self.assertIn("vendor/model-a", ids)
+
+
+class TestServerNonDictStateAndConfig(unittest.TestCase):
+    """BUG: server functions raised AttributeError when state/config files contained non-dict JSON/YAML."""
+
+    def test_get_hermes_status_with_non_dict_state(self):
+        from unittest.mock import mock_open
+        import server
+
+        with patch.object(server, '_hermes_state_cache', {'payload': None, 'at': 0}), \
+             patch('server.hermes_gateway_state_path', return_value='/tmp/fake_state.json'), \
+             patch('builtins.open', mock_open(read_data='[1, 2, 3]')):
+            status = server.get_hermes_status()
+            self.assertIsInstance(status, dict)
+            self.assertFalse(status['alive'])
+
+    def test_get_hermes_config_providers_with_non_dict_yaml(self):
+        from unittest.mock import mock_open
+        import server
+
+        class FakeListYaml:
+            @staticmethod
+            def safe_load(f):
+                return ["item1", "item2"]
+
+        server._cached_providers = None
+        with patch.object(server, 'yaml', FakeListYaml), \
+             patch('server.hermes_config_path', return_value='/tmp/fake.yaml'), \
+             patch('builtins.open', mock_open(read_data='dummy')):
+            providers = server.get_hermes_config_providers()
+            self.assertIsInstance(providers, list)
+            self.assertEqual(providers, [])
+
+
+class TestRunSyncLiveSpecsExceptionHandling(unittest.TestCase):
+    """BUG: run_sync._live_specs() crashed when requests raised network/JSON errors."""
+
+    def test_network_and_json_errors_handled_gracefully(self):
+        import run_sync
+        fake_req = MagicMock()
+        fake_req.get.side_effect = Exception("Connection refused")
+        with patch.dict("sys.modules", {"requests": fake_req}):
+            specs = run_sync._live_specs("https://x/v1", "key")
+            self.assertEqual(specs, [])
+
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.side_effect = ValueError("Invalid JSON")
+        fake_req.get.side_effect = None
+        fake_req.get.return_value = resp
+        with patch.dict("sys.modules", {"requests": fake_req}):
+            specs = run_sync._live_specs("https://x/v1", "key")
+            self.assertEqual(specs, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
