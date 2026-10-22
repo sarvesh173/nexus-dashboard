@@ -124,6 +124,43 @@ class TestOmniRouteVendor(unittest.TestCase):
         self.assertIsNone(live_sync.omniroute_vendor(None))
 
 
+import os
+import tempfile
+from unittest.mock import patch
+
+
+class TestLiveSyncPathHelpers(unittest.TestCase):
+    def test_fetch_hermes_config_respects_env_override(self):
+        """fetch_hermes_config must respect HERMES_CONFIG / HERMES_HOME env overrides."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_cfg = os.path.join(tmpdir, "custom_config.yaml")
+            with open(custom_cfg, "w", encoding="utf-8") as fh:
+                fh.write("providers:\n  custom_prov:\n    enabled: true\n    models:\n      - custom-model-1\n")
+
+            with patch.dict(os.environ, {"HERMES_CONFIG": custom_cfg}):
+                fake_yaml = type("FakeYaml", (), {"safe_load": lambda self, stream: {
+                    "providers": {"custom_prov": {"enabled": True, "models": ["custom-model-1"]}}
+                }})()
+                with patch.dict("sys.modules", {"yaml": fake_yaml}):
+                    provs, err = live_sync.fetch_hermes_config()
+                    self.assertIsNone(err)
+                    self.assertIn("custom_prov", provs)
+                    self.assertEqual(provs["custom_prov"]["models"][0]["id"], "custom-model-1")
+
+    def test_omniroute_endpoint_respects_env_override(self):
+        """omniroute_endpoint must respect OMNIROUTE_HOME env overrides."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            omni_home = os.path.join(tmpdir, ".omniroute")
+            os.makedirs(omni_home, exist_ok=True)
+            custom_env = os.path.join(omni_home, ".env")
+            with open(custom_env, "w", encoding="utf-8") as fh:
+                fh.write('OMNIROUTE_API_KEY="test-secret-key-123"\n')
+
+            with patch.dict(os.environ, {"OMNIROUTE_HOME": omni_home}):
+                ep = live_sync.omniroute_endpoint()
+                self.assertEqual(ep.get("api_key"), "test-secret-key-123")
+
+
 class TestWriteCacheMaths(unittest.TestCase):
     def test_unique_models_is_never_above_entry_count(self):
         """unique_models <= models, else the count lies about the catalogue."""
