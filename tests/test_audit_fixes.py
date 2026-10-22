@@ -781,6 +781,19 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogIsoTimestampSorting(unittest.TestCase):
+    """Console log entries with ISO 8601 'T' timestamps must sort properly without throwing ValueError."""
+
+    def test_iso_timestamp_sorting(self):
+        import server
+        mock_logs = {'logs': [{'time': '2026-10-07T12:00:00Z', 'level': 'INFO', 'logger': 'test', 'message': 'Newer ISO'}]}
+        with patch.object(server, 'get_hermes_logs', return_value=mock_logs), \
+             patch.object(server, 'omniroute_logs', None):
+            entries = server.build_console_log_entries(limit=10, level='all')
+            self.assertEqual(len(entries), 1)
+            self.assertEqual(entries[0]['message'], 'Newer ISO')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

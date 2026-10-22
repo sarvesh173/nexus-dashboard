@@ -631,7 +631,8 @@ def build_console_log_entries(limit='500', level='all'):
     # the last row rather than the first.
     def sort_key(e):
         try:
-            return (0, -time.mktime(time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')))
+            ts = e['timestamp'][:19].replace('T', ' ')
+            return (0, -time.mktime(time.strptime(ts, '%Y-%m-%d %H:%M:%S')))
         except Exception:
             return (1, 0)
 
@@ -1913,7 +1914,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             # fallback can upgrade the status, and only when encoding itself fails.
             return self.send_json(payload, code)
 
-        if self.path == '/api/visibility/reset':
+        elif self.path == '/api/visibility/reset':
             try:
                 before = (len(visibility.hidden_providers()),
                           len(visibility.hidden_models()))

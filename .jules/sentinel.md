@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Filter text parts in agent stream prompt queries and handle ISO timestamps in console sorting
+**Learning**: In `agent_stream.py`, `_read_prompts` performed an unfiltered `LEFT JOIN` on `part`, generating duplicate empty prompt entries for non-text parts and consuming SQL `LIMIT` slots. In `server.py`, `build_console_log_entries` attempted `time.strptime` on ISO 8601 timestamps containing `'T'` without replacing it with a space, throwing `ValueError` and putting ISO logs at the bottom of the array.
+**Action**: Added `AND json_extract(p.data, '$.type') = 'text'` to `_read_prompts` SQL query and stripped whitespace. Replaced `'T'` with `' '` in `server.py` console log timestamp sorting key. Added regression unit tests.
+**Fingerprint**: agent_stream.py:237 - LogicError: unfiltered message part join in prompt extraction
