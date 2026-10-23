@@ -781,6 +781,55 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestNonDictJsonHandling(unittest.TestCase):
+    def test_hermes_gateway_list_models_handles_list_payload(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value=[{'id': 'vendor/model-a'}, 'junk']):
+            hermes_gateway._cache['models'] = []
+            ids = hermes_gateway.list_models(force=True)
+            self.assertEqual(ids, ['vendor/model-a'])
+
+    def test_visibility_read_handles_non_dict_json(self):
+        import visibility
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.json') as tf:
+            tf.write('[1, 2, 3]')
+            tf.flush()
+            tf_path = tf.name
+
+        try:
+            with patch.object(visibility, 'STORE', tf_path):
+                visibility._cache['at'] = 0.0
+                visibility._cache['data'] = {}
+                providers = visibility.hidden_providers()
+                models = visibility.hidden_models()
+                self.assertEqual(providers, set())
+                self.assertEqual(models, set())
+        finally:
+            if os.path.exists(tf_path):
+                os.unlink(tf_path)
+
+    def test_server_get_hermes_status_handles_non_dict_state(self):
+        import server
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.json') as tf:
+            tf.write('["running"]')
+            tf.flush()
+            tf_path = tf.name
+
+        try:
+            with patch('server.hermes_gateway_state_path', return_value=tf_path):
+                server._hermes_state_cache['at'] = 0.0
+                server._hermes_state_cache['data'] = None
+                res = server.get_hermes_status()
+                self.assertIsInstance(res, dict)
+                self.assertIn('state', res)
+                self.assertIn('pid', res)
+        finally:
+            if os.path.exists(tf_path):
+                os.unlink(tf_path)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
