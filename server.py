@@ -510,6 +510,9 @@ def get_hermes_status():
     except Exception as exc:  # noqa: BLE001
         state_error = f'{type(exc).__name__}: {exc}'
 
+    if not isinstance(state, dict):
+        state = {}
+
     pid = state.get('pid')
     alive = False
     uptime_sec = None

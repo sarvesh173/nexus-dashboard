@@ -29,3 +29,10 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-23 - Guard non-dict JSON payloads across gateway, visibility, and server status
+**Learning**: `hermes_gateway.py` (`list_models`), `visibility.py` (`_read`), and `server.py` (`get_hermes_status`) assumed JSON root structures were dicts without validating item or root types, raising unhandled `AttributeError` on list/scalar responses or non-dict state/store values.
+**Action**: Used `models_payload.model_rows()` in `hermes_gateway.py` and added explicit `isinstance(data, dict)` / `isinstance(state, dict)` checks in `visibility.py` and `server.py`. Added unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:72 - AttributeError: 'list' object has no attribute 'get'
+**Fingerprint**: visibility.py:38 - AttributeError: 'list' object has no attribute 'get'
+**Fingerprint**: server.py:512 - AttributeError: 'list' object has no attribute 'get'
