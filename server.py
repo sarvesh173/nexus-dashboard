@@ -1707,9 +1707,10 @@ def _openrouter_lookup(model_id):
         for mid, item in model_rows(req.json()):
             i_id = mid.lower()
             if i_id == model_id.lower() or i_id.endswith('/' + clean_id):
+                top_prov = item.get('top_provider')
+                max_tokens = top_prov.get('max_completion_tokens') if isinstance(top_prov, dict) else None
                 return (item.get('context_length'),
-                        (item.get('top_provider') or {}).get(
-                            'max_completion_tokens'),
+                        max_tokens,
                         'openrouter-verified')
     except Exception:
         pass
