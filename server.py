@@ -1746,6 +1746,15 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             # only print a socketserver traceback for a normal event.
             pass
 
+    def _parse_body(self):
+        try:
+            n = int(self.headers.get('Content-Length') or 0)
+            raw = self.rfile.read(n) if n > 0 else b'{}'
+            data = json.loads(raw or b'{}')
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
     def do_POST(self):
         """Local visibility control. Upstream OmniRoute has no model-level
         enable/disable (PUT /api/models is rename-only and persists nothing),
@@ -1754,11 +1763,13 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         if self.path == '/api/model/test':
             # Live Model Test Runner (9Router / OmniRouter pattern)
             try:
-                n = int(self.headers.get('Content-Length') or 0)
-                body = json.loads(self.rfile.read(n) or b'{}')
-                model_id = body.get('model', '').strip()
-                provider_id = body.get('provider', '').strip()
-                kind = body.get('kind', 'text').strip()
+                body = self._parse_body()
+                model_id = body.get('model')
+                model_id = model_id.strip() if isinstance(model_id, str) else str(model_id).strip() if model_id is not None else ''
+                provider_id = body.get('provider')
+                provider_id = provider_id.strip() if isinstance(provider_id, str) else str(provider_id).strip() if provider_id is not None else ''
+                kind = body.get('kind')
+                kind = kind.strip() if isinstance(kind, str) else 'text'
 
                 if not model_id:
                     return self.send_json({'ok': False, 'error': 'Missing model ID', 'latency_ms': 0}, 400)
@@ -1877,10 +1888,11 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
         elif self.path == '/api/model/active':
             try:
-                n = int(self.headers.get('Content-Length') or 0)
-                body = json.loads(self.rfile.read(n) or b'{}')
-                model_id = body.get('model', '').strip()
-                provider_id = body.get('provider', '').strip()
+                body = self._parse_body()
+                model_id = body.get('model')
+                model_id = model_id.strip() if isinstance(model_id, str) else str(model_id).strip() if model_id is not None else ''
+                provider_id = body.get('provider')
+                provider_id = provider_id.strip() if isinstance(provider_id, str) else str(provider_id).strip() if provider_id is not None else ''
                 if not model_id:
                     return self.send_json({'ok': False, 'error': 'Missing model ID'}, 400)
                 active_file = os.path.join(os.path.dirname(__file__), 'active_model_store.json')
@@ -1892,8 +1904,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
         elif self.path == '/api/visibility':
             try:
-                n = int(self.headers.get('Content-Length') or 0)
-                body = json.loads(self.rfile.read(n) or b'{}')
+                body = self._parse_body()
                 kind = body.get('kind')          # 'providers' | 'models'
                 ident = body.get('id')
                 hide = bool(body.get('hidden', True))

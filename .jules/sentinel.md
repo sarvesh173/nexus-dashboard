@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Safely parse POST request bodies and string inputs in server endpoints
+**Learning**: In `server.py`, POST endpoints (`/api/model/test`, `/api/model/active`, `/api/visibility`) called `json.loads` directly without checking if the parsed result was a `dict`, and called `.strip()` directly on input values without checking if they were `str`. Non-dict payloads or integer field values caused uncaught `AttributeError` exceptions (`'list' object has no attribute 'get'` / `'int' object has no attribute 'strip'`).
+**Action**: Added `_parse_body()` on `TelemetryHandler` to enforce dict body payloads and coerced field values safely to strings before invoking `.strip()`. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1758 - AttributeError: 'list' object has no attribute 'get'

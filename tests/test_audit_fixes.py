@@ -18,7 +18,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import live_sync  # noqa: E402
@@ -779,6 +779,69 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
             reg = model_health.sync_models([('vendor/model-x', 'text')],
                                            'https://integrate.api.nvidia.com/v1')
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
+
+
+class TestServerPostMalformedBodies(unittest.TestCase):
+    """POST routes in server.py must handle non-dict or non-string JSON payloads without raising AttributeError."""
+
+    def _call_post(self, path, payload_bytes):
+        import server
+        from io import BytesIO
+
+        class FakeHandler(server.TelemetryHandler):
+            def __init__(self, path, payload_bytes):
+                self.path = path
+                self.headers = {'Content-Length': str(len(payload_bytes))}
+                self.rfile = BytesIO(payload_bytes)
+                self.wfile = BytesIO()
+                self.sent_json = None
+                self.sent_code = None
+
+            def send_json(self, data, code=200):
+                self.sent_json = data
+                self.sent_code = code
+
+        handler = FakeHandler(path, payload_bytes)
+        handler.do_POST()
+        return handler.sent_code, handler.sent_json
+
+    def test_model_test_handles_non_dict_and_non_string_fields(self):
+        # Non-dict JSON payload
+        code, resp = self._call_post('/api/model/test', b'[1, 2, 3]')
+        self.assertEqual(code, 400)
+        self.assertFalse(resp['ok'])
+        self.assertEqual(resp['error'], 'Missing model ID')
+
+        import server
+        # Non-string model field (e.g. integer 123 becomes "123" and is accepted)
+        # Verify it safely parses without raising AttributeError.
+        with patch.object(server, 'requests', None):
+            code, resp = self._call_post('/api/model/test', b'{"model": 123}')
+            self.assertEqual(code, 200)
+            self.assertEqual(resp['status'], 503)
+            self.assertFalse(resp['ok'])
+
+    def test_model_active_handles_non_dict_and_non_string_fields(self):
+        # Non-dict JSON payload
+        code, resp = self._call_post('/api/model/active', b'"just a string"')
+        self.assertEqual(code, 400)
+        self.assertFalse(resp['ok'])
+        self.assertEqual(resp['error'], 'Missing model ID')
+
+        # Non-string model field (e.g. integer 456 becomes "456" and is accepted)
+        # Verify it safely parses without raising AttributeError.
+        with patch('builtins.open', mock_open()), patch('server.time.time', return_value=12345):
+            code, resp = self._call_post('/api/model/active', b'{"model": 456}')
+            self.assertEqual(code, 200)
+            self.assertTrue(resp['ok'])
+            self.assertEqual(resp['active_model'], '456')
+
+    def test_visibility_handles_non_dict_payload(self):
+        # Non-dict JSON payload
+        code, resp = self._call_post('/api/visibility', b'[1, 2, 3]')
+        self.assertEqual(code, 400)
+        self.assertFalse(resp['ok'])
+        self.assertIn('kind and id are required', resp['error'])
 
 
 if __name__ == "__main__":
