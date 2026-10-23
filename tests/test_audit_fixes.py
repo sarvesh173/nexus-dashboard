@@ -501,6 +501,15 @@ class TestOpenRouterTopProviderNull(unittest.TestCase):
         self.assertIsNone(out)
         self.assertEqual(source, 'openrouter-verified')
 
+    def test_non_dict_top_provider_still_resolves_context(self):
+        ctx, out, source = self._lookup(
+            {'data': [{'id': 'vendor/model-x', 'context_length': 128000,
+                       'top_provider': 'azure'}]},
+            'vendor/model-x')
+        self.assertEqual(ctx, 128000)
+        self.assertIsNone(out)
+        self.assertEqual(source, 'openrouter-verified')
+
     def test_suffix_match_with_null_top_provider(self):
         ctx, out, source = self._lookup(
             {'data': [{'id': 'openai/gpt-4o', 'context_length': 128000,

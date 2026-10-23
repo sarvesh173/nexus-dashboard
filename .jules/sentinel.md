@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Safely handle non-dict top_provider in OpenRouter context lookup
+**Learning**: `server.py` (`_openrouter_lookup`) evaluated `(item.get('top_provider') or {}).get(...)` assuming `top_provider` was a dict or `None`. When OpenRouter returned a non-dict string (e.g. `"azure"`), calling `.get()` raised an `AttributeError`, which was caught by a generic `except` block and caused lookup to prematurely fail back to heuristic mode, discarding the valid `context_length`.
+**Action**: Added an explicit `isinstance(top_prov, dict)` check before calling `.get('max_completion_tokens')`, and added a regression test in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1711 - AttributeError: 'str' object has no attribute 'get'
