@@ -781,6 +781,28 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestBuildConsoleLogEntriesIsoTimestamp(unittest.TestCase):
+    """BUG: ISO 8601 timestamps containing 'T' failed to parse in
+    build_console_log_entries, causing entries to fall back to the error tuple
+    (1, 0) and sort out of order instead of newest first.
+    """
+
+    def test_iso_timestamp_sorting(self):
+        import server
+        logs = [
+            {'time': '2026-10-20T12:00:00Z', 'level': 'info', 'logger': 'test', 'message': 'old_iso'},
+            {'time': '2026-10-20T15:00:00Z', 'level': 'info', 'logger': 'test', 'message': 'new_iso'},
+        ]
+        orig_logs = server.get_hermes_logs
+        server.get_hermes_logs = lambda **kw: {'logs': logs}
+        try:
+            entries = server.build_console_log_entries()
+            messages = [e['message'] for e in entries]
+            self.assertEqual(messages, ['new_iso', 'old_iso'])
+        finally:
+            server.get_hermes_logs = orig_logs
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
