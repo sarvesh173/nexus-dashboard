@@ -781,6 +781,98 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogIsoTimestampParsing(unittest.TestCase):
+    """Test ISO 8601 timestamps containing 'T' are parsed without ValueError in build_console_log_entries."""
+
+    def test_iso_timestamp_with_t_sorts_correctly(self):
+        import server
+        from unittest.mock import patch
+
+        fake_hermes = {
+            'logs': [
+                {'time': '2026-10-06 23:10:14,000', 'level': 'INFO', 'logger': 'gateway', 'message': 'hermes entry'}
+            ]
+        }
+        fake_omniroute = {
+            'calls': [
+                {
+                    'at': '2026-10-06T23:10:13.103Z',
+                    'status': 200,
+                    'ok': True,
+                    'method': 'POST',
+                    'path': '/v1/chat/completions',
+                    'model': 'gpt-4o',
+                    'provider': 'openai',
+                }
+            ]
+        }
+
+        with patch('server.get_hermes_logs', return_value=fake_hermes), \
+             patch('omniroute_logs.read_call_logs', return_value=fake_omniroute):
+            entries = server.build_console_log_entries(limit=10)
+            self.assertEqual(len(entries), 2)
+            # Checked chronological sort (newest first): 23:10:14 comes before 23:10:13
+            self.assertEqual(entries[0]['component'], 'gateway')
+            self.assertEqual(entries[1]['component'], 'openai')
+
+
+class TestAgentStreamRawStringModel(unittest.TestCase):
+    """Test raw model string representation is parsed as dict in _read_sessions so model_id resolves."""
+
+    def test_raw_string_model_resolves_id(self):
+        import sqlite3
+        import agent_stream
+        from unittest.mock import patch
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            "CREATE TABLE session (id TEXT, title TEXT, agent TEXT, model TEXT, "
+            "directory TEXT, cost REAL, tokens_input INT, tokens_output INT, "
+            "tokens_reasoning INT, time_created INT, time_updated INT)"
+        )
+        conn.execute(
+            "INSERT INTO session VALUES ('s1', 'title', 'agent', 'gpt-4o', '/dir', 0, 0, 0, 0, 100, 100)"
+        )
+        conn.commit()
+
+        with patch('agent_stream._session_live', return_value=(False, 1000)), \
+             patch('agent_stream._newest_message_model', return_value=None), \
+             patch('agent_stream._read_prompts', return_value=[]), \
+             patch('agent_stream._read_stream', return_value=[]):
+            agents = agent_stream._read_sessions(conn, include_idle=True)
+            self.assertEqual(len(agents), 1)
+            self.assertEqual(agents[0]['model_id'], 'gpt-4o')
+            self.assertEqual(agents[0]['model'], 'gpt-4o')
+
+
+class TestAgentStreamPromptPartFiltering(unittest.TestCase):
+    """Test user prompt fetching filters text parts in SQL query."""
+
+    def test_read_prompts_filters_non_text_parts(self):
+        import sqlite3
+        import agent_stream
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute("CREATE TABLE message (id TEXT, session_id TEXT, time_created INT, data TEXT)")
+        conn.execute("CREATE TABLE part (id TEXT, message_id TEXT, data TEXT)")
+
+        # Create message with two parts: one text, one non-text (e.g., image or tool_call)
+        conn.execute(
+            "INSERT INTO message VALUES ('m1', 's1', 100, '{\"role\": \"user\"}')"
+        )
+        conn.execute(
+            "INSERT INTO part VALUES ('p1', 'm1', '{\"type\": \"text\", \"text\": \"Hello World\"}')"
+        )
+        conn.execute(
+            "INSERT INTO part VALUES ('p2', 'm1', '{\"type\": \"image\", \"url\": \"http://img\"}')"
+        )
+        conn.commit()
+
+        prompts = agent_stream._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello World')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

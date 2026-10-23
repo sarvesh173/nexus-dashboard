@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-23 - Handle ISO 8601 timestamps and raw model strings
+**Learning**: In `server.py`, `build_console_log_entries` failed to parse ISO 8601 timestamps with 'T' (e.g. `2026-10-06T23:10:13.103Z`) using `time.strptime` with `%Y-%m-%d %H:%M:%S` format, causing log entries to sort incorrectly. In `agent_stream.py`, non-JSON string models evaluated `session_model_dict` as `{}` causing `model_id` to resolve as `None`, and `_read_prompts` joined non-text parts which generated duplicate/blank prompt entries.
+**Action**: Replaced 'T' with space in timestamp strings before parsing in `server.py`, wrapped non-JSON string models in `{'id': model}` dicts in `agent_stream.py`, and added `json_extract(p.data, '$.type') = 'text'` to prompt queries in `agent_stream.py`.
+**Fingerprint**: server.py:634 - ValueError: time data does not match format
