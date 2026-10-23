@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Dynamic path helpers in live_sync and paths
+**Learning**: `live_sync.py` imported `hermes_config_path` and `omniroute_env_path` from `paths.py` but assigned module-level constants `HERMES_CONFIG` and `OMNIROUTE_ENV` at import time, preventing runtime environment variable overrides (`HERMES_CONFIG`, `OMNIROUTE_HOME`) from taking effect in `fetch_hermes_config` and `omniroute_endpoint`. In addition, `paths.py` defined `HERMES_HOME` and `OMNIROUTE_HOME` at import time instead of via dynamic evaluation helper functions.
+**Action**: Updated `paths.py` to evaluate home directories dynamically in `hermes_home()` and `omniroute_home()` path builders, and updated `live_sync.py` to call `hermes_config_path()` and `omniroute_env_path()` dynamically at call time. Added unit tests in `tests/test_live_sync.py`.
+**Fingerprint**: live_sync.py:31 - DynamicPaths: import-time constant path resolution

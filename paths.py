@@ -6,19 +6,27 @@ and a public checkout leaks no username.
 """
 import os
 
-HERMES_HOME = os.environ.get('HERMES_HOME') or os.path.expanduser('~/.hermes')
-OMNIROUTE_HOME = os.environ.get('OMNIROUTE_HOME') or os.path.join(
-    os.path.expanduser('~'), '.omniroute')
+def hermes_home():
+    return os.environ.get('HERMES_HOME') or os.path.expanduser('~/.hermes')
+
+
+def omniroute_home():
+    return os.environ.get('OMNIROUTE_HOME') or os.path.join(
+        os.path.expanduser('~'), '.omniroute')
+
+
+HERMES_HOME = hermes_home()
+OMNIROUTE_HOME = omniroute_home()
 REPO_DIR = os.environ.get('NEXUS_DIR') or os.path.dirname(os.path.abspath(__file__))
 
 
 def hermes_config_path():
     """The agent config this dashboard reads (read-only)."""
-    return os.environ.get('HERMES_CONFIG') or os.path.join(HERMES_HOME, 'config.yaml')
+    return os.environ.get('HERMES_CONFIG') or os.path.join(hermes_home(), 'config.yaml')
 
 
 def hermes_env_path():
-    return os.path.join(HERMES_HOME, '.env')
+    return os.path.join(hermes_home(), '.env')
 
 
 def hermes_gateway_state_path():
@@ -28,7 +36,7 @@ def hermes_gateway_state_path():
     the gateway has never started (or has been stopped cleanly), so every caller
     has to treat a missing file as a real state, not an error to hide.
     """
-    return os.path.join(HERMES_HOME, 'gateway_state.json')
+    return os.path.join(hermes_home(), 'gateway_state.json')
 
 
 def hermes_logs_dir():
@@ -37,7 +45,7 @@ def hermes_logs_dir():
     This is the DEFAULT profile's log directory. A profile that runs in its own
     process keeps its own copies under `hermes_profile_logs_dir()`.
     """
-    return os.path.join(HERMES_HOME, 'logs')
+    return os.path.join(hermes_home(), 'logs')
 
 
 def hermes_profiles_dir():
@@ -48,7 +56,7 @@ def hermes_profiles_dir():
     subdirectory is therefore a normal state, not an error, and every caller must
     handle it by falling back to the shared log.
     """
-    return os.path.join(HERMES_HOME, 'profiles')
+    return os.path.join(hermes_home(), 'profiles')
 
 
 def hermes_profile_logs_dir(profile):
@@ -62,7 +70,7 @@ def hermes_profile_logs_dir(profile):
 
 
 def omniroute_env_path():
-    return os.path.join(OMNIROUTE_HOME, '.env')
+    return os.path.join(omniroute_home(), '.env')
 
 
 def omniroute_storage_path():
