@@ -238,5 +238,29 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestReadPrompts(unittest.TestCase):
+    """Ensure _read_prompts ignores non-text message parts and omits blank items."""
+
+    def test_non_text_parts_do_not_produce_blank_prompts(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute('CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, time_created INT)')
+        conn.execute('CREATE TABLE part (id TEXT, message_id TEXT, session_id TEXT, data TEXT, time_created INT)')
+
+        # User message with both step-start and text parts
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)', ('m1', 's1', json.dumps({'role': 'user'}), 100))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p1_step', 'm1', 's1', json.dumps({'type': 'step-start'}), 100))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p1_text', 'm1', 's1', json.dumps({'type': 'text', 'text': 'Hello world'}), 101))
+
+        # Second user message with only text part
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)', ('m2', 's1', json.dumps({'role': 'user'}), 200))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p2_text', 'm2', 's1', json.dumps({'type': 'text', 'text': 'Second prompt'}), 200))
+
+        prompts = a._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 2)
+        self.assertEqual(prompts[0]['text'], 'Hello world')
+        self.assertEqual(prompts[1]['text'], 'Second prompt')
+        conn.close()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
