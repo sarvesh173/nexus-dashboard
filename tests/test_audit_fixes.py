@@ -781,6 +781,42 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestBuildConsoleLogEntriesIsoTimestamps(unittest.TestCase):
+    """BUG: ISO 8601 timestamps containing 'T' raised ValueError in time.strptime.
+
+    When OmniRoute call logs produced timestamps like '2026-10-07T12:00:00.000Z',
+    build_console_log_entries sort_key failed to parse them with '%Y-%m-%d %H:%M:%S',
+    falling back to (1, 0) and placing all call logs out of chronological order.
+    """
+
+    def test_iso_timestamps_with_t_are_parsed_and_sorted_correctly(self):
+        import server
+
+        fake_hermes = {
+            'ok': True,
+            'logs': [
+                {'time': '2026-10-07 10:00:00', 'level': 'INFO', 'logger': 'gateway', 'message': 'Hermes early'},
+                {'time': '2026-10-07 12:00:00', 'level': 'INFO', 'logger': 'gateway', 'message': 'Hermes late'},
+            ],
+        }
+
+        fake_omniroute = {
+            'calls': [
+                {'at': '2026-10-07T11:00:00.000Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4', 'provider': 'router'},
+            ],
+        }
+
+        with patch("server.get_hermes_logs", return_value=fake_hermes), \
+             patch("server.omniroute_logs.read_call_logs", return_value=fake_omniroute):
+            entries = server.build_console_log_entries(limit=10)
+
+        self.assertEqual(len(entries), 3)
+        # Bounded newest first
+        self.assertEqual(entries[0]['message'], 'Hermes late')
+        self.assertEqual(entries[1]['message'], 'POST /v1/chat gpt-4')
+        self.assertEqual(entries[2]['message'], 'Hermes early')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Normalize ISO 8601 timestamps in console log builder
+**Learning**: In `server.py` (`build_console_log_entries`), timestamps containing ISO 8601 'T' separators (from OmniRoute call logs) caused `time.strptime` to raise `ValueError: time data ... does not match format '%Y-%m-%d %H:%M:%S'`, forcing all call log entries into `sort_key`'s exception handler and mis-sorting them at the end.
+**Action**: Replaced `'T'` with `' '` on timestamp strings in `sort_key` before parsing, and added `TestBuildConsoleLogEntriesIsoTimestamps` in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time data does not match format %Y-%m-%d %H:%M:%S
