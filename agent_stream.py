@@ -238,6 +238,7 @@ def _read_prompts(conn, session_id):
         rows = conn.execute(
             "SELECT m.id, m.time_created, p.data "
             "FROM message m LEFT JOIN part p ON p.message_id = m.id "
+            "AND json_extract(p.data, '$.type') = 'text' "
             "WHERE m.session_id = ? AND json_extract(m.data, '$.role') = 'user' "
             "ORDER BY m.time_created ASC LIMIT ?",
             (session_id, PROMPT_LIMIT),
@@ -251,12 +252,13 @@ def _read_prompts(conn, session_id):
             part = _loads(part_data, {}) or {}
             if part.get('type') == 'text':
                 text = part.get('text') or ''
-        prompts.append({
-            'at': int(time_created or 0),
-            'text': text,
-            'excerpt': _clip(text, 600),
-            'message_id': message_id,
-        })
+        if text:
+            prompts.append({
+                'at': int(time_created or 0),
+                'text': text,
+                'excerpt': _clip(text, 600),
+                'message_id': message_id,
+            })
     return prompts
 
 
