@@ -470,6 +470,40 @@ class TestLiveSpecsNon200IsLoud(unittest.TestCase):
             specs = run_sync._live_specs("https://x/v1", "k")
         self.assertEqual(specs, [("nvidia/model-a", "text")])
 
+    def test_network_exception_returns_empty_list(self):
+        import run_sync
+        fake_req = MagicMock()
+        fake_req.get.side_effect = Exception("Connection refused / Timeout")
+        with patch.dict("sys.modules", {"requests": fake_req}):
+            specs = run_sync._live_specs("https://x/v1", "k")
+        self.assertEqual(specs, [])
+
+
+class TestDynamicEnvPathOverrides(unittest.TestCase):
+    """Verify that path helpers in paths.py and live_sync.py dynamically reflect
+    os.environ changes."""
+
+    def test_paths_helpers_eval_environ_dynamically(self):
+        import paths
+        with patch.dict(os.environ, {"HERMES_HOME": "/custom/hermes", "OMNIROUTE_HOME": "/custom/omniroute"}):
+            self.assertEqual(paths.hermes_config_path(), "/custom/hermes/config.yaml")
+            self.assertEqual(paths.hermes_env_path(), "/custom/hermes/.env")
+            self.assertEqual(paths.omniroute_env_path(), "/custom/omniroute/.env")
+
+    def test_live_sync_uses_path_helpers(self):
+        import live_sync
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {}
+        with patch.dict("sys.modules", {"yaml": fake_yaml}), \
+             patch("live_sync.hermes_config_path", return_value="/custom/hermes/config.yaml") as mock_cfg, \
+             patch("live_sync.omniroute_env_path", return_value="/custom/omniroute/.env") as mock_env, \
+             patch("builtins.open", side_effect=FileNotFoundError):
+            live_sync.fetch_hermes_config()
+            mock_cfg.assert_called()
+
+            live_sync.omniroute_endpoint()
+            mock_env.assert_called()
+
 
 
 

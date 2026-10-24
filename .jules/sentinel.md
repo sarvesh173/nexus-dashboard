@@ -29,3 +29,9 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Catch network exceptions in run_sync and evaluate paths dynamically
+**Learning**: `run_sync.py`'s `_live_specs()` made an HTTP GET request via `requests.get` without catching network / request exceptions (`requests.exceptions.RequestException`), causing unhandled crashes when the endpoint was unreachable. Additionally, `paths.py` evaluated `HERMES_HOME` and `OMNIROUTE_HOME` once at import time, preventing path helpers from respecting dynamic runtime `os.environ` overrides in modules like `live_sync.py`.
+**Action**: Wrapped `requests.get()` in `_live_specs()` with `try...except Exception` and updated `paths.py` and `live_sync.py` to evaluate `os.environ` helper functions dynamically at call time. Added unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: run_sync.py:38 - RequestException: unhandled connection error in _live_specs
+**Fingerprint**: live_sync.py:22 - Hardcoded path constants ignoring paths.py helpers
