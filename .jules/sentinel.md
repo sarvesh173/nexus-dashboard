@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Filter non-text parts in agent prompt SQL queries
+**Learning**: In `agent_stream.py`, `_read_prompts` joined `message` and `part` tables on `m.id = p.message_id` without filtering for `p.data` type `text`, causing user messages with multiple parts (`step-start`, `text`, `step-finish`) to produce duplicate rows, blank prompt entries, and premature SQL limit truncation.
+**Action**: Added `AND json_extract(p.data, '$.type') = 'text'` to the `LEFT JOIN` clause in `_read_prompts` and added a regression test in `tests/test_agent_stream.py`.
+**Fingerprint**: agent_stream.py:238 - LogicError: duplicate blank prompts on multi-part user messages
