@@ -781,6 +781,47 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityReadShape(unittest.TestCase):
+    """Guard visibility._read() against non-dict JSON files."""
+
+    def setUp(self):
+        import visibility
+        visibility._cache['data'] = {}
+        visibility._cache['at'] = 0.0
+
+    def test_non_dict_json_returns_blank(self):
+        import visibility
+        for payload in ('[]', '"string"', '123', 'null', 'true'):
+            with self.subTest(payload=payload):
+                with tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False) as fh:
+                    fh.write(payload)
+                    tmp_path = fh.name
+                try:
+                    visibility._cache['data'] = {}
+                    visibility._cache['at'] = 0.0
+                    with patch.object(visibility, 'STORE', tmp_path):
+                        data = visibility._read()
+                        self.assertEqual(data, {'providers': [], 'models': []})
+                finally:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+
+    def test_dict_with_non_list_keys_normalises(self):
+        import visibility
+        with tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False) as fh:
+            fh.write('{"providers": "not-a-list", "models": null}')
+            tmp_path = fh.name
+        try:
+            visibility._cache['data'] = {}
+            visibility._cache['at'] = 0.0
+            with patch.object(visibility, 'STORE', tmp_path):
+                data = visibility._read()
+                self.assertEqual(data, {'providers': [], 'models': []})
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
