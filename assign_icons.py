@@ -135,14 +135,21 @@ def build():
         return 1
     with open(CACHE, encoding="utf-8") as fh:
         cache = json.load(fh)
+    if not isinstance(cache, dict):
+        cache = {}
     cache.pop("_meta", None)
 
     icons = available_icons()
     manifest, stats = {}, {"exact": 0, "rule": 0, "default": 0}
     for pid, prov in cache.items():
-        if pid.startswith("_"):
+        if pid.startswith("_") or not isinstance(prov, dict):
             continue
-        for m in prov.get("models", []):
+        models = prov.get("models")
+        if not isinstance(models, list):
+            continue
+        for m in models:
+            if not isinstance(m, dict):
+                continue
             mid = m.get("id")
             if not mid:
                 continue

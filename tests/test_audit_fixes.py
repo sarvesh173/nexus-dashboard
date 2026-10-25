@@ -781,6 +781,88 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestNonDictJsonGuards(unittest.TestCase):
+    """Regression tests ensuring non-dict JSON stores and payloads do not raise AttributeError."""
+
+    def test_visibility_read_non_dict_json(self):
+        import visibility
+        d = tempfile.mkdtemp()
+        store_path = os.path.join(d, "hidden_store.json")
+        with open(store_path, "w", encoding="utf-8") as fh:
+            fh.write("[]")  # top-level JSON array
+
+        with patch.object(visibility, 'STORE', store_path), \
+             patch.object(visibility, '_cache', {'at': 0.0, 'data': None}):
+            try:
+                res = visibility._read()
+                self.assertIsInstance(res, dict)
+                self.assertEqual(res.get('providers'), [])
+                self.assertEqual(res.get('models'), [])
+            except AttributeError as exc:
+                self.fail(f"visibility._read() raised AttributeError on non-dict JSON: {exc}")
+
+    def test_hermes_gateway_list_models_non_dict(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value=[{"id": "vendor/model-1"}]), \
+             patch.object(hermes_gateway, '_cache', {'models': [], 'at': 0, 'error': None}):
+            try:
+                ids = hermes_gateway.list_models(force=True)
+                self.assertEqual(ids, ["vendor/model-1"])
+            except AttributeError as exc:
+                self.fail(f"hermes_gateway.list_models raised AttributeError on top-level list: {exc}")
+
+    def test_model_health_load_non_dict_models(self):
+        import model_health
+        d = tempfile.mkdtemp()
+        reg_path = os.path.join(d, "model_health.json")
+        with open(reg_path, "w", encoding="utf-8") as fh:
+            fh.write('{"models": []}')  # 'models' is a list instead of a dict
+
+        with patch.object(model_health, 'REGISTRY_PATH', reg_path), \
+             patch.object(model_health, '_registry', None), \
+             patch.object(model_health, '_registry_mtime', [None]):
+            try:
+                hmap = model_health.get_health_map()
+                self.assertIsInstance(hmap, dict)
+                self.assertFalse(model_health.is_hidden("some/model"))
+                summary = model_health.summary()
+                self.assertIsInstance(summary, dict)
+            except AttributeError as exc:
+                self.fail(f"model_health helpers raised AttributeError when models is non-dict: {exc}")
+
+    def test_assign_icons_build_non_dict_cache(self):
+        import assign_icons
+        d = tempfile.mkdtemp()
+        cache_path = os.path.join(d, "live_sync.json")
+        with open(cache_path, "w", encoding="utf-8") as fh:
+            fh.write("[]")  # top-level JSON array
+
+        with patch.object(assign_icons, 'CACHE', cache_path), \
+             patch.object(assign_icons, 'ICON_DIRS', [os.path.join(d, "public")]), \
+             patch("sys.stdout", new_callable=io.StringIO):
+            try:
+                code = assign_icons.build()
+                self.assertEqual(code, 0)
+            except AttributeError as exc:
+                self.fail(f"assign_icons.build raised AttributeError on non-dict cache: {exc}")
+
+    def test_server_get_hermes_status_non_dict_state(self):
+        import server
+        d = tempfile.mkdtemp()
+        state_path = os.path.join(d, "gateway_state.json")
+        with open(state_path, "w", encoding="utf-8") as fh:
+            fh.write("[]")  # top-level list instead of dict
+
+        with patch("server.hermes_gateway_state_path", return_value=state_path), \
+             patch.object(server, '_hermes_state_cache', {'at': 0.0, 'payload': None}):
+            try:
+                res = server.get_hermes_status()
+                self.assertIsInstance(res, dict)
+                self.assertTrue(res['ok'])
+            except AttributeError as exc:
+                self.fail(f"server.get_hermes_status raised AttributeError on non-dict state: {exc}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

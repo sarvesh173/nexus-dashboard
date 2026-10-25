@@ -510,6 +510,9 @@ def get_hermes_status():
     except Exception as exc:  # noqa: BLE001
         state_error = f'{type(exc).__name__}: {exc}'
 
+    if not isinstance(state, dict):
+        state = {}
+
     pid = state.get('pid')
     alive = False
     uptime_sec = None
@@ -1756,6 +1759,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             try:
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n) or b'{}')
+                if not isinstance(body, dict):
+                    return self.send_json({'ok': False, 'error': 'Invalid JSON object body', 'latency_ms': 0}, 400)
                 model_id = body.get('model', '').strip()
                 provider_id = body.get('provider', '').strip()
                 kind = body.get('kind', 'text').strip()
@@ -1879,6 +1884,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             try:
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n) or b'{}')
+                if not isinstance(body, dict):
+                    return self.send_json({'ok': False, 'error': 'Invalid JSON object body'}, 400)
                 model_id = body.get('model', '').strip()
                 provider_id = body.get('provider', '').strip()
                 if not model_id:
@@ -1894,6 +1901,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             try:
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n) or b'{}')
+                if not isinstance(body, dict):
+                    return self.send_json({'ok': False, 'error': 'Invalid JSON object body'}, 400)
                 kind = body.get('kind')          # 'providers' | 'models'
                 ident = body.get('id')
                 hide = bool(body.get('hidden', True))

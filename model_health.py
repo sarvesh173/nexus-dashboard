@@ -102,7 +102,8 @@ def _load():
         _registry = {}
     if not isinstance(_registry, dict):
         _registry = {}
-    _registry.setdefault('models', {})
+    if not isinstance(_registry.get('models'), dict):
+        _registry['models'] = {}
     _registry_mtime[0] = mtime
     return _registry
 
@@ -127,12 +128,19 @@ def _save():
 
 def get_health_map():
     """model-id -> status, for the dashboard to filter on."""
-    return {mid: rec.get('status', 'UNKNOWN')
-            for mid, rec in _load()['models'].items()}
+    models = _load().get('models', {})
+    if not isinstance(models, dict):
+        return {}
+    return {mid: rec.get('status', 'UNKNOWN') if isinstance(rec, dict) else 'UNKNOWN'
+            for mid, rec in models.items()}
 
 
 def is_hidden(mid):
-    return _load()['models'].get(mid, {}).get('status') == 'RETIRED'
+    models = _load().get('models', {})
+    if not isinstance(models, dict):
+        return False
+    rec = models.get(mid)
+    return rec.get('status') == 'RETIRED' if isinstance(rec, dict) else False
 
 
 def _api_key():
@@ -252,7 +260,9 @@ def sync_models(model_specs, base='https://integrate.api.nvidia.com/v1'):
         elif status in ('UNREACHABLE', 'WRONG_EP') and catalog and mid not in catalog:
             status, detail = 'RETIRED', 'absent from provider catalog'
 
-        rec = reg['models'].get(mid) or {}
+        rec = reg['models'].get(mid)
+        if not isinstance(rec, dict):
+            rec = {}
         if rec.get('status') != status:
             changed += 1
         rec.update({'status': status, 'detail': detail[:200],
@@ -279,7 +289,10 @@ def sync_models(model_specs, base='https://integrate.api.nvidia.com/v1'):
 def summary():
     reg = _load()
     out = {}
-    for rec in reg['models'].values():
-        out[rec.get('status', 'UNKNOWN')] = out.get(rec.get('status', 'UNKNOWN'), 0) + 1
-    return {'counts': out, 'total': len(reg['models']),
-            'last_sync': reg.get('last_sync', 0)}
+    models = reg.get('models', {}) if isinstance(reg, dict) else {}
+    if isinstance(models, dict):
+        for rec in models.values():
+            st = rec.get('status', 'UNKNOWN') if isinstance(rec, dict) else 'UNKNOWN'
+            out[st] = out.get(st, 0) + 1
+    return {'counts': out, 'total': len(models) if isinstance(models, dict) else 0,
+            'last_sync': reg.get('last_sync', 0) if isinstance(reg, dict) else 0}
