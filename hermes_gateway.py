@@ -16,9 +16,11 @@ import urllib.error
 import urllib.request
 from paths import hermes_env_path, OMNI_BASE
 
-GATEWAY = os.environ.get('HERMES_GATEWAY_URL', OMNI_BASE)
-ENV_FILES = (hermes_env_path(),)
 KEY_NAMES = ('OMNIROUTE_API_KEY', 'OMNIROUTER_API_KEY', 'API_KEY')
+
+
+def _gateway_url():
+    return os.environ.get('HERMES_GATEWAY_URL', OMNI_BASE)
 
 # Prefixes that are routing layers, not model vendors.
 ROUTER_HINTS = ('auto', 'freee', 'drd', 'cf', 'free-ai', 'router', 'openrouter',
@@ -33,7 +35,7 @@ def _key():
         k = os.environ.get(name)
         if k:
             return k
-    for path in ENV_FILES:
+    for path in (hermes_env_path(),):
         try:
             with open(path, encoding='utf-8', errors='replace') as fh:
                 for line in fh:
@@ -49,7 +51,7 @@ def _key():
 
 def _get(path, timeout=20):
     req = urllib.request.Request(
-        GATEWAY.rstrip('/') + path,
+        _gateway_url().rstrip('/') + path,
         headers={'Authorization': 'Bearer ' + _key()} if _key() else {},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -253,4 +255,4 @@ def status():
             'stale': bool(err),
             'error': err,
             'models': len(ids),
-            'gateway': GATEWAY, 'cached_at': _cache['at']}
+            'gateway': _gateway_url(), 'cached_at': _cache['at']}

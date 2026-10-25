@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Dynamic path resolution and user prompt text part filtering
+**Learning**: Path helper functions in `paths.py`, `live_sync.py`, and `hermes_gateway.py` evaluated `os.environ` at import time, ignoring runtime environment overrides. Additionally, `agent_stream.py` `_read_prompts` joined `message` and `part` tables without filtering `json_extract(p.data, '$.type') = 'text'`, producing blank or duplicate prompt entries when messages contained non-text parts.
+**Action**: Refactored `paths.py`, `live_sync.py`, and `hermes_gateway.py` to evaluate environment variables dynamically at call time, and updated `_read_prompts` in `agent_stream.py` to filter user text parts explicitly. Added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: paths.py:17 - LogicError: import-time environment variable evaluation in path helpers

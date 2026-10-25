@@ -781,6 +781,113 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestDynamicEnvironmentPathResolution(unittest.TestCase):
+    """Path helpers must query os.environ dynamically at call time."""
+
+    def test_paths_helpers_respect_runtime_os_environ_changes(self):
+        import paths
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_hermes = os.environ.get('HERMES_HOME')
+            orig_omni = os.environ.get('OMNIROUTE_HOME')
+            try:
+                os.environ['HERMES_HOME'] = os.path.join(tmpdir, 'custom_hermes')
+                os.environ['OMNIROUTE_HOME'] = os.path.join(tmpdir, 'custom_omniroute')
+
+                self.assertEqual(paths.hermes_config_path(),
+                                 os.path.join(tmpdir, 'custom_hermes', 'config.yaml'))
+                self.assertEqual(paths.hermes_env_path(),
+                                 os.path.join(tmpdir, 'custom_hermes', '.env'))
+                self.assertEqual(paths.omniroute_env_path(),
+                                 os.path.join(tmpdir, 'custom_omniroute', '.env'))
+                self.assertEqual(paths.omniroute_storage_path(),
+                                 os.path.join(tmpdir, 'custom_omniroute', 'storage.sqlite'))
+            finally:
+                if orig_hermes is not None:
+                    os.environ['HERMES_HOME'] = orig_hermes
+                else:
+                    os.environ.pop('HERMES_HOME', None)
+                if orig_omni is not None:
+                    os.environ['OMNIROUTE_HOME'] = orig_omni
+                else:
+                    os.environ.pop('OMNIROUTE_HOME', None)
+
+    def test_live_sync_uses_dynamic_paths(self):
+        import live_sync
+
+        class FakeYaml:
+            @staticmethod
+            def safe_load(f):
+                return {'providers': {'custom_prov': {'models': ['m1'], 'enabled': True}}}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_cfg = os.path.join(tmpdir, 'cfg.yaml')
+            with open(custom_cfg, 'w', encoding='utf-8') as fh:
+                fh.write("dummy")
+
+            orig_cfg = os.environ.get('HERMES_CONFIG')
+            try:
+                os.environ['HERMES_CONFIG'] = custom_cfg
+                with patch.dict('sys.modules', {'yaml': FakeYaml}):
+                    providers, err = live_sync.fetch_hermes_config()
+                self.assertIn('custom_prov', providers)
+                self.assertIsNone(err)
+            finally:
+                if orig_cfg is not None:
+                    os.environ['HERMES_CONFIG'] = orig_cfg
+                else:
+                    os.environ.pop('HERMES_CONFIG', None)
+
+    def test_hermes_gateway_uses_dynamic_gateway_url_and_env_path(self):
+        import hermes_gateway
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_env = os.path.join(tmpdir, '.env')
+            with open(custom_env, 'w', encoding='utf-8') as fh:
+                fh.write("OMNIROUTE_API_KEY=test_dynamic_key\n")
+
+            orig_hermes = os.environ.get('HERMES_HOME')
+            orig_gw = os.environ.get('HERMES_GATEWAY_URL')
+            try:
+                os.environ['HERMES_HOME'] = tmpdir
+                os.environ['HERMES_GATEWAY_URL'] = 'http://127.0.0.1:9999/v1'
+
+                self.assertEqual(hermes_gateway._key(), 'test_dynamic_key')
+                self.assertEqual(hermes_gateway._gateway_url(), 'http://127.0.0.1:9999/v1')
+                self.assertEqual(hermes_gateway.status()['gateway'], 'http://127.0.0.1:9999/v1')
+            finally:
+                if orig_hermes is not None:
+                    os.environ['HERMES_HOME'] = orig_hermes
+                else:
+                    os.environ.pop('HERMES_HOME', None)
+                if orig_gw is not None:
+                    os.environ['HERMES_GATEWAY_URL'] = orig_gw
+                else:
+                    os.environ.pop('HERMES_GATEWAY_URL', None)
+
+
+class TestAgentStreamPromptsTextPartFiltering(unittest.TestCase):
+    """_read_prompts must explicitly filter on json_extract(p.data, '$.type') = 'text'."""
+
+    def test_non_text_parts_are_filtered_out(self):
+        import sqlite3
+        import agent_stream
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            'CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, time_created INT)')
+        conn.execute(
+            'CREATE TABLE part (id TEXT, message_id TEXT, data TEXT, time_created INT)')
+
+        conn.execute("INSERT INTO message VALUES ('m1', 's1', '{\"role\": \"user\"}', 100)")
+        conn.execute("INSERT INTO part VALUES ('p1', 'm1', '{\"type\": \"image\", \"url\": \"http://img\"}', 100)")
+        conn.execute("INSERT INTO part VALUES ('p2', 'm1', '{\"type\": \"text\", \"text\": \"Hello prompt\"}', 101)")
+
+        prompts = agent_stream._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello prompt')
+        self.assertEqual(prompts[0]['excerpt'], 'Hello prompt')
+        self.assertEqual(prompts[0]['message_id'], 'm1')
+        conn.close()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
