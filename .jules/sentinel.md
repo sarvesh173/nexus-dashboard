@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-25 - Handle non-dict JSON payloads in visibility._read
+**Learning**: `visibility._read()` called `.get()` directly on JSON data loaded from `hidden_store.json` without verifying that the parsed structure was a dictionary, causing `AttributeError` when non-dict JSON (e.g. lists or scalars) was present.
+**Action**: Added type verification `if not isinstance(data, dict): data = _blank()`, added `AttributeError` to exception catching, and added regression unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: visibility.py:35 - AttributeError: 'list' object has no attribute 'get'
