@@ -631,7 +631,8 @@ def build_console_log_entries(limit='500', level='all'):
     # the last row rather than the first.
     def sort_key(e):
         try:
-            return (0, -time.mktime(time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')))
+            ts = e['timestamp'][:19].replace('T', ' ')
+            return (0, -time.mktime(time.strptime(ts, '%Y-%m-%d %H:%M:%S')))
         except Exception:
             return (1, 0)
 
