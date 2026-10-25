@@ -15,6 +15,7 @@ import re
 import urllib.error
 import urllib.request
 from paths import hermes_env_path, OMNI_BASE
+from models_payload import model_rows
 
 GATEWAY = os.environ.get('HERMES_GATEWAY_URL', OMNI_BASE)
 ENV_FILES = (hermes_env_path(),)
@@ -69,7 +70,7 @@ def list_models(force=False):
         # the gateway was returning 401, so a dead gateway looked healthy.
         _cache['error'] = f'{type(exc).__name__}: {exc}'
         return _cache['models']
-    ids = sorted({m.get('id') for m in data.get('data', []) if m.get('id')})
+    ids = sorted({mid for mid, _row in model_rows(data)})
     _cache.update({'models': ids, 'at': time.time(), 'error': None})
     return ids
 

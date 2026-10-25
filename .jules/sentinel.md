@@ -29,3 +29,12 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-25 - Guard non-dict JSON responses and store files
+**Learning**: Multiple backend modules (`visibility.py`, `hermes_gateway.py`, `model_health.py`, `assign_icons.py`, `server.py`) assumed parsed JSON files and API payloads were always dictionary objects. When store files or request bodies contained non-dict JSON (such as top-level arrays `[]` or primitive values), methods like `.get()`, `.pop()`, `.items()`, or `.values()` raised unhandled `AttributeError` exceptions.
+**Action**: Added explicit `isinstance(data, dict)` checks and utilized `models_payload.model_rows` shape normalizers across store readers, catalog lists, and HTTP POST endpoint handlers. Added regression unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: visibility.py:38 - AttributeError: non-dict JSON store payload
+**Fingerprint**: hermes_gateway.py:70 - AttributeError: non-dict /models payload
+**Fingerprint**: model_health.py:102 - AttributeError: non-dict models registry field
+**Fingerprint**: assign_icons.py:138 - AttributeError: non-dict cache store payload
+**Fingerprint**: server.py:1759 - AttributeError: non-dict POST request body
