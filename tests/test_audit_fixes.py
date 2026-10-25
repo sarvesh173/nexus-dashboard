@@ -781,6 +781,37 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestBuildConsoleLogEntriesIsoTimestampSorting(unittest.TestCase):
+    """BUG: ISO 8601 timestamps containing 'T' failed in time.strptime in build_console_log_entries,
+    falling back to (1, 0) in sort_key and breaking chronological log sorting.
+    """
+
+    def test_iso_timestamp_with_t_sorts_chronologically(self):
+        import server
+        mock_hermes = {
+            'logs': [
+                {'time': '2026-10-06 10:00:00,100', 'level': 'INFO', 'logger': 'gateway', 'message': 'hermes early'},
+            ]
+        }
+        mock_calls = {
+            'calls': [
+                {'at': '2026-10-06T12:00:00.000Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'm1', 'provider': 'p1'},
+                {'at': '2026-10-06T08:00:00.000Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'm2', 'provider': 'p2'},
+            ]
+        }
+        with patch('server.get_hermes_logs', return_value=mock_hermes), \
+             patch('server.omniroute_logs.read_call_logs', return_value=mock_calls):
+            entries = server.build_console_log_entries(limit=10, level='all')
+            timestamps = [e['timestamp'] for e in entries]
+            # Entries are sorted newest first in build_console_log_entries
+            expected = [
+                '2026-10-06T12:00:00.000Z',
+                '2026-10-06 10:00:00,100',
+                '2026-10-06T08:00:00.000Z',
+            ]
+            self.assertEqual(timestamps, expected)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
