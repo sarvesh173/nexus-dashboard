@@ -781,6 +781,42 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityReadShape(unittest.TestCase):
+    """BUG: visibility._read() raised AttributeError on non-dict JSON structures in STORE.
+
+    If hidden_store.json was written or corrupted to contain a non-dict value
+    (e.g., [], "string", 123, null), json.load(fh) succeeded but data.get()
+    raised AttributeError, which escaped _read() and broke endpoints calling visibility.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.path = os.path.join(self.dir, "hidden_store.json")
+
+    def _write(self, text):
+        with open(self.path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
+    def test_non_dict_json_returns_blank(self):
+        import visibility
+        with patch.object(visibility, "STORE", self.path), \
+             patch.object(visibility, "_cache", {"at": 0.0, "data": None}):
+            for text in ('"hi"', "5", "[]", "null", "true", '["a"]'):
+                with self.subTest(text=text):
+                    self._write(text)
+                    res = visibility._read()
+                    self.assertEqual(res, {"providers": [], "models": []})
+
+    def test_dict_json_with_valid_and_invalid_lists(self):
+        import visibility
+        with patch.object(visibility, "STORE", self.path), \
+             patch.object(visibility, "_cache", {"at": 0.0, "data": None}):
+            self._write('{"providers": ["p1", null, 123], "models": "not_a_list"}')
+            res = visibility._read()
+            self.assertEqual(res["providers"], ["p1", "123"])
+            self.assertEqual(res["models"], [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

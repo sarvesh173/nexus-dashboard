@@ -36,10 +36,14 @@ def _read():
     try:
         with open(STORE, encoding='utf-8') as fh:
             data = json.load(fh)
+        if not isinstance(data, dict):
+            data = _blank()
         for k in _blank():
             if not isinstance(data.get(k), list):
                 data[k] = []
-    except (OSError, ValueError):
+            else:
+                data[k] = [str(x) for x in data[k] if x is not None]
+    except (OSError, ValueError, AttributeError):
         data = _blank()
     _cache['data'] = data
     _cache['at'] = now
