@@ -781,6 +781,103 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestDynamicEnvironmentPathResolution(unittest.TestCase):
+    """Test that runtime os.environ overrides are dynamically resolved at call time.
+
+    Verifies that modules reading Hermes or OmniRoute configuration files
+    (paths.py, live_sync.py, model_health.py, hermes_gateway.py) do not rely on
+    static import-time constants, ensuring runtime environment changes are honored.
+    """
+
+    def setUp(self):
+        self.orig_env = os.environ.copy()
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+
+    def test_paths_module_dynamic_resolution(self):
+        import paths
+        tmp_dir = tempfile.mkdtemp()
+        os.environ["HERMES_HOME"] = os.path.join(tmp_dir, "hermes_custom")
+        os.environ["OMNIROUTE_HOME"] = os.path.join(tmp_dir, "omniroute_custom")
+
+        self.assertEqual(paths.hermes_config_path(), os.path.join(tmp_dir, "hermes_custom", "config.yaml"))
+        self.assertEqual(paths.hermes_env_path(), os.path.join(tmp_dir, "hermes_custom", ".env"))
+        self.assertEqual(paths.hermes_gateway_state_path(), os.path.join(tmp_dir, "hermes_custom", "gateway_state.json"))
+        self.assertEqual(paths.hermes_logs_dir(), os.path.join(tmp_dir, "hermes_custom", "logs"))
+        self.assertEqual(paths.hermes_profiles_dir(), os.path.join(tmp_dir, "hermes_custom", "profiles"))
+        self.assertEqual(paths.omniroute_env_path(), os.path.join(tmp_dir, "omniroute_custom", ".env"))
+        self.assertEqual(paths.omniroute_storage_path(), os.path.join(tmp_dir, "omniroute_custom", "storage.sqlite"))
+
+        # Explicit HERMES_CONFIG override
+        os.environ["HERMES_CONFIG"] = os.path.join(tmp_dir, "override_config.yaml")
+        self.assertEqual(paths.hermes_config_path(), os.path.join(tmp_dir, "override_config.yaml"))
+
+        # Module __getattr__ dynamic properties
+        self.assertEqual(paths.HERMES_HOME, os.path.join(tmp_dir, "hermes_custom"))
+        self.assertEqual(paths.OMNIROUTE_HOME, os.path.join(tmp_dir, "omniroute_custom"))
+
+    def test_live_sync_dynamic_resolution(self):
+        import live_sync
+        tmp_dir = tempfile.mkdtemp()
+        custom_cfg = os.path.join(tmp_dir, "custom_live_sync.yaml")
+        custom_env = os.path.join(tmp_dir, ".env")
+
+        os.environ["HERMES_CONFIG"] = custom_cfg
+        os.environ["OMNIROUTE_HOME"] = tmp_dir
+
+        self.assertEqual(live_sync.HERMES_CONFIG, custom_cfg)
+        self.assertEqual(live_sync.OMNIROUTE_ENV, custom_env)
+
+        # Mock yaml for test environments without PyYAML installed
+        class FakeYaml:
+            @staticmethod
+            def safe_load(f):
+                return {"providers": {"test_provider": {"enabled": True}}}
+
+        with open(custom_cfg, "w", encoding="utf-8") as fh:
+            fh.write("providers:\n  test_provider:\n    enabled: true\n")
+
+        with open(custom_env, "w", encoding="utf-8") as fh:
+            fh.write("OMNIROUTE_API_KEY=secret_key_123\n")
+
+        with patch.dict("sys.modules", {"yaml": FakeYaml}):
+            provs, err = live_sync.fetch_hermes_config()
+            self.assertIsNone(err)
+            self.assertIn("test_provider", provs)
+
+        ep = live_sync.omniroute_endpoint()
+        self.assertEqual(ep.get("api_key"), "secret_key_123")
+
+    def test_model_health_and_hermes_gateway_dynamic_resolution(self):
+        import model_health, hermes_gateway
+        tmp_dir = tempfile.mkdtemp()
+        custom_cfg = os.path.join(tmp_dir, "custom_model_health.yaml")
+        custom_env = os.path.join(tmp_dir, ".env")
+
+        os.environ["HERMES_HOME"] = tmp_dir
+        os.environ["HERMES_CONFIG"] = custom_cfg
+
+        self.assertEqual(model_health.CONFIG_PATH, custom_cfg)
+        self.assertEqual(hermes_gateway.ENV_FILES, (custom_env,))
+
+        class FakeYaml:
+            @staticmethod
+            def safe_load(f):
+                return {"providers": {"nvidia": {"api_key": "nv_key_999"}}}
+
+        with open(custom_cfg, "w", encoding="utf-8") as fh:
+            fh.write("providers:\n  nvidia:\n    api_key: nv_key_999\n")
+
+        with open(custom_env, "w", encoding="utf-8") as fh:
+            fh.write("OMNIROUTE_API_KEY=gw_key_888\nNVIDIA_API_KEY=nv_key_999\n")
+
+        with patch.dict("sys.modules", {"yaml": FakeYaml}):
+            self.assertEqual(model_health._api_key(), "nv_key_999")
+        self.assertEqual(hermes_gateway._key(), "gw_key_888")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

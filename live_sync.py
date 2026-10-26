@@ -28,10 +28,16 @@ from paths import hermes_config_path, omniroute_env_path, OMNI_BASE
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(ROOT, "cache")
 CACHE_PATH = os.path.join(CACHE_DIR, "live_sync.json")
-HERMES_CONFIG = os.path.join(os.path.expanduser("~"), ".hermes", "config.yaml")
-OMNIROUTE_ENV = os.path.join(os.path.expanduser("~"), ".omniroute", ".env")
 
 SYNC_INTERVAL = 30  # seconds
+
+
+def __getattr__(name):
+    if name == "HERMES_CONFIG":
+        return hermes_config_path()
+    if name == "OMNIROUTE_ENV":
+        return omniroute_env_path()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 _STEM_SPLIT = re.compile(r"[-_:.]")
 
@@ -98,7 +104,7 @@ def fetch_hermes_config():
     """Read providers + models straight from ~/.hermes/config.yaml. Read-only."""
     try:
         import yaml
-        with open(HERMES_CONFIG, encoding="utf-8") as fh:
+        with open(hermes_config_path(), encoding="utf-8") as fh:
             cfg = yaml.safe_load(fh) or {}
     except Exception as exc:                       # missing file, bad YAML, no PyYAML
         return {}, f"hermes config unavailable: {type(exc).__name__}"
@@ -127,7 +133,7 @@ def fetch_hermes_config():
 # ── source 2: OmniRoute ────────────────────────────────────────────────────
 def omniroute_endpoint():
     """base_url + api_key for the local OmniRoute. Key is never returned to callers."""
-    env = _read_env_file(OMNIROUTE_ENV)
+    env = _read_env_file(omniroute_env_path())
     key = env.get("OMNIROUTE_API_KEY", "")
     if not key:
         return {}
