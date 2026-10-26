@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-25 - Handle ISO 8601 timestamps in console log sorting
+**Learning**: In `server.py` (`build_console_log_entries`), call log timestamps with ISO 8601 format containing 'T' (e.g. `2026-10-07T02:44:36Z`) raised `ValueError` in `time.strptime(ts[:19], '%Y-%m-%d %H:%M:%S')`, causing them to fail parsing and sort out of order at the end of log output.
+**Action**: Replaced `'T'` with `' '` in `sort_key(e)` prior to slicing and parsing, and added regression test in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time data does not match format

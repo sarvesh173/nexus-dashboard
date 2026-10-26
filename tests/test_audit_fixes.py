@@ -781,6 +781,37 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestBuildConsoleLogEntriesIsoTimestampSorting(unittest.TestCase):
+    """Test that build_console_log_entries correctly parses ISO 8601 timestamps
+    containing 'T' and sorts chronologically."""
+
+    def test_build_console_log_entries_sorts_iso_timestamps(self):
+        import server
+        import omniroute_logs
+
+        fake_hermes_logs = {
+            'logs': [
+                {'time': '2026-10-07 02:44:35,200', 'level': 'INFO', 'logger': 'gateway', 'message': 'Hermes line 1'},
+                {'time': '2026-10-07 02:44:37,100', 'level': 'INFO', 'logger': 'gateway', 'message': 'Hermes line 2'},
+            ]
+        }
+        fake_call_logs = {
+            'calls': [
+                {'at': '2026-10-07T02:44:36Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4', 'provider': 'openai'},
+            ]
+        }
+
+        with patch.object(server, 'get_hermes_logs', return_value=fake_hermes_logs), \
+             patch.object(omniroute_logs, 'read_call_logs', return_value=fake_call_logs):
+            entries = server.build_console_log_entries(limit=10, level='all')
+
+        self.assertEqual(len(entries), 3)
+        # Newest first: 02:44:37, then 02:44:36, then 02:44:35
+        self.assertEqual(entries[0]['message'], 'Hermes line 2')
+        self.assertEqual(entries[1]['timestamp'], '2026-10-07T02:44:36Z')
+        self.assertEqual(entries[2]['message'], 'Hermes line 1')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
