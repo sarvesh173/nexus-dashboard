@@ -781,6 +781,37 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestBuildConsoleLogEntriesIsoTimestamp(unittest.TestCase):
+    """Test that build_console_log_entries correctly parses and sorts ISO 8601 timestamps
+    containing 'T' separators alongside space-separated timestamps.
+    """
+
+    def test_iso_timestamp_sorting(self):
+        import server
+        mock_hermes_logs = {
+            'logs': [
+                {'time': '2026-10-06 10:00:00', 'level': 'INFO', 'logger': 'gateway', 'message': 'msg1'},
+                {'time': '2026-10-06T12:00:00.123Z', 'level': 'INFO', 'logger': 'gateway', 'message': 'msg3'},
+            ]
+        }
+        mock_omniroute_calls = {
+            'calls': [
+                {'at': '2026-10-06T11:00:00.000Z', 'status': 200, 'provider': 'router', 'method': 'POST', 'path': '/v1/chat', 'model': 'm1', 'ok': True},
+            ]
+        }
+
+        with patch('server.get_hermes_logs', return_value=mock_hermes_logs), \
+             patch('server.omniroute_logs') as mock_omni:
+            mock_omni.read_call_logs.return_value = mock_omniroute_calls
+            entries = server.build_console_log_entries(limit=10, level='all')
+
+            self.assertEqual(len(entries), 3)
+            # Newest first sorting order: 12:00:00 -> 11:00:00 -> 10:00:00
+            self.assertEqual(entries[0]['message'], 'msg3')
+            self.assertEqual(entries[1]['timestamp'], '2026-10-06T11:00:00.000Z')
+            self.assertEqual(entries[2]['message'], 'msg1')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
