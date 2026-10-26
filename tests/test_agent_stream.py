@@ -238,5 +238,26 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestReadPromptsFiltering(unittest.TestCase):
+    """User prompt queries must filter on text part types to avoid blank entries."""
+
+    def test_read_prompts_filters_non_text_parts(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute('CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, time_created INT)')
+        conn.execute('CREATE TABLE part (id TEXT, message_id TEXT, session_id TEXT, data TEXT, time_created INT)')
+
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)', ('m1', 's1', json.dumps({'role': 'user'}), 100))
+        # Part 1: non-text part (e.g. step marker)
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p1', 'm1', 's1', json.dumps({'type': 'step-start'}), 100))
+        # Part 2: text part
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?, ?)', ('p2', 'm1', 's1', json.dumps({'type': 'text', 'text': 'Hello agent'}), 101))
+
+        prompts = a._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello agent')
+        self.assertEqual(prompts[0]['message_id'], 'm1')
+        conn.close()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
