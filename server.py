@@ -1575,6 +1575,20 @@ def get_live_providers():
             'source': 'config',
         })
 
+    # Capture all known providers and models served by gateway/config BEFORE
+    # applying the visibility filter, so prune() only drops items that are
+    # no longer present in the upstream catalogue rather than items that were
+    # hidden by the user.
+    all_known_providers = {c['id'] for c in merged if c.get('id')}
+    all_known_models = set()
+    for card in merged:
+        for m in (card.get('models') or []):
+            if isinstance(m, dict):
+                if m.get('id'):
+                    all_known_models.add(m['id'])
+                if m.get('fullModel'):
+                    all_known_models.add(m['fullModel'])
+
     # Apply the local visibility layer. Upstream has no model-level
     # enable/disable, so this is the only place hide/show can take effect.
     hidden_p = visibility.hidden_providers()
@@ -1591,13 +1605,7 @@ def get_live_providers():
                 card['total_models'] = card['model_count']
         merged = [c for c in merged if not c.get('hidden')]
 
-    # Prune against what the catalogue actually contains. The hidden set was
-    # previously unioned into the "known" set, which made every hidden entry
-    # trivially known and therefore never prunable - prune() was a guaranteed
-    # no-op and hidden_store.json grew without bound.
-    visibility.prune({c['id'] for c in merged},
-                     {m.get('id') for c in merged
-                      for m in (c.get('models') or [])})
+    visibility.prune(all_known_providers, all_known_models)
 
     return merged
 

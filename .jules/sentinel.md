@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-25 - Preserve hidden items during visibility pruning in server.py
+**Learning**: In `server.py` (`get_live_providers`), provider and model IDs were collected for `visibility.prune()` after applying user visibility filters, causing user-hidden items to be treated as absent from the catalog and immediately deleted from `hidden_store.json`. Additionally, `live_sync.py` and `paths.py` used import-time evaluated constants for paths rather than dynamic function calls.
+**Action**: In `server.py`, collected all known provider and model IDs prior to filtering for `visibility.prune()`. Updated `live_sync.py` to use `hermes_config_path()` and `omniroute_env_path()`, and made `paths.py` helper functions dynamically evaluate `os.environ` at call time. Added regression unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1605 - LogicError: visibility prune deletes hidden entries from store

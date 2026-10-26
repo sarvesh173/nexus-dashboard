@@ -781,6 +781,79 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityPrunePreservesHiddenItems(unittest.TestCase):
+    """BUG: get_live_providers passed filtered providers/models to prune(),
+    causing hidden items to be immediately deleted from hidden_store.json.
+    """
+
+    def setUp(self):
+        import visibility
+        self.tmp_dir = tempfile.mkdtemp()
+        self.orig_store = visibility.STORE
+        visibility.STORE = os.path.join(self.tmp_dir, "hidden_store.json")
+        visibility._cache = {'at': 0.0, 'data': {'providers': [], 'models': []}}
+
+    def tearDown(self):
+        import visibility
+        visibility.STORE = self.orig_store
+
+    def test_get_live_providers_retains_hidden_provider(self):
+        import visibility
+        import server
+
+        visibility.set_hidden("providers", "nvidia", True)
+        self.assertIn("nvidia", visibility.hidden_providers())
+
+        fake_catalog = {
+            "providers": [
+                {
+                    "id": "nvidia",
+                    "name": "NVIDIA",
+                    "kind": "direct",
+                    "model_count": 1,
+                    "models": [{"id": "nvidia/model-a"}],
+                }
+            ]
+        }
+
+        with patch("hermes_gateway.catalog", return_value=fake_catalog), \
+             patch("server.config_provider_map", return_value={}):
+            live = server.get_live_providers()
+            # 'nvidia' is hidden so it won't be returned in live
+            self.assertEqual([p["id"] for p in live], [])
+            # But 'nvidia' must remain in hidden_store.json because it was in catalog
+            self.assertIn("nvidia", visibility.hidden_providers())
+
+    def test_prune_drops_truly_absent_provider(self):
+        import visibility
+
+        visibility.set_hidden("providers", "absent-vendor", True)
+        visibility.set_hidden("providers", "nvidia", True)
+        self.assertIn("absent-vendor", visibility.hidden_providers())
+
+        before, after = visibility.prune(known_providers={"nvidia"}, known_models=set())
+        self.assertNotIn("absent-vendor", visibility.hidden_providers())
+        self.assertIn("nvidia", visibility.hidden_providers())
+
+
+class TestDynamicPathsEnvOverrides(unittest.TestCase):
+    """Ensure path helpers in paths.py and live_sync.py dynamically respect env overrides."""
+
+    def test_hermes_config_path_env_override(self):
+        import paths
+        import live_sync
+
+        custom_path = "/tmp/custom_hermes_config.yaml"
+        fake_yaml = MagicMock()
+        with patch.dict(os.environ, {"HERMES_CONFIG": custom_path}), \
+             patch.dict(sys.modules, {"yaml": fake_yaml}):
+            self.assertEqual(paths.hermes_config_path(), custom_path)
+            # live_sync.fetch_hermes_config uses hermes_config_path()
+            with patch("builtins.open", side_effect=FileNotFoundError):
+                _, err = live_sync.fetch_hermes_config()
+                self.assertIn("FileNotFoundError", err)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
