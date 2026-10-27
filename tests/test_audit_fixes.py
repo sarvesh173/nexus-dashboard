@@ -781,6 +781,25 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestHermesGatewayListModels(unittest.TestCase):
+    """BUG: list_models called data.get('data', []) directly, so top-level list payloads
+    raised AttributeError: 'list' object has no attribute 'get'.
+    """
+
+    def test_top_level_list_parsed_safely(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value=[{'id': 'a/b'}, {'id': 'c/d'}]):
+            ids = hermes_gateway.list_models(force=True)
+            self.assertEqual(ids, ['a/b', 'c/d'])
+
+    def test_invalid_items_and_non_dicts_are_skipped(self):
+        import hermes_gateway
+        payload = [{'id': 'a/b'}, 'junk', 123, None, {'no_id': True}]
+        with patch.object(hermes_gateway, '_get', return_value=payload):
+            ids = hermes_gateway.list_models(force=True)
+            self.assertEqual(ids, ['a/b'])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

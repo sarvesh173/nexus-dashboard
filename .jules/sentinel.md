@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-27 - Use model_rows in hermes_gateway for model list payload parsing
+**Learning**: `hermes_gateway.list_models` evaluated `data.get('data', [])` directly, which raised `AttributeError: 'list' object has no attribute 'get'` when the gateway returned a top-level JSON list instead of `{"data": [...]}`.
+**Action**: Used shared `model_rows` guard from `models_payload.py` in `hermes_gateway.list_models` and added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:73 - AttributeError: 'list' object has no attribute 'get'
