@@ -238,5 +238,40 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestReadPromptsTextFilter(unittest.TestCase):
+    """User prompts must explicitly filter on json_extract(p.data, '$.type') = 'text'."""
+
+    def test_non_text_parts_are_ignored_and_do_not_produce_duplicates(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            'CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, time_created INT)'
+        )
+        conn.execute(
+            'CREATE TABLE part (id TEXT, message_id TEXT, data TEXT, time_created INT)'
+        )
+
+        # Message with role 'user'
+        conn.execute(
+            "INSERT INTO message VALUES ('m1', 's1', ?, 1000)",
+            (json.dumps({'role': 'user'}),),
+        )
+        # Part 1: non-text part (e.g. step-start)
+        conn.execute(
+            "INSERT INTO part VALUES ('p1', 'm1', ?, 1000)",
+            (json.dumps({'type': 'step-start'}),),
+        )
+        # Part 2: text part
+        conn.execute(
+            "INSERT INTO part VALUES ('p2', 'm1', ?, 1001)",
+            (json.dumps({'type': 'text', 'text': 'Hello world'}),),
+        )
+
+        prompts = a._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello world')
+        self.assertEqual(prompts[0]['message_id'], 'm1')
+        conn.close()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
