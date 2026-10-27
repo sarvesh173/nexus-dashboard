@@ -631,7 +631,8 @@ def build_console_log_entries(limit='500', level='all'):
     # the last row rather than the first.
     def sort_key(e):
         try:
-            return (0, -time.mktime(time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')))
+            ts = e['timestamp'][:19].replace('T', ' ')
+            return (0, -time.mktime(time.strptime(ts, '%Y-%m-%d %H:%M:%S')))
         except Exception:
             return (1, 0)
 
@@ -1575,6 +1576,17 @@ def get_live_providers():
             'source': 'config',
         })
 
+    # Collect all known providers and models from the unfiltered catalogue
+    # BEFORE applying visibility filters, so prune() can distinguish between
+    # user-hidden items that still exist upstream vs items dropped by the gateway.
+    all_known_providers = {c['id'] for c in merged}
+    all_known_models = {
+        m.get('id')
+        for c in merged
+        for m in (c.get('models') or [])
+        if isinstance(m, dict) and m.get('id')
+    }
+
     # Apply the local visibility layer. Upstream has no model-level
     # enable/disable, so this is the only place hide/show can take effect.
     hidden_p = visibility.hidden_providers()
@@ -1591,13 +1603,7 @@ def get_live_providers():
                 card['total_models'] = card['model_count']
         merged = [c for c in merged if not c.get('hidden')]
 
-    # Prune against what the catalogue actually contains. The hidden set was
-    # previously unioned into the "known" set, which made every hidden entry
-    # trivially known and therefore never prunable - prune() was a guaranteed
-    # no-op and hidden_store.json grew without bound.
-    visibility.prune({c['id'] for c in merged},
-                     {m.get('id') for c in merged
-                      for m in (c.get('models') or [])})
+    visibility.prune(all_known_providers, all_known_models)
 
     return merged
 

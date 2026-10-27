@@ -781,6 +781,154 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestHermesGatewayListModelsNormalisation(unittest.TestCase):
+    """Hermes gateway list_models normalises response payloads using model_rows."""
+
+    def test_top_level_list_and_junk_items_do_not_raise(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value=[{"id": "v/m1"}, "junk", {"no_id": True}]), \
+             patch.object(hermes_gateway, '_cache', {'models': [], 'at': 0, 'error': None}):
+            ids = hermes_gateway.list_models(force=True)
+            self.assertEqual(ids, ["v/m1"])
+
+    def test_dict_payload_passes_through(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value={"data": [{"id": "a/b"}, {"id": "c/d"}]}), \
+             patch.object(hermes_gateway, '_cache', {'models': [], 'at': 0, 'error': None}):
+            ids = hermes_gateway.list_models(force=True)
+            self.assertEqual(ids, ["a/b", "c/d"])
+
+
+class TestGetLiveProvidersVisibilityPruning(unittest.TestCase):
+    """get_live_providers passes unfiltered IDs to prune() so hidden entries persist."""
+
+    def test_prune_receives_unfiltered_catalog_ids(self):
+        import server
+        import visibility
+
+        mock_catalog = {
+            'providers': [
+                {
+                    'id': 'p1',
+                    'name': 'P1',
+                    'kind': 'direct',
+                    'model_count': 2,
+                    'models': [{'id': 'p1/m1'}, {'id': 'p1/m2'}],
+                }
+            ]
+        }
+
+        prune_calls = []
+
+        def fake_prune(p_set, m_set):
+            prune_calls.append((set(p_set), set(m_set)))
+            return (0, 0), (0, 0)
+
+        with patch("hermes_gateway.catalog", return_value=mock_catalog), \
+             patch("server.config_provider_map", return_value={}), \
+             patch.object(visibility, "hidden_providers", return_value=set()), \
+             patch.object(visibility, "hidden_models", return_value={"p1/m1"}), \
+             patch.object(visibility, "prune", side_effect=fake_prune):
+            result = server.get_live_providers()
+
+            self.assertEqual(len(prune_calls), 1)
+            p_known, m_known = prune_calls[0]
+            # m_known must include 'p1/m1' even though it was filtered from result
+            self.assertIn("p1/m1", m_known)
+            self.assertIn("p1/m2", m_known)
+            self.assertIn("p1", p_known)
+
+            # verify 'p1/m1' was filtered from result returned to caller
+            m_result_ids = [m["id"] for p in result for m in p.get("models", [])]
+            self.assertNotIn("p1/m1", m_result_ids)
+            self.assertIn("p1/m2", m_result_ids)
+
+
+class TestBuildConsoleLogEntriesIsoTimestampParsing(unittest.TestCase):
+    """Console log entries with ISO-8601 'T' timestamps sort cleanly without ValueError."""
+
+    def test_iso_timestamps_sort_chronologically(self):
+        import server
+
+        hermes_payload = {
+            'logs': [
+                {'time': '2026-10-06 20:00:00', 'level': 'INFO', 'logger': 'gw', 'message': 'first'}
+            ]
+        }
+        call_ledger_payload = {
+            'calls': [
+                {
+                    'at': '2026-10-06T21:00:00.123Z',
+                    'status': 200,
+                    'ok': True,
+                    'method': 'POST',
+                    'path': '/v1/chat',
+                    'model': 'm1',
+                    'provider': 'p1',
+                }
+            ]
+        }
+
+        fake_omniroute = MagicMock()
+        fake_omniroute.read_call_logs.return_value = call_ledger_payload
+
+        with patch("server.get_hermes_logs", return_value=hermes_payload), \
+             patch.object(server, "omniroute_logs", fake_omniroute):
+            entries = server.build_console_log_entries(limit=10, level='all')
+
+            self.assertEqual(len(entries), 2)
+            # e['timestamp'] for call ledger has 'T', e['timestamp'] for hermes has space
+            # Newest first sorting: 21:00:00 (call log) should come before 20:00:00 (hermes)
+            self.assertEqual(entries[0]['timestamp'], '2026-10-06T21:00:00.123Z')
+            self.assertEqual(entries[1]['timestamp'], '2026-10-06 20:00:00')
+
+
+class TestReadPromptsTextFiltering(unittest.TestCase):
+    """_read_prompts joins text parts only, preventing duplicate prompt entries."""
+
+    def test_non_text_parts_are_filtered_in_sql(self):
+        import sqlite3
+        import agent_stream
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute("CREATE TABLE message (id TEXT, session_id TEXT, time_created INT, data TEXT)")
+        conn.execute("CREATE TABLE part (id TEXT, message_id TEXT, data TEXT)")
+
+        msg_id = "msg1"
+        sess_id = "sess1"
+        conn.execute("INSERT INTO message VALUES (?, ?, 100, ?)",
+                     (msg_id, sess_id, json.dumps({"role": "user"})))
+
+        # Insert 1 text part and 2 step/image parts
+        conn.execute("INSERT INTO part VALUES ('p1', ?, ?)",
+                     (msg_id, json.dumps({"type": "text", "text": "Hello world"})))
+        conn.execute("INSERT INTO part VALUES ('p2', ?, ?)",
+                     (msg_id, json.dumps({"type": "step-start"})))
+
+        prompts = agent_stream._read_prompts(conn, sess_id)
+        conn.close()
+
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], "Hello world")
+
+
+class TestVisibilityReadNonDictJson(unittest.TestCase):
+    """visibility._read handles non-dict JSON gracefully."""
+
+    def test_non_dict_json_file_returns_blank(self):
+        import visibility
+
+        tmp_dir = tempfile.mkdtemp()
+        tmp_store = os.path.join(tmp_dir, "hidden_store.json")
+        with open(tmp_store, "w", encoding="utf-8") as fh:
+            fh.write("[]")
+
+        with patch.object(visibility, "STORE", tmp_store), \
+             patch.object(visibility, "_cache", {'at': 0.0, 'data': {}}):
+            res = visibility._read()
+            self.assertEqual(res, {'providers': [], 'models': []})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
