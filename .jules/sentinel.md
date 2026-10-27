@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-25 - Dynamically resolve path helpers at call time
+**Learning**: Path helpers in `paths.py` evaluated home directory environment variables (`HERMES_HOME`, `OMNIROUTE_HOME`) at module import time, and modules `live_sync.py`, `model_health.py`, and `hermes_gateway.py` hardcoded path constants at module load time (`HERMES_CONFIG`, `OMNIROUTE_ENV`, `CONFIG_PATH`, `ENV_FILES`), causing runtime environment variable overrides set after import to be ignored.
+**Action**: Refactored `paths.py` helpers to query `os.environ` dynamically at call time, updated `live_sync.py`, `model_health.py`, and `hermes_gateway.py` to use path helper functions directly, and added regression unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: paths.py:15 - LogicError: import-time constant path evaluation ignoring dynamic environment overrides

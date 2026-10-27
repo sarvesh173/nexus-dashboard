@@ -17,7 +17,6 @@ import urllib.request
 from paths import hermes_env_path, OMNI_BASE
 
 GATEWAY = os.environ.get('HERMES_GATEWAY_URL', OMNI_BASE)
-ENV_FILES = (hermes_env_path(),)
 KEY_NAMES = ('OMNIROUTE_API_KEY', 'OMNIROUTER_API_KEY', 'API_KEY')
 
 # Prefixes that are routing layers, not model vendors.
@@ -33,7 +32,7 @@ def _key():
         k = os.environ.get(name)
         if k:
             return k
-    for path in ENV_FILES:
+    for path in (hermes_env_path(),):
         try:
             with open(path, encoding='utf-8', errors='replace') as fh:
                 for line in fh:
