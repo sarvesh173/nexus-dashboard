@@ -781,6 +781,30 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogISO8601TimestampSorting(unittest.TestCase):
+    """Bug: build_console_log_entries failed on ISO 8601 timestamps with 'T' separator,
+    falling back to tuple (1, 0) in sort_key and sorting items incorrectly.
+    """
+
+    def test_console_log_entries_sort_iso_timestamps_with_t(self):
+        import server
+        e1 = {'timestamp': '2026-10-27T21:43:00.000Z', 'level': 'info', 'component': 'gw', 'message': 'msg1'}
+        e2 = {'timestamp': '2026-10-27 21:42:00', 'level': 'info', 'component': 'gw', 'message': 'msg2'}
+
+        fake_hermes = {'logs': [{'time': '2026-10-27T21:43:00.000Z', 'level': 'info', 'logger': 'gw', 'message': 'msg1'}]}
+
+        def fake_read_call_logs(limit, offset):
+            return {'calls': [{'at': '2026-10-27 21:42:00', 'status': 200, 'provider': 'gw', 'method': 'GET', 'path': '/v1', 'model': 'm1'}]}
+
+        with patch("server.get_hermes_logs", return_value=fake_hermes), \
+             patch.object(server, 'omniroute_logs', MagicMock(read_call_logs=fake_read_call_logs)):
+            entries = server.build_console_log_entries(limit='10', level='all')
+            self.assertEqual(len(entries), 2)
+            # Newest first: 21:43:00 must precede 21:42:00
+            self.assertEqual(entries[0]['timestamp'], '2026-10-27T21:43:00.000Z')
+            self.assertEqual(entries[1]['timestamp'], '2026-10-27 21:42:00')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
