@@ -29,3 +29,17 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Normalise model catalog payloads, visibility pruning order, ISO timestamp parsing, and prompt SQL filtering
+**Learning**:
+1. `hermes_gateway.py` `list_models()` assumed a dictionary payload from `/models`, raising `AttributeError` on top-level JSON arrays.
+2. `server.py` `get_live_providers()` applied visibility filtering before collecting known provider/model IDs, causing `visibility.prune()` to erase user-hidden items from `hidden_store.json`.
+3. `server.py` `build_console_log_entries()` attempted to parse ISO-8601 timestamps containing 'T' with `time.strptime(ts, '%Y-%m-%d %H:%M:%S')`, raising `ValueError` on call-ledger logs and breaking chronological sorting.
+4. `agent_stream.py` `_read_prompts()` joined `part` without filtering `json_extract(p.data, '$.type') = 'text'`, producing duplicate prompt items and premature SQL `LIMIT` truncation.
+5. `visibility.py` `_read()` attempted `.get()` on non-dict JSON files, raising `AttributeError`.
+**Action**: Normalised `/models` with `model_rows`, preserved unfiltered catalogue IDs for `visibility.prune()`, stripped 'T' from ISO timestamps before `time.strptime`, added type filtering in `_read_prompts`, validated JSON dict types in `visibility._read()`, and added unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: hermes_gateway.py:70 - AttributeError: top-level array in list_models
+**Fingerprint**: server.py:1580 - LogicError: visibility filter applied before prune collection
+**Fingerprint**: server.py:634 - ValueError: time.strptime ISO timestamp with T
+**Fingerprint**: agent_stream.py:242 - LogicError: missing text part filter in prompt SQL join
+**Fingerprint**: visibility.py:39 - AttributeError: non-dict JSON in visibility _read
