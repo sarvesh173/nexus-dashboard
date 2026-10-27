@@ -29,3 +29,13 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-27 - Filter text part type in agent stream prompt query
+**Learning**: In `agent_stream.py`, `_read_prompts` joined `message` and `part` tables without filtering `json_extract(p.data, '$.type') = 'text'`. Joining non-text parts produced blank prompt items and caused `LIMIT PROMPT_LIMIT` to truncate subsequent prompt messages.
+**Action**: Added `AND json_extract(p.data, '$.type') = 'text'` to SQL query and added unit test in `tests/test_agent_stream.py`.
+**Fingerprint**: agent_stream.py:239 - LogicError: missing text type filter in prompt query
+
+## 2026-10-27 - Replace T in ISO 8601 timestamps before time.strptime in server
+**Learning**: In `server.py`, `build_console_log_entries` sorted log entries using `time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')`. ISO 8601 timestamps containing `'T'` (from call logs) raised `ValueError` and fell back to `(1, 0)`, ruining log sorting.
+**Action**: Replaced `'T'` with `' '` via `.replace('T', ' ')` before calling `time.strptime` and added regression test in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time.strptime unable to parse ISO 8601 T separator
