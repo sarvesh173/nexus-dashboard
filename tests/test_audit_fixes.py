@@ -781,6 +781,59 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestDynamicPathEnvResolution(unittest.TestCase):
+    """Test that setting environment variables dynamically at runtime updates paths."""
+
+    def test_paths_helpers_reflect_environ_overrides(self):
+        import paths
+        with patch.dict(os.environ, {
+            'HERMES_HOME': '/custom/hermes',
+            'OMNIROUTE_HOME': '/custom/omniroute',
+            'HERMES_CONFIG': '/custom/hermes/my_config.yaml',
+        }):
+            self.assertEqual(paths.hermes_config_path(), '/custom/hermes/my_config.yaml')
+            self.assertEqual(paths.hermes_env_path(), '/custom/hermes/.env')
+            self.assertEqual(paths.hermes_gateway_state_path(), '/custom/hermes/gateway_state.json')
+            self.assertEqual(paths.hermes_logs_dir(), '/custom/hermes/logs')
+            self.assertEqual(paths.hermes_profiles_dir(), '/custom/hermes/profiles')
+            self.assertEqual(paths.omniroute_env_path(), '/custom/omniroute/.env')
+            self.assertEqual(paths.omniroute_storage_path(), '/custom/omniroute/storage.sqlite')
+
+    def test_live_sync_reflects_environ_overrides(self):
+        import live_sync
+        from unittest.mock import mock_open, MagicMock
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {'providers': {}}
+        m = mock_open(read_data='providers: {}')
+        with patch.dict(os.environ, {'HERMES_CONFIG': '/custom/hermes/my_config.yaml'}), \
+             patch.dict('sys.modules', {'yaml': fake_yaml}), \
+             patch('builtins.open', m):
+            live_sync.fetch_hermes_config()
+            m.assert_any_call('/custom/hermes/my_config.yaml', encoding='utf-8')
+
+    def test_model_health_api_key_reflects_environ_overrides(self):
+        import model_health
+        from unittest.mock import mock_open, MagicMock
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {'providers': {'nvidia': {'api_key': 'custom_key'}}}
+        m = mock_open(read_data='providers:\n  nvidia:\n    api_key: custom_key\n')
+        with patch.dict(os.environ, {'HERMES_CONFIG': '/custom/hermes/my_config.yaml'}), \
+             patch.dict('sys.modules', {'yaml': fake_yaml}), \
+             patch('builtins.open', m):
+            key = model_health._api_key()
+            self.assertEqual(key, 'custom_key')
+            m.assert_any_call('/custom/hermes/my_config.yaml')
+
+    def test_hermes_gateway_key_reflects_environ_overrides(self):
+        import hermes_gateway
+        from unittest.mock import mock_open
+        with patch.dict(os.environ, {'HERMES_HOME': '/custom/hermes'}, clear=True), \
+             patch('builtins.open', mock_open(read_data='OMNIROUTE_API_KEY=env_key')) as mock_file:
+            key = hermes_gateway._key()
+            self.assertEqual(key, 'env_key')
+            mock_file.assert_called_with('/custom/hermes/.env', encoding='utf-8', errors='replace')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
