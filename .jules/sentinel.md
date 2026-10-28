@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Dynamic path helper resolution in live_sync
+**Learning**: `live_sync.py` defined top-level `HERMES_CONFIG` and `OMNIROUTE_ENV` string constants at import time instead of dynamically calling `hermes_config_path()` and `omniroute_env_path()` from `paths.py`, causing `live_sync.py` to ignore runtime environment variable overrides (`HERMES_CONFIG`, `HERMES_HOME`, `OMNIROUTE_HOME`).
+**Action**: Replaced top-level static constants in `live_sync.py` with dynamic calls to `hermes_config_path()` and `omniroute_env_path()` inside `fetch_hermes_config()` and `omniroute_endpoint()`. Added unit tests in `tests/test_live_sync.py`.
+**Fingerprint**: live_sync.py:98 - LogicError: static path constant ignoring env overrides

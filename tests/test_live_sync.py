@@ -140,5 +140,50 @@ class TestWriteCacheMaths(unittest.TestCase):
         self.assertLessEqual(unique, total)
 
 
+class TestDynamicPaths(unittest.TestCase):
+    def test_fetch_hermes_config_uses_hermes_config_path(self):
+        """fetch_hermes_config must resolve hermes_config_path() dynamically."""
+        from unittest.mock import patch, MagicMock
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".yaml") as tmp:
+            tmp.write("providers:\n  test_p:\n    models:\n      - m1\n")
+            tmp_path = tmp.name
+
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {"providers": {"test_p": {"models": ["m1"]}}}
+
+        try:
+            with patch.dict(sys.modules, {"yaml": fake_yaml}):
+                with patch("live_sync.hermes_config_path", return_value=tmp_path) as mock_path:
+                    providers, err = live_sync.fetch_hermes_config()
+                    mock_path.assert_called_once()
+                    self.assertIsNone(err)
+                    self.assertIn("test_p", providers)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    def test_omniroute_endpoint_uses_omniroute_env_path(self):
+        """omniroute_endpoint must resolve omniroute_env_path() dynamically."""
+        from unittest.mock import patch
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+            tmp.write("OMNIROUTE_API_KEY=test-secret-key\n")
+            tmp_path = tmp.name
+
+        try:
+            with patch("live_sync.omniroute_env_path", return_value=tmp_path) as mock_path:
+                ep = live_sync.omniroute_endpoint()
+                mock_path.assert_called_once()
+                self.assertEqual(ep.get("api_key"), "test-secret-key")
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
