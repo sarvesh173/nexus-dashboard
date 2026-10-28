@@ -781,6 +781,35 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogEntriesIsoParsing(unittest.TestCase):
+    """Test that build_console_log_entries parses ISO 8601 timestamps containing 'T'."""
+
+    def test_iso_timestamp_with_t_parses_and_sorts(self):
+        import server
+        mock_logs = {
+            'logs': [
+                {
+                    'time': '2026-10-07T02:44:35.209Z',
+                    'level': 'INFO',
+                    'logger': 'gateway',
+                    'message': 'newer ISO entry'
+                },
+                {
+                    'time': '2026-10-07 02:44:30,100',
+                    'level': 'INFO',
+                    'logger': 'gateway',
+                    'message': 'older space entry'
+                }
+            ]
+        }
+        with patch('server.get_hermes_logs', return_value=mock_logs):
+            entries = server.build_console_log_entries(limit=10)
+            self.assertEqual(len(entries), 2)
+            # build_console_log_entries sorts newest first
+            self.assertEqual(entries[0]['message'], 'newer ISO entry')
+            self.assertEqual(entries[1]['message'], 'older space entry')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
