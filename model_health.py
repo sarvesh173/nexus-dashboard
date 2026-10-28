@@ -102,7 +102,8 @@ def _load():
         _registry = {}
     if not isinstance(_registry, dict):
         _registry = {}
-    _registry.setdefault('models', {})
+    if not isinstance(_registry.get('models'), dict):
+        _registry['models'] = {}
     _registry_mtime[0] = mtime
     return _registry
 
