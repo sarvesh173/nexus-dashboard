@@ -97,6 +97,46 @@ class TestFetchOmniRouteNeverRaises(unittest.TestCase):
         self.assertIsNone(err)
 
 
+class TestConsoleLogIsoTimestampSorting(unittest.TestCase):
+    """ISO 8601 timestamps containing 'T' (e.g. '2026-10-06T23:10:13.103Z')
+    must sort chronologically in build_console_log_entries without raising ValueError.
+    """
+
+    def test_iso_timestamps_sort_chronologically(self):
+        import server
+        mock_omniroute = MagicMock()
+        mock_omniroute.read_call_logs.return_value = {
+            'calls': [
+                {
+                    'at': '2026-10-06T23:10:13.103Z',
+                    'status': 200,
+                    'ok': True,
+                    'method': 'POST',
+                    'path': '/v1/chat/completions',
+                    'model': 'gpt-4o',
+                    'provider': 'openai',
+                },
+                {
+                    'at': '2026-10-07T10:15:00.000Z',
+                    'status': 200,
+                    'ok': True,
+                    'method': 'POST',
+                    'path': '/v1/chat/completions',
+                    'model': 'claude-3-5',
+                    'provider': 'anthropic',
+                },
+            ]
+        }
+
+        with patch.object(server, 'get_hermes_logs', return_value={'logs': []}), \
+             patch.object(server, 'omniroute_logs', mock_omniroute):
+            entries = server.build_console_log_entries(limit=10, level='all')
+            self.assertEqual(len(entries), 2)
+            # Newest first sorting: 2026-10-07 comes before 2026-10-06
+            self.assertEqual(entries[0]['timestamp'], '2026-10-07T10:15:00.000Z')
+            self.assertEqual(entries[1]['timestamp'], '2026-10-06T23:10:13.103Z')
+
+
 class TestAutoNamespaceIsNotAVendor(unittest.TestCase):
     """BUG: `auto/` routing aliases became 11 phantom providers.
 
