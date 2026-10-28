@@ -29,3 +29,14 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-28 - Preserve visibility pruning and guard store type safety across backend readers
+**Learning**: In `server.py`, `get_live_providers()` passed visibility-filtered cards to `visibility.prune()`, causing hidden providers/models to be misidentified as removed upstream and instantly deleted from `hidden_store.json`. Additionally, `visibility._read()` and `model_health._load()` lacked type guards for non-dict JSON stores, `server.build_console_log_entries()` failed ISO timestamp parsing on `'T'`, `run_sync._live_specs()` leaked `requests.get` network exceptions, `hermes_gateway.list_models()` failed on array responses, and `agent_stream._read_sessions()` returned `None` for raw string `model_id`.
+**Action**: Collected unfiltered known provider and model IDs before applying visibility filters in `server.py`, added non-dict guards in `visibility.py` and `model_health.py`, replaced `'T'` with `' '` in log sorting, caught network exceptions in `run_sync.py`, parsed array payloads via `models_payload.model_rows()`, and wrapped raw model ID strings as dicts in `agent_stream.py`. Added regression unit tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1580 - LogicError: prune against visibility-filtered provider catalogue
+**Fingerprint**: visibility.py:32 - AttributeError: non-dict JSON store in hidden_store.json
+**Fingerprint**: server.py:634 - ValueError: ISO 8601 timestamp with 'T' in build_console_log_entries
+**Fingerprint**: run_sync.py:37 - RequestException: unhandled requests.get exception in _live_specs
+**Fingerprint**: model_health.py:105 - AttributeError: non-dict models key in model_health.json
+**Fingerprint**: hermes_gateway.py:72 - AttributeError: top-level array in list_models
+**Fingerprint**: agent_stream.py:476 - LogicError: raw model string resolves to None model_id

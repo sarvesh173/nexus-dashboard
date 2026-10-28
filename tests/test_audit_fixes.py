@@ -780,6 +780,101 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
                                            'https://integrate.api.nvidia.com/v1')
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
+    def test_visibility_read_nondict_json(self):
+        import visibility
+        import tempfile, os
+        with tempfile.NamedTemporaryFile('w', delete=False) as f:
+            f.write('[]')
+            tmp_path = f.name
+
+        old_store = visibility.STORE
+        visibility.STORE = tmp_path
+        visibility._cache = {'at': 0.0, 'data': {}}
+        try:
+            res = visibility._read()
+            self.assertEqual(res, {'providers': [], 'models': []})
+        finally:
+            visibility.STORE = old_store
+            visibility._cache = {'at': 0.0, 'data': {}}
+            os.unlink(tmp_path)
+
+    def test_server_visibility_prune_unfiltered_catalog(self):
+        import server, visibility, tempfile, os
+        with tempfile.NamedTemporaryFile('w', delete=False) as f:
+            f.write('{"providers": ["p1"], "models": ["m1"]}')
+            tmp_path = f.name
+
+        old_store = visibility.STORE
+        visibility.STORE = tmp_path
+        visibility._cache = {'at': 0.0, 'data': {}}
+        try:
+            with patch.object(server.hermes_gateway, 'catalog', return_value={
+                'providers': [{'id': 'p1', 'name': 'P1', 'kind': 'direct', 'model_count': 1, 'models': [{'id': 'm1'}]}]
+            }):
+                providers = server.get_live_providers()
+                self.assertEqual(len(providers), 0)
+                self.assertIn('p1', visibility.hidden_providers())
+        finally:
+            visibility.STORE = old_store
+            visibility._cache = {'at': 0.0, 'data': {}}
+            os.unlink(tmp_path)
+
+    def test_server_build_console_log_entries_iso_timestamp(self):
+        import server
+        with patch('server.get_hermes_logs', return_value={'logs': [
+            {'time': '2026-10-01 12:00:00', 'level': 'info', 'logger': 'test', 'message': 'older space'},
+            {'time': '2026-10-28T14:30:00Z', 'level': 'info', 'logger': 'test', 'message': 'newer ISO T'},
+        ]}):
+            res = server.build_console_log_entries()
+            self.assertEqual(res[0]['timestamp'], '2026-10-28T14:30:00Z')
+
+    def test_run_sync_live_specs_network_error(self):
+        import run_sync
+        mock_req = MagicMock()
+        mock_req.get.side_effect = Exception('Connection refused')
+        with patch.dict('sys.modules', {'requests': mock_req}):
+            res = run_sync._live_specs('http://fake', 'key')
+            self.assertEqual(res, [])
+
+    def test_model_health_load_nondict_models_key(self):
+        import model_health, tempfile, os
+        with tempfile.NamedTemporaryFile('w', delete=False) as f:
+            f.write('{"models": null}')
+            tmp_path = f.name
+
+        old_reg_path = model_health.REGISTRY_PATH
+        model_health.REGISTRY_PATH = tmp_path
+        model_health._registry = None
+        model_health._registry_mtime = [None]
+        try:
+            res = model_health.get_health_map()
+            self.assertEqual(res, {})
+        finally:
+            model_health.REGISTRY_PATH = old_reg_path
+            model_health._registry = None
+            model_health._registry_mtime = [None]
+            os.unlink(tmp_path)
+
+    def test_hermes_gateway_list_models_top_level_array(self):
+        import hermes_gateway
+        with patch.object(hermes_gateway, '_get', return_value=[{'id': 'm1'}, {'id': 'm2'}, None]):
+            hermes_gateway._cache = {'models': [], 'at': 0, 'error': None}
+            res = hermes_gateway.list_models(force=True)
+            self.assertEqual(res, ['m1', 'm2'])
+
+    def test_agent_stream_read_sessions_raw_model_string(self):
+        import agent_stream
+        with patch.object(agent_stream, '_table_exists', return_value=True), \
+             patch.object(agent_stream, '_session_live', return_value=(False, 100)), \
+             patch.object(agent_stream, '_newest_message_model', return_value=None), \
+             patch.object(agent_stream, '_read_prompts', return_value=[]):
+            mock_conn = MagicMock()
+            mock_conn.execute().fetchall.return_value = [
+                ('s1', 'title', 'agent', 'gpt-4', '/dir', 0, 0, 0, 0, 1000, 1000)
+            ]
+            sessions = agent_stream._read_sessions(mock_conn, True)
+            self.assertEqual(sessions[0]['model_id'], 'gpt-4')
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
