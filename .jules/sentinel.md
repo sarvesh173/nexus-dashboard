@@ -29,3 +29,13 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-22 - Normalize ISO 8601 timestamps in server console log entries
+**Learning**: In `server.py` (`build_console_log_entries`), ISO 8601 timestamps containing 'T' (e.g. `2026-10-22T14:30:00.000Z`) caused `time.strptime` to raise `ValueError` because the format string expects space-separated `%Y-%m-%d %H:%M:%S`.
+**Action**: Replaced 'T' with ' ' in timestamp strings prior to parsing with `time.strptime` in `server.py` and added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time data does not match format
+
+## 2026-10-22 - Normalize /models response shape in hermes_gateway
+**Learning**: `hermes_gateway.py` (`list_models`) assumed `/models` always returned `{"data": [...]}` dictionary payloads, causing crashes or empty lists when upstreams returned a raw list `[...]`.
+**Action**: Imported `model_rows` from `models_payload.py` to extract model IDs cleanly across both dict and list response shapes in `list_models`.
+**Fingerprint**: hermes_gateway.py:72 - AttributeError: list object has no attribute get

@@ -781,6 +781,90 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestISO8601ConsoleLogSorting(unittest.TestCase):
+    """Test ISO 8601 timestamps containing 'T' are parsed cleanly in build_console_log_entries."""
+
+    def test_iso_timestamp_with_t_sorts_without_value_error(self):
+        import server
+        mock_omniroute = MagicMock()
+        mock_omniroute.read_call_logs.return_value = {
+            'calls': [
+                {'at': '2026-10-22T14:30:00.000Z', 'status': 200, 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4o', 'provider': 'openai', 'ok': True},
+                {'at': '2026-10-22 14:35:00', 'status': 200, 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4o', 'provider': 'openai', 'ok': True},
+            ]
+        }
+        with patch.object(server, 'get_hermes_logs', return_value={'logs': []}), \
+             patch.object(server, 'omniroute_logs', mock_omniroute):
+            entries = server.build_console_log_entries(limit='10', level='all')
+            self.assertEqual(len(entries), 2)
+            # Newest first
+            self.assertEqual(entries[0]['timestamp'], '2026-10-22 14:35:00')
+            self.assertEqual(entries[1]['timestamp'], '2026-10-22T14:30:00.000Z')
+
+
+class TestHermesGatewayListModels(unittest.TestCase):
+    """Test hermes_gateway.list_models handles list and dict response shapes via model_rows."""
+
+    def test_list_models_handles_top_level_list(self):
+        import hermes_gateway
+        hermes_gateway._cache = {'models': [], 'at': 0, 'error': None}
+        with patch.object(hermes_gateway, '_get', return_value=[{"id": "nvidia/model-a"}, {"id": "openai/gpt-4o"}]):
+            models = hermes_gateway.list_models(force=True)
+            self.assertEqual(models, ["nvidia/model-a", "openai/gpt-4o"])
+
+
+class TestLiveSyncDynamicPaths(unittest.TestCase):
+    """Test live_sync uses dynamic path functions from paths.py."""
+
+    def test_fetch_hermes_config_and_omniroute_endpoint_use_dynamic_paths(self):
+        import live_sync
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {}
+        with patch("live_sync.hermes_config_path", return_value="/nonexistent/hermes/config.yaml") as mock_hermes, \
+             patch("live_sync.omniroute_env_path", return_value="/nonexistent/omniroute/.env") as mock_omni, \
+             patch.dict("sys.modules", {"yaml": fake_yaml}):
+            try:
+                live_sync.fetch_hermes_config()
+            except FileNotFoundError:
+                pass
+            self.assertTrue(mock_hermes.called)
+
+            live_sync.omniroute_endpoint()
+            self.assertTrue(mock_omni.called)
+
+
+class TestAgentStreamPromptAndModelParsing(unittest.TestCase):
+    """Test agent_stream prompt text filtering and raw string model wrapping."""
+
+    def test_raw_string_session_model_wraps_in_dict(self):
+        import agent_stream
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = None
+        # Mock sqlite_master query for table check
+        def fake_execute(sql, params=()):
+            m = MagicMock()
+            if "sqlite_master" in sql:
+                m.fetchone.return_value = (1,)
+            elif "FROM session" in sql:
+                m.fetchall.return_value = [
+                    ("s1", "Title", "agent1", "gpt-4o", "/dir", 0.0, 0, 0, 0, 1000, 1000)
+                ]
+            else:
+                m.fetchall.return_value = []
+            return m
+
+        mock_conn.execute = fake_execute
+
+        with patch("agent_stream._table_exists", return_value=True), \
+             patch("agent_stream._session_live", return_value=(False, 100)), \
+             patch("agent_stream._newest_message_model", return_value=None), \
+             patch("agent_stream._read_prompts", return_value=[]), \
+             patch("agent_stream._read_stream", return_value=[]):
+            agents = agent_stream._read_sessions(mock_conn, include_idle=True)
+            self.assertEqual(len(agents), 1)
+            self.assertEqual(agents[0]['model_id'], 'gpt-4o')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

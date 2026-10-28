@@ -239,6 +239,7 @@ def _read_prompts(conn, session_id):
             "SELECT m.id, m.time_created, p.data "
             "FROM message m LEFT JOIN part p ON p.message_id = m.id "
             "WHERE m.session_id = ? AND json_extract(m.data, '$.role') = 'user' "
+            "AND json_extract(p.data, '$.type') = 'text' "
             "ORDER BY m.time_created ASC LIMIT ?",
             (session_id, PROMPT_LIMIT),
         ).fetchall()
@@ -473,9 +474,9 @@ def _read_sessions(conn, include_idle):
         prompts = _read_prompts(conn, sid)
         events = _read_stream(conn, sid) if live else []
 
-        session_model_dict = model if isinstance(model, dict) else (_loads(model, {}) or {})
+        session_model_dict = model if isinstance(model, dict) else _loads(model, None)
         if not isinstance(session_model_dict, dict):
-            session_model_dict = {}
+            session_model_dict = {'id': str(model)} if model else {}
 
         agents.append({
             'id': sid,
