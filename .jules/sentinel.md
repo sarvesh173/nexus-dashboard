@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-28 - Replace ISO 8601 'T' separator before strptime in console log sorting
+**Learning**: In `server.py` (`build_console_log_entries`), sorting call log entries by timestamp called `time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')`. ISO 8601 strings from call logs containing 'T' (e.g. `'2026-10-06T23:10:13.103Z'`) raised `ValueError`, causing sort_key to fall back to `(1, 0)` and break chronological log sorting.
+**Action**: Replaced `'T'` with a space in timestamp string before parsing with `time.strptime` in `server.py` and added a regression unit test in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time data does not match format %Y-%m-%d %H:%M:%S
