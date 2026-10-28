@@ -781,6 +781,35 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogEntriesSorting(unittest.TestCase):
+    """Test ISO 8601 timestamp parsing and sorting in build_console_log_entries."""
+
+    def test_iso_timestamps_sort_correctly(self):
+        import server
+
+        mock_hermes_logs = {
+            'logs': [
+                {'time': '2026-10-07 01:00:00', 'level': 'INFO', 'logger': 'gateway', 'message': 'Hermes line 1'}
+            ]
+        }
+
+        mock_call_detail = {
+            'calls': [
+                {'at': '2026-10-07T02:44:35Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4o', 'provider': 'openai'}
+            ]
+        }
+
+        with patch('server.get_hermes_logs', return_value=mock_hermes_logs), \
+             patch('server.omniroute_logs') as mock_omniroute:
+            mock_omniroute.read_call_logs.return_value = mock_call_detail
+            entries = server.build_console_log_entries(limit=10, level='all')
+
+            self.assertEqual(len(entries), 2)
+            # 2026-10-07T02:44:35Z is newer than 2026-10-07 01:00:00, so it must be sorted first (newest first)
+            self.assertEqual(entries[0]['timestamp'], '2026-10-07T02:44:35Z')
+            self.assertEqual(entries[1]['timestamp'], '2026-10-07 01:00:00')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
