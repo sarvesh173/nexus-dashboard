@@ -29,3 +29,13 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-24 - Normalize ISO 8601 timestamps for console log sorting
+**Learning**: In `server.py` (`build_console_log_entries`), ISO 8601 timestamps with 'T' (e.g., from call logs) caused `time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')` to raise `ValueError`, forcing all call logs to fallback to `(1, 0)` sort keys and breaking chronological log sorting.
+**Action**: Replaced 'T' with ' ' in `ts = e['timestamp'][:19].replace('T', ' ')` before calling `time.strptime`, and added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:634 - ValueError: time data ISO timestamp with T
+
+## 2026-10-24 - Filter text parts in agent stream user prompt queries
+**Learning**: In `agent_stream.py` (`_read_prompts`), the SQL query joined `message` and `part` tables without checking `json_extract(p.data, '$.type') = 'text'`, causing non-text parts or multi-part user messages to produce duplicate prompt rows, blank text entries, and premature SQL limit truncation.
+**Action**: Added `AND json_extract(p.data, '$.type') = 'text'` to the SQLite `WHERE` clause in `_read_prompts`, and added regression tests in `tests/test_audit_fixes.py`.
+**Fingerprint**: agent_stream.py:242 - LogicError: missing type text filter on user prompt part join
