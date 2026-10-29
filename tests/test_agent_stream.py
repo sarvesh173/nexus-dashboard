@@ -238,5 +238,54 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestReadPromptsFiltering(unittest.TestCase):
+    """Ensure _read_prompts only selects text parts and avoids blank duplicate entries."""
+
+    def test_filters_non_text_parts(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            'CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, time_created INT)'
+        )
+        conn.execute(
+            'CREATE TABLE part (id TEXT, message_id TEXT, data TEXT, time_created INT)'
+        )
+
+        # Message 1 has step-start, text, step-finish parts
+        conn.execute(
+            'INSERT INTO message VALUES (?, ?, ?, ?)',
+            ('m1', 's1', json.dumps({'role': 'user'}), 100)
+        )
+        conn.execute(
+            'INSERT INTO part VALUES (?, ?, ?, ?)',
+            ('p1', 'm1', json.dumps({'type': 'step-start'}), 100)
+        )
+        conn.execute(
+            'INSERT INTO part VALUES (?, ?, ?, ?)',
+            ('p2', 'm1', json.dumps({'type': 'text', 'text': 'First prompt'}), 101)
+        )
+        conn.execute(
+            'INSERT INTO part VALUES (?, ?, ?, ?)',
+            ('p3', 'm1', json.dumps({'type': 'step-finish'}), 102)
+        )
+
+        # Message 2 has text part
+        conn.execute(
+            'INSERT INTO message VALUES (?, ?, ?, ?)',
+            ('m2', 's1', json.dumps({'role': 'user'}), 200)
+        )
+        conn.execute(
+            'INSERT INTO part VALUES (?, ?, ?, ?)',
+            ('p4', 'm2', json.dumps({'type': 'text', 'text': 'Second prompt'}), 201)
+        )
+
+        prompts = a._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 2)
+        self.assertEqual(prompts[0]['text'], 'First prompt')
+        self.assertEqual(prompts[0]['message_id'], 'm1')
+        self.assertEqual(prompts[1]['text'], 'Second prompt')
+        self.assertEqual(prompts[1]['message_id'], 'm2')
+        conn.close()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
