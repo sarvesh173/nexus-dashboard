@@ -781,6 +781,30 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestDynamicPathResolution(unittest.TestCase):
+    """Verify paths.py and live_sync.py dynamically respect os.environ overrides."""
+
+    def test_paths_dynamic_env_override(self):
+        import paths
+        with patch.dict(os.environ, {
+            'HERMES_HOME': '/custom/hermes',
+            'OMNIROUTE_HOME': '/custom/omniroute',
+        }):
+            self.assertEqual(paths.hermes_config_path(), '/custom/hermes/config.yaml')
+            self.assertEqual(paths.hermes_env_path(), '/custom/hermes/.env')
+            self.assertEqual(paths.omniroute_env_path(), '/custom/omniroute/.env')
+            self.assertEqual(paths.omniroute_storage_path(), '/custom/omniroute/storage.sqlite')
+
+    def test_live_sync_dynamic_path_lookup(self):
+        import live_sync
+        with patch.dict(os.environ, {
+            'HERMES_CONFIG': '/tmp/test_hermes_config.yaml',
+            'OMNIROUTE_HOME': '/tmp/test_omniroute_home',
+        }):
+            self.assertEqual(live_sync.hermes_config_path(), '/tmp/test_hermes_config.yaml')
+            self.assertEqual(live_sync.omniroute_env_path(), '/tmp/test_omniroute_home/.env')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
