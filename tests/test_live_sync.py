@@ -124,6 +124,25 @@ class TestOmniRouteVendor(unittest.TestCase):
         self.assertIsNone(live_sync.omniroute_vendor(None))
 
 
+class TestDynamicEnvironmentResolution(unittest.TestCase):
+    def test_fetch_hermes_config_uses_paths_helper(self):
+        """fetch_hermes_config must resolve hermes_config_path dynamically."""
+        from unittest.mock import MagicMock, patch
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {}
+        with patch.dict("sys.modules", {"yaml": fake_yaml}), \
+             patch("live_sync.hermes_config_path", return_value="/nonexistent/dynamic_config.yaml") as mock_path:
+            live_sync.fetch_hermes_config()
+            mock_path.assert_called_once()
+
+    def test_omniroute_endpoint_uses_paths_helper(self):
+        """omniroute_endpoint must resolve omniroute_env_path dynamically."""
+        from unittest.mock import patch
+        with patch("live_sync.omniroute_env_path", return_value="/nonexistent/dynamic_.env") as mock_path:
+            live_sync.omniroute_endpoint()
+            mock_path.assert_called_once()
+
+
 class TestWriteCacheMaths(unittest.TestCase):
     def test_unique_models_is_never_above_entry_count(self):
         """unique_models <= models, else the count lies about the catalogue."""
