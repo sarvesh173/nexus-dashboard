@@ -8,9 +8,11 @@ separate rows. The alias has to be resolved BEFORE the final normalisation.
 These tests are pure functions: no network, no files, no services.
 """
 import sys
+import tempfile
 import unittest
 from collections import defaultdict
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import live_sync  # noqa: E402
@@ -138,6 +140,46 @@ class TestWriteCacheMaths(unittest.TestCase):
         self.assertEqual(total, entries)
         self.assertEqual(unique, 80)
         self.assertLessEqual(unique, total)
+
+
+class TestLiveSyncPathHelpers(unittest.TestCase):
+    def test_fetch_hermes_config_uses_path_helper(self):
+        """fetch_hermes_config must query hermes_config_path() rather than reading a static file path."""
+        fake_yaml = unittest.mock.MagicMock()
+        fake_yaml.safe_load.return_value = {
+            "providers": {
+                "testprov": {
+                    "enabled": True,
+                    "models": ["m1"],
+                }
+            }
+        }
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".yaml", delete=False) as tmp:
+            tmp.write("providers:\n  testprov:\n    enabled: true\n    models:\n      - m1\n")
+            tmp_path = tmp.name
+
+        try:
+            with patch.dict("sys.modules", {"yaml": fake_yaml}), \
+                 patch("live_sync.hermes_config_path", return_value=tmp_path):
+                provs, err = live_sync.fetch_hermes_config()
+                self.assertIsNone(err)
+                self.assertIn("testprov", provs)
+                self.assertEqual(provs["testprov"]["models"], [{"id": "m1", "name": "m1"}])
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    def test_omniroute_endpoint_uses_path_helper(self):
+        """omniroute_endpoint must query omniroute_env_path() dynamically."""
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".env", delete=False) as tmp:
+            tmp.write("OMNIROUTE_API_KEY=testkey123\n")
+            tmp_path = tmp.name
+
+        try:
+            with patch("live_sync.omniroute_env_path", return_value=tmp_path):
+                ep = live_sync.omniroute_endpoint()
+                self.assertEqual(ep.get("api_key"), "testkey123")
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
