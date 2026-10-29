@@ -781,6 +781,71 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestConsoleLogEntriesIsoTimestampSorting(unittest.TestCase):
+    """BUG: ISO timestamps containing 'T' (e.g. '2026-10-07T02:44:35Z') caused
+    time.strptime to raise ValueError in server.py build_console_log_entries,
+    falling back to (1, 0) and breaking chronological log sorting.
+    """
+
+    def test_iso_timestamps_with_t_are_sorted_chronologically(self):
+        import server
+        from unittest.mock import patch
+
+        fake_hermes_logs = {
+            'logs': [
+                {'time': '2026-10-07 01:00:00,000', 'level': 'INFO', 'logger': 'gateway', 'message': 'hermes early'}
+            ]
+        }
+        fake_call_logs = {
+            'calls': [
+                {'at': '2026-10-07T02:00:00.000Z', 'status': 200, 'ok': True, 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4o', 'provider': 'openai'}
+            ]
+        }
+
+        mock_omniroute = MagicMock()
+        mock_omniroute.read_call_logs.return_value = fake_call_logs
+
+        with patch('server.get_hermes_logs', return_value=fake_hermes_logs), \
+             patch('server.omniroute_logs', mock_omniroute):
+            entries = server.build_console_log_entries(limit=10, level='all')
+
+        self.assertEqual(len(entries), 2)
+        # Newest first: 02:00:00 should come before 01:00:00
+        self.assertIn('02:00:00', entries[0]['timestamp'])
+        self.assertIn('01:00:00', entries[1]['timestamp'])
+
+
+class TestReadPromptsTextPartsFiltering(unittest.TestCase):
+    """BUG: _read_prompts joined message and part without filtering on
+    json_extract(p.data, '$.type') = 'text', causing duplicate message entries,
+    blank prompt items, and premature SQL limit truncation on non-text parts.
+    """
+
+    def test_prompts_query_filters_text_parts_only(self):
+        import sqlite3
+        import agent_stream
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute('CREATE TABLE message (id TEXT, session_id TEXT, time_created INT, data TEXT)')
+        conn.execute('CREATE TABLE part (id TEXT, message_id TEXT, session_id TEXT, data TEXT)')
+
+        m_id = 'msg_1'
+        s_id = 'sess_1'
+        m_data = json.dumps({'role': 'user'})
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)', (m_id, s_id, 1000, m_data))
+
+        non_text_part = json.dumps({'type': 'step-start', 'text': ''})
+        text_part = json.dumps({'type': 'text', 'text': 'Hello agent'})
+
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?)', ('part_1', m_id, s_id, non_text_part))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?, ?)', ('part_2', m_id, s_id, text_part))
+
+        prompts = agent_stream._read_prompts(conn, s_id)
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello agent')
+        conn.close()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
