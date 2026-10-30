@@ -238,5 +238,47 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestReadPromptsFiltersTextType(unittest.TestCase):
+    """_read_prompts must explicitly filter on json_extract(p.data, '$.type') = 'text'
+    to avoid duplicate blank prompt entries when non-text parts exist.
+    """
+
+    def test_non_text_parts_ignored(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute('CREATE TABLE message (id TEXT, session_id TEXT, data TEXT, time_created INT)')
+        conn.execute('CREATE TABLE part (id TEXT, message_id TEXT, data TEXT)')
+        conn.execute('INSERT INTO message VALUES (?, ?, ?, ?)',
+                     ('m1', 's1', '{"role":"user"}', 100))
+        # Add a non-text part and a text part for the same message
+        conn.execute('INSERT INTO part VALUES (?, ?, ?)',
+                     ('p1', 'm1', '{"type":"step-start"}'))
+        conn.execute('INSERT INTO part VALUES (?, ?, ?)',
+                     ('p2', 'm1', '{"type":"text","text":"Hello world"}'))
+
+        prompts = a._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello world')
+
+
+class TestReadSessionsRawStringModel(unittest.TestCase):
+    """_read_sessions must handle raw string model values in session.model."""
+
+    def test_raw_string_model_resolves_model_id(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            'CREATE TABLE session (id TEXT, title TEXT, agent TEXT, model TEXT, '
+            'directory TEXT, cost REAL, tokens_input INT, tokens_output INT, '
+            'tokens_reasoning INT, time_created INT, time_updated INT)'
+        )
+        conn.execute(
+            'INSERT INTO session VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            ('s1', 'title', 'build', 'gpt-4o', '/x', 0.0, 0, 0, 0, 1, a._ms_now())
+        )
+
+        sessions = a._read_sessions(conn, include_idle=True)
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]['model_id'], 'gpt-4o')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
