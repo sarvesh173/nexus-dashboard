@@ -29,3 +29,11 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-30 - Collect unfiltered catalogue for visibility prune and fix log timestamp parsing
+**Learning**: In `server.py`, `get_live_providers()` derived `known_providers` and `known_models` after filtering `merged` with local visibility rules, causing `visibility.prune()` to delete user-hidden entries from `hidden_store.json`. Also in `server.py`, `build_console_log_entries()` attempted `time.strptime` on ISO 8601 timestamps containing 'T', raising `ValueError` and breaking log sorting. In `agent_stream.py`, `_read_prompts` lacked `json_extract(p.data, '$.type') = 'text'` filtering, resulting in duplicate blank prompt entries, and `_read_sessions` failed to parse raw model ID strings into `session_model_dict`.
+**Action**: Updated `server.py` to collect known provider/model IDs prior to visibility filtering and replaced 'T' with a space in timestamp strings before parsing. Added `json_extract` text filter and raw model ID dictionary wrapping in `agent_stream.py`. Added regression unit tests in `tests/test_audit_fixes.py` and `tests/test_agent_stream.py`.
+**Fingerprint**: server.py:1578 - LogicError: visibility.prune deletes hidden items
+**Fingerprint**: server.py:634 - ValueError: ISO 8601 time string contains T
+**Fingerprint**: agent_stream.py:242 - LogicError: un-filtered non-text message parts in prompt query
+**Fingerprint**: agent_stream.py:477 - TypeError: raw string model ID in session row

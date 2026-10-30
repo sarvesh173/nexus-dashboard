@@ -781,6 +781,87 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestGetLiveProvidersUnfilteredPrune(unittest.TestCase):
+    """get_live_providers() must collect known provider and model IDs before
+    applying visibility filters, ensuring visibility.prune() receives all known items
+    and does not prune user-hidden entries from hidden_store.json.
+    """
+
+    def test_hidden_items_are_not_pruned_from_store(self):
+        import server
+        import visibility
+
+        mock_catalog = {
+            'providers': [
+                {
+                    'id': 'provider-a',
+                    'name': 'Provider A',
+                    'kind': 'direct',
+                    'model_count': 1,
+                    'models': [{'id': 'provider-a/model-1', 'name': 'Model 1'}],
+                }
+            ]
+        }
+
+        prune_calls = []
+
+        def mock_prune(known_p, known_m):
+            prune_calls.append((known_p, known_m))
+
+        with patch('hermes_gateway.catalog', return_value=mock_catalog), \
+             patch('server.config_provider_map', return_value={}), \
+             patch('visibility.hidden_providers', return_value={'provider-a'}), \
+             patch('visibility.hidden_models', return_value={'provider-a/model-1'}), \
+             patch('visibility.prune', side_effect=mock_prune):
+            result = server.get_live_providers()
+
+        self.assertEqual(len(prune_calls), 1)
+        known_p, known_m = prune_calls[0]
+        self.assertIn('provider-a', known_p)
+        self.assertIn('provider-a/model-1', known_m)
+
+
+class TestConsoleLogIsoTimestampSorting(unittest.TestCase):
+    """build_console_log_entries must parse ISO 8601 timestamps containing 'T'
+    without ValueError so entries are sorted chronologically.
+    """
+
+    def test_iso_timestamps_sorted_chronologically(self):
+        import server
+
+        mock_call_logs = {
+            'calls': [
+                {
+                    'at': '2026-10-06T10:00:00.000Z',
+                    'status': 200,
+                    'ok': True,
+                    'method': 'POST',
+                    'path': '/v1/chat/completions',
+                    'model': 'model-old',
+                    'provider': 'prov',
+                },
+                {
+                    'at': '2026-10-06T12:00:00.000Z',
+                    'status': 200,
+                    'ok': True,
+                    'method': 'POST',
+                    'path': '/v1/chat/completions',
+                    'model': 'model-new',
+                    'provider': 'prov',
+                },
+            ]
+        }
+
+        with patch('server.get_hermes_logs', return_value={'logs': []}), \
+             patch('omniroute_logs.read_call_logs', return_value=mock_call_logs):
+            entries = server.build_console_log_entries(limit='10', level='all')
+
+        self.assertEqual(len(entries), 2)
+        # Newest timestamp ('2026-10-06T12:00:00.000Z') should be first
+        self.assertEqual(entries[0]['timestamp'], '2026-10-06T12:00:00.000Z')
+        self.assertEqual(entries[1]['timestamp'], '2026-10-06T10:00:00.000Z')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
