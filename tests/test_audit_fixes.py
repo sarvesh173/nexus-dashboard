@@ -781,6 +781,39 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityReadNonDict(unittest.TestCase):
+    """BUG: visibility._read() failed with AttributeError when hidden_store.json
+    contained a top-level JSON list or non-dict document.
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.store_path = os.path.join(self.temp_dir, "hidden_store.json")
+
+    def test_non_dict_json_returns_blank(self):
+        import visibility
+        orig_store = visibility.STORE
+        orig_cache = dict(visibility._cache)
+        visibility.STORE = self.store_path
+
+        try:
+            for text in ("[]", '"string"', "123", "null", "true", "false"):
+                with self.subTest(text=text):
+                    with open(self.store_path, "w", encoding="utf-8") as fh:
+                        fh.write(text)
+                    visibility._cache["at"] = 0.0
+                    visibility._cache["data"] = {}
+                    data = visibility._read()
+                    self.assertIsInstance(data, dict)
+                    self.assertIn("providers", data)
+                    self.assertIn("models", data)
+                    self.assertEqual(data["providers"], [])
+                    self.assertEqual(data["models"], [])
+        finally:
+            visibility.STORE = orig_store
+            visibility._cache = orig_cache
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
