@@ -781,6 +781,142 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityPruneUnfilteredCatalog(unittest.TestCase):
+    """Pruning must receive the full upstream catalogue before filtering so that
+    hidden items are not pruned from hidden_store.json.
+    """
+
+    def test_hidden_provider_retains_prune_membership(self):
+        import server
+        import visibility
+
+        mock_catalog = {
+            'providers': [
+                {'id': 'p1', 'name': 'Provider 1', 'kind': 'direct', 'model_count': 1, 'models': [{'id': 'p1/m1'}]},
+                {'id': 'p2', 'name': 'Provider 2', 'kind': 'direct', 'model_count': 1, 'models': [{'id': 'p2/m2'}]},
+            ]
+        }
+
+        pruned_p = []
+        pruned_m = []
+
+        def fake_prune(kp, km):
+            pruned_p.extend(kp)
+            pruned_m.extend(km)
+
+        with patch("hermes_gateway.catalog", return_value=mock_catalog), \
+             patch("server.config_provider_map", return_value={}), \
+             patch("visibility.hidden_providers", return_value={'p1'}), \
+             patch("visibility.hidden_models", return_value={'p2/m2'}), \
+             patch("visibility.prune", side_effect=fake_prune):
+            result = server.get_live_providers()
+            # p1 is hidden, so result only contains p2
+            self.assertEqual([p['id'] for p in result], ['p2'])
+            # prune must have received p1 and p2, and both models
+            self.assertIn('p1', pruned_p)
+            self.assertIn('p2', pruned_p)
+            self.assertIn('p1/m1', pruned_m)
+            self.assertIn('p2/m2', pruned_m)
+
+
+class TestBuildConsoleLogEntriesIsoTimestamp(unittest.TestCase):
+    """Console log entries with ISO 8601 'T' timestamps must parse correctly
+    and sort chronologically.
+    """
+
+    def test_iso_timestamps_sort_chronologically(self):
+        import server
+
+        mock_hermes_logs = {
+            'logs': [{'time': '2026-10-06 12:00:00,000', 'level': 'INFO', 'logger': 'sys', 'message': 'Hermes log'}]
+        }
+        mock_call_logs = {
+            'calls': [{'status': 200, 'at': '2026-10-06T13:00:00.000Z', 'method': 'POST', 'path': '/v1/chat', 'model': 'gpt-4o'}]
+        }
+
+        fake_omni = MagicMock()
+        fake_omni.read_call_logs.return_value = mock_call_logs
+
+        with patch("server.get_hermes_logs", return_value=mock_hermes_logs), \
+             patch("server.omniroute_logs", fake_omni):
+            entries = server.build_console_log_entries(limit=10, level='all')
+            self.assertEqual(len(entries), 2)
+            # 13:00 is newer than 12:00, so 13:00 should come first in descending order
+            self.assertIn('2026-10-06T13:00:00', entries[0]['timestamp'])
+            self.assertIn('2026-10-06 12:00:00', entries[1]['timestamp'])
+
+
+class TestAgentStreamRawModelAndPromptFilter(unittest.TestCase):
+    """Raw model strings in session table must resolve model_id cleanly, and
+    user prompt SQL must filter out non-text message parts.
+    """
+
+    def test_raw_model_string_resolves_model_id(self):
+        import sqlite3
+        import agent_stream
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute(
+            "CREATE TABLE session (id TEXT, title TEXT, agent TEXT, model TEXT, directory TEXT, cost REAL, tokens_input INT, tokens_output INT, tokens_reasoning INT, time_created INT, time_updated INT)"
+        )
+        conn.execute(
+            "INSERT INTO session VALUES ('s1', 'Test', 'build', 'anthropic/claude-3-5-sonnet', '/tmp', 0.0, 0, 0, 0, 1000, 1000)"
+        )
+
+        with patch("agent_stream._session_live", return_value=(False, 100)), \
+             patch("agent_stream._newest_message_model", return_value=None), \
+             patch("agent_stream._read_prompts", return_value=[]), \
+             patch("agent_stream._read_stream", return_value=[]):
+            sessions = agent_stream._read_sessions(conn, include_idle=True)
+            self.assertEqual(len(sessions), 1)
+            self.assertEqual(sessions[0]['model_id'], 'anthropic/claude-3-5-sonnet')
+
+    def test_read_prompts_sql_filters_text_type(self):
+        import sqlite3
+        import agent_stream
+
+        conn = sqlite3.connect(':memory:')
+        conn.execute("CREATE TABLE message (id TEXT, session_id TEXT, time_created INT, data TEXT)")
+        conn.execute("CREATE TABLE part (message_id TEXT, data TEXT)")
+
+        conn.execute("INSERT INTO message VALUES ('m1', 's1', 100, '{\"role\": \"user\"}')")
+        # Non-text part and text part for message m1
+        conn.execute("INSERT INTO part VALUES ('m1', '{\"type\": \"step-start\"}')")
+        conn.execute("INSERT INTO part VALUES ('m1', '{\"type\": \"text\", \"text\": \"Hello World\"}')")
+
+        prompts = agent_stream._read_prompts(conn, 's1')
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]['text'], 'Hello World')
+
+
+class TestPathsDynamicEnvOverrides(unittest.TestCase):
+    """Helper functions in paths.py must dynamically query os.environ at call time,
+    and live_sync must use hermes_config_path() and omniroute_env_path().
+    """
+
+    def test_dynamic_env_override_in_paths(self):
+        import paths
+
+        with patch.dict(os.environ, {'HERMES_HOME': '/custom/hermes', 'OMNIROUTE_HOME': '/custom/omniroute'}):
+            self.assertEqual(paths.hermes_config_path(), '/custom/hermes/config.yaml')
+            self.assertEqual(paths.omniroute_env_path(), '/custom/omniroute/.env')
+
+    def test_live_sync_uses_paths_helpers(self):
+        import live_sync
+        from unittest.mock import mock_open
+
+        with patch.object(live_sync, "hermes_config_path", return_value="/override/config.yaml") as mock_cfg, \
+             patch("builtins.open", mock_open(read_data="providers: {}")):
+            live_sync.fetch_hermes_config()
+            mock_cfg.assert_called_once()
+
+        with patch.object(live_sync, "omniroute_env_path", return_value="/override/.env") as mock_env, \
+             patch("live_sync._read_env_file", return_value={'OMNIROUTE_API_KEY': 'testkey'}) as mock_read:
+            ep = live_sync.omniroute_endpoint()
+            mock_env.assert_called_once()
+            mock_read.assert_called_once_with("/override/.env")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
