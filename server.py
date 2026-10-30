@@ -631,7 +631,8 @@ def build_console_log_entries(limit='500', level='all'):
     # the last row rather than the first.
     def sort_key(e):
         try:
-            return (0, -time.mktime(time.strptime(e['timestamp'][:19], '%Y-%m-%d %H:%M:%S')))
+            ts = e['timestamp'][:19].replace('T', ' ')
+            return (0, -time.mktime(time.strptime(ts, '%Y-%m-%d %H:%M:%S')))
         except Exception:
             return (1, 0)
 
@@ -1503,12 +1504,17 @@ def _alias_models(pid, merged):
         if card['id'] not in prefixes:
             continue
         for m in (card.get('models') or []):
-            if not needle or needle in m.get('id', '').lower():
+            if not isinstance(m, dict):
+                continue
+            mid = m.get('id')
+            if not isinstance(mid, str):
+                continue
+            if not needle or needle in mid.lower():
                 # ids are "<gateway>/<vendor>/<model>" for routed catalogs
                 # (openrouter/black-forest-labs/flux.2-pro) but only
                 # "<gateway>/<vendor>/<model>" for flat ones, so take the
                 # segment after the gateway prefix.
-                parts = m.get('id', '').split('/')
+                parts = mid.split('/')
                 vendor = parts[1] if len(parts) > 2 else (parts[0] if parts else '')
                 out.append(dict(m, provider=pid, vendor=vendor))
     return out
@@ -1575,6 +1581,13 @@ def get_live_providers():
             'source': 'config',
         })
 
+    # Collect the full known sets from the unfiltered catalogue before applying
+    # local visibility filters so visibility.prune() receives all known upstream
+    # items and does not delete user-hidden entries from hidden_store.json.
+    all_provider_ids = {c['id'] for c in merged if isinstance(c, dict) and c.get('id')}
+    all_model_ids = {m.get('id') for c in merged if isinstance(c, dict)
+                     for m in (c.get('models') or []) if isinstance(m, dict) and m.get('id')}
+
     # Apply the local visibility layer. Upstream has no model-level
     # enable/disable, so this is the only place hide/show can take effect.
     hidden_p = visibility.hidden_providers()
@@ -1585,19 +1598,14 @@ def get_live_providers():
                 card['hidden'] = True
             if hidden_m and card.get('models'):
                 card['models'] = [m for m in card['models']
-                                  if m.get('id') not in hidden_m
+                                  if isinstance(m, dict)
+                                  and m.get('id') not in hidden_m
                                   and m.get('fullModel') not in hidden_m]
                 card['model_count'] = len(card['models'])
                 card['total_models'] = card['model_count']
         merged = [c for c in merged if not c.get('hidden')]
 
-    # Prune against what the catalogue actually contains. The hidden set was
-    # previously unioned into the "known" set, which made every hidden entry
-    # trivially known and therefore never prunable - prune() was a guaranteed
-    # no-op and hidden_store.json grew without bound.
-    visibility.prune({c['id'] for c in merged},
-                     {m.get('id') for c in merged
-                      for m in (c.get('models') or [])})
+    visibility.prune(all_provider_ids, all_model_ids)
 
     return merged
 
