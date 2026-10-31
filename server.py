@@ -1577,27 +1577,38 @@ def get_live_providers():
 
     # Apply the local visibility layer. Upstream has no model-level
     # enable/disable, so this is the only place hide/show can take effect.
-    hidden_p = visibility.hidden_providers()
-    hidden_m = visibility.hidden_models()
-    if hidden_p or hidden_m:
-        for card in merged:
-            if card['id'] in hidden_p:
-                card['hidden'] = True
-            if hidden_m and card.get('models'):
-                card['models'] = [m for m in card['models']
-                                  if m.get('id') not in hidden_m
-                                  and m.get('fullModel') not in hidden_m]
-                card['model_count'] = len(card['models'])
-                card['total_models'] = card['model_count']
-        merged = [c for c in merged if not c.get('hidden')]
+    if visibility is not None:
+        # Collect known providers and models from the unfiltered upstream/config
+        # catalogue BEFORE applying visibility filters. Passing the post-filter
+        # list to prune() treats user-hidden items as unserved and purges them
+        # from hidden_store.json on the first poll.
+        known_providers = {c['id'] for c in merged if c.get('id')}
+        known_models = set()
+        for c in merged:
+            for m in (c.get('models') or []):
+                if isinstance(m, dict):
+                    if m.get('id'):
+                        known_models.add(m.get('id'))
+                    if m.get('fullModel'):
+                        known_models.add(m.get('fullModel'))
+                elif isinstance(m, str) and m:
+                    known_models.add(m)
 
-    # Prune against what the catalogue actually contains. The hidden set was
-    # previously unioned into the "known" set, which made every hidden entry
-    # trivially known and therefore never prunable - prune() was a guaranteed
-    # no-op and hidden_store.json grew without bound.
-    visibility.prune({c['id'] for c in merged},
-                     {m.get('id') for c in merged
-                      for m in (c.get('models') or [])})
+        hidden_p = visibility.hidden_providers()
+        hidden_m = visibility.hidden_models()
+        if hidden_p or hidden_m:
+            for card in merged:
+                if card['id'] in hidden_p:
+                    card['hidden'] = True
+                if hidden_m and card.get('models'):
+                    card['models'] = [m for m in card['models']
+                                      if (isinstance(m, dict) and m.get('id') not in hidden_m and m.get('fullModel') not in hidden_m)
+                                      or (isinstance(m, str) and m not in hidden_m)]
+                    card['model_count'] = len(card['models'])
+                    card['total_models'] = card['model_count']
+            merged = [c for c in merged if not c.get('hidden')]
+
+        visibility.prune(known_providers, known_models)
 
     return merged
 
@@ -1891,6 +1902,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 return self.send_json({'ok': False, 'error': str(e)}, 500)
 
         elif self.path == '/api/visibility':
+            if visibility is None:
+                return self.send_json({'ok': False, 'error': 'visibility module unavailable'}, 503)
             try:
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n) or b'{}')
@@ -1913,7 +1926,9 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             # fallback can upgrade the status, and only when encoding itself fails.
             return self.send_json(payload, code)
 
-        if self.path == '/api/visibility/reset':
+        elif self.path == '/api/visibility/reset':
+            if visibility is None:
+                return self.send_json({'ok': False, 'error': 'visibility module unavailable'}, 503)
             try:
                 before = (len(visibility.hidden_providers()),
                           len(visibility.hidden_models()))
@@ -1934,6 +1949,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/api/visibility':
+            if visibility is None:
+                return self.send_json({'providers': [], 'models': []})
             return self.send_json({
                 'providers': sorted(visibility.hidden_providers()),
                 'models': sorted(visibility.hidden_models()),
