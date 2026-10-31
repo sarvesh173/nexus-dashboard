@@ -781,6 +781,178 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestVisibilityPrunePreservesHiddenItems(unittest.TestCase):
+    """Hidden items must not be purged by prune() on get_live_providers()."""
+
+    def setUp(self):
+        self.tmp_dir = tempfile.TemporaryDirectory(prefix="test_visibility_")
+        self.addCleanup(self.tmp_dir.cleanup)
+        self.store_path = os.path.join(self.tmp_dir.name, "hidden_store.json")
+
+    def test_hidden_provider_and_model_preserved_across_live_providers_poll(self):
+        import server
+        import visibility
+
+        mock_catalog = {
+            "providers": [
+                {
+                    "id": "provider-live",
+                    "name": "Live Provider",
+                    "kind": "direct",
+                    "model_count": 2,
+                    "models": [
+                        {"id": "provider-live/model-1", "fullModel": "model-1"},
+                        {"id": "provider-live/model-2", "fullModel": "model-2"},
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(visibility, "STORE", self.store_path), \
+             patch.object(visibility, "_cache", {"at": 0.0, "data": None}), \
+             patch.object(server.hermes_gateway, "catalog", return_value=mock_catalog), \
+             patch.object(server, "config_provider_map", return_value={}):
+
+            # Hide active provider-live/model-1 and add a retired model
+            visibility.set_hidden("models", "provider-live/model-1", True)
+            visibility.set_hidden("models", "retired-provider/retired-model", True)
+            visibility.set_hidden("providers", "retired-provider", True)
+
+            self.assertIn("provider-live/model-1", visibility.hidden_models())
+            self.assertIn("retired-provider/retired-model", visibility.hidden_models())
+            self.assertIn("retired-provider", visibility.hidden_providers())
+
+            # get_live_providers applies filter and calls prune()
+            result = server.get_live_providers()
+
+            # Active hidden model was filtered from the returned cards
+            self.assertEqual(len(result), 1)
+            returned_models = [m["id"] for m in result[0]["models"]]
+            self.assertNotIn("provider-live/model-1", returned_models)
+            self.assertIn("provider-live/model-2", returned_models)
+
+            # Active hidden model was preserved in hidden_store!
+            self.assertIn("provider-live/model-1", visibility.hidden_models())
+            # Retired model and provider were pruned because they are no longer in catalog
+            self.assertNotIn("retired-provider/retired-model", visibility.hidden_models())
+            self.assertNotIn("retired-provider", visibility.hidden_providers())
+
+    def test_hidden_provider_preserved_across_live_providers_poll(self):
+        import server
+        import visibility
+
+        mock_catalog = {
+            "providers": [
+                {
+                    "id": "provider-hidden",
+                    "name": "Hidden Provider",
+                    "kind": "direct",
+                    "model_count": 1,
+                    "models": [{"id": "provider-hidden/model-1"}],
+                },
+                {
+                    "id": "provider-visible",
+                    "name": "Visible Provider",
+                    "kind": "direct",
+                    "model_count": 1,
+                    "models": [{"id": "provider-visible/model-2"}],
+                },
+            ]
+        }
+
+        with patch.object(visibility, "STORE", self.store_path), \
+             patch.object(visibility, "_cache", {"at": 0.0, "data": None}), \
+             patch.object(server.hermes_gateway, "catalog", return_value=mock_catalog), \
+             patch.object(server, "config_provider_map", return_value={}):
+
+            visibility.set_hidden("providers", "provider-hidden", True)
+            self.assertIn("provider-hidden", visibility.hidden_providers())
+
+            result = server.get_live_providers()
+
+            # Result excludes provider-hidden
+            self.assertEqual([p["id"] for p in result], ["provider-visible"])
+            # But visibility store still remembers provider-hidden!
+            self.assertIn("provider-hidden", visibility.hidden_providers())
+
+
+class TestServerVisibilityNoneGuard(unittest.TestCase):
+    """Routes and live providers must handle visibility module being None gracefully."""
+
+    def test_get_live_providers_when_visibility_is_none(self):
+        import server
+
+        mock_catalog = {
+            "providers": [
+                {
+                    "id": "provider-1",
+                    "name": "Provider 1",
+                    "kind": "direct",
+                    "model_count": 1,
+                    "models": [{"id": "provider-1/model-1"}],
+                }
+            ]
+        }
+
+        with patch.object(server, "visibility", None), \
+             patch.object(server.hermes_gateway, "catalog", return_value=mock_catalog), \
+             patch.object(server, "config_provider_map", return_value={}):
+            result = server.get_live_providers()
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0]["id"], "provider-1")
+
+    def test_visibility_routes_when_visibility_is_none(self):
+        import server
+
+        class DummyHandler(server.TelemetryHandler):
+            def __init__(self, path, method="GET", body=None):
+                self.path = path
+                self.command = method
+                self.headers = {}
+                if body is not None:
+                    raw = json.dumps(body).encode("utf-8")
+                    self.rfile = io.BytesIO(raw)
+                    self.headers["Content-Length"] = str(len(raw))
+                else:
+                    self.rfile = io.BytesIO(b"")
+                self.wfile = io.BytesIO()
+                self.sent_code = None
+                self.sent_body = None
+
+            def send_response(self, code, message=None):
+                self.sent_code = code
+
+            def send_header(self, keyword, value):
+                pass
+
+            def end_headers(self):
+                pass
+
+            def send_json(self, data, code=200):
+                self.sent_code = code
+                self.sent_body = data
+                return super().send_json(data, code)
+
+        with patch.object(server, "visibility", None):
+            # GET /api/visibility
+            h_get = DummyHandler("/api/visibility", "GET")
+            h_get.do_GET()
+            self.assertEqual(h_get.sent_code, 200)
+            self.assertEqual(h_get.sent_body, {"providers": [], "models": []})
+
+            # POST /api/visibility
+            h_post = DummyHandler("/api/visibility", "POST", {"kind": "models", "id": "m1", "hidden": True})
+            h_post.do_POST()
+            self.assertEqual(h_post.sent_code, 503)
+            self.assertIn("unavailable", h_post.sent_body.get("error", ""))
+
+            # POST /api/visibility/reset
+            h_reset = DummyHandler("/api/visibility/reset", "POST")
+            h_reset.do_POST()
+            self.assertEqual(h_reset.sent_code, 503)
+            self.assertIn("unavailable", h_reset.sent_body.get("error", ""))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
