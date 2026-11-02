@@ -238,5 +238,45 @@ class TestSessionModelPrecedence(unittest.TestCase):
         self.assertEqual(rows[0]['model_variant'], 'max')
 
 
+class TestExtractTime(unittest.TestCase):
+    """Part time can be a dict {'start': ..., 'end': ...}, integer/float timestamp, or missing."""
+
+    def test_dict_time(self):
+        part = {'time': {'start': 100, 'end': 200}}
+        self.assertEqual(a._extract_time(part, 'start', 0), 100)
+        self.assertEqual(a._extract_time(part, 'end', 0), 200)
+
+    def test_numeric_time(self):
+        part = {'time': 1700000000}
+        self.assertEqual(a._extract_time(part, 'start', 0), 1700000000)
+        self.assertEqual(a._extract_time(part, 'end', 0), 1700000000)
+
+    def test_missing_and_invalid_time(self):
+        self.assertEqual(a._extract_time({}, 'start', 0), 0)
+        self.assertEqual(a._extract_time({'time': 'invalid'}, 'start', 0), 0)
+
+    def test_read_stream_handles_numeric_part_time(self):
+        conn = sqlite3.connect(':memory:')
+        conn.execute('CREATE TABLE part (session_id TEXT, data TEXT, time_created INT)')
+        tool_part = {
+            'type': 'tool',
+            'tool': 'bash',
+            'time': 1700000000,
+            'state': {'status': 'completed', 'input': {'command': 'echo hi'}}
+        }
+        text_part = {
+            'type': 'text',
+            'text': 'Hello world',
+            'time': 1700000005
+        }
+        conn.execute('INSERT INTO part VALUES (?,?,?)', ('s1', json.dumps(tool_part), 10))
+        conn.execute('INSERT INTO part VALUES (?,?,?)', ('s1', json.dumps(text_part), 11))
+
+        stream = a._read_stream(conn, 's1')
+        self.assertEqual(len(stream), 2)
+        self.assertEqual(stream[0]['at'], 1700000000)
+        self.assertEqual(stream[1]['at'], 1700000005)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

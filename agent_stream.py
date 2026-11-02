@@ -260,6 +260,19 @@ def _read_prompts(conn, session_id):
     return prompts
 
 
+def _extract_time(part, key='start', fallback=0):
+    time_val = part.get('time') if isinstance(part, dict) else None
+    if isinstance(time_val, dict):
+        val = time_val.get(key)
+        try:
+            return int(val) if val is not None else fallback
+        except (TypeError, ValueError):
+            return fallback
+    if isinstance(time_val, (int, float)):
+        return int(time_val)
+    return fallback
+
+
 def _read_stream(conn, session_id, limit=STREAM_LIMIT):
     """The execution stream: tool calls, edits, thoughts and answers.
 
@@ -283,7 +296,7 @@ def _read_stream(conn, session_id, limit=STREAM_LIMIT):
     for (raw,) in rows:
         part = _loads(raw, {}) or {}
         kind = part.get('type')
-        at = int(((part.get('time') or {}).get('start')) or 0)
+        at = _extract_time(part, 'start', 0)
 
         if kind == 'tool':
             state = part.get('state') or {}
@@ -330,7 +343,7 @@ def _read_stream(conn, session_id, limit=STREAM_LIMIT):
                     'kind': 'answer',
                     'tool': None,
                     'status': 'ok',
-                    'at': int(((part.get('time') or {}).get('end')) or at),
+                    'at': _extract_time(part, 'end', at),
                     'excerpt': _clip(text, 400),
                 })
         elif kind in ('step-start', 'step-finish'):
