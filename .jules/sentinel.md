@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-10-21 - Safely extract timestamps from agent stream parts
+**Learning**: In `agent_stream.py`, `_read_stream` assumed `part.get('time')` was always a dictionary or `None` and called `.get('start')` / `.get('end')`, which caused `AttributeError: 'int' object has no attribute 'get'` when opencode stored integer/float timestamps.
+**Action**: Created `_extract_time` helper function to handle `dict`, `int`, `float`, or invalid timestamp values safely, and added regression tests in `tests/test_agent_stream.py`.
+**Fingerprint**: agent_stream.py:286 - AttributeError: 'int' object has no attribute 'get'
