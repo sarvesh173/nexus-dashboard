@@ -781,6 +781,95 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestDynamicPathResolution(unittest.TestCase):
+    """Verify that path helpers and modules dynamically respect runtime environment changes."""
+
+    def test_paths_helpers_resolve_dynamically_at_runtime(self):
+        import paths
+        old_hermes = os.environ.get('HERMES_HOME')
+        old_omni = os.environ.get('OMNIROUTE_HOME')
+        old_config = os.environ.get('HERMES_CONFIG')
+        try:
+            os.environ['HERMES_HOME'] = '/custom/hermes_home'
+            os.environ['OMNIROUTE_HOME'] = '/custom/omniroute_home'
+            os.environ.pop('HERMES_CONFIG', None)
+
+            self.assertEqual(paths.hermes_config_path(), '/custom/hermes_home/config.yaml')
+            self.assertEqual(paths.hermes_env_path(), '/custom/hermes_home/.env')
+            self.assertEqual(paths.hermes_gateway_state_path(), '/custom/hermes_home/gateway_state.json')
+            self.assertEqual(paths.hermes_logs_dir(), '/custom/hermes_home/logs')
+            self.assertEqual(paths.hermes_profiles_dir(), '/custom/hermes_home/profiles')
+            self.assertEqual(paths.hermes_profile_logs_dir('sub'), '/custom/hermes_home/profiles/sub/logs')
+            self.assertEqual(paths.omniroute_env_path(), '/custom/omniroute_home/.env')
+            self.assertEqual(paths.omniroute_storage_path(), '/custom/omniroute_home/storage.sqlite')
+        finally:
+            if old_hermes:
+                os.environ['HERMES_HOME'] = old_hermes
+            else:
+                os.environ.pop('HERMES_HOME', None)
+            if old_omni:
+                os.environ['OMNIROUTE_HOME'] = old_omni
+            else:
+                os.environ.pop('OMNIROUTE_HOME', None)
+            if old_config:
+                os.environ['HERMES_CONFIG'] = old_config
+            else:
+                os.environ.pop('HERMES_CONFIG', None)
+
+    def test_live_sync_fetches_config_from_dynamic_path(self):
+        import live_sync
+        from unittest.mock import mock_open
+        fake_yaml = MagicMock()
+        fake_yaml.safe_load.return_value = {
+            "providers": {
+                "dynamic_provider": {
+                    "enabled": True,
+                    "models": ["dynamic-model"]
+                }
+            }
+        }
+        old_config = os.environ.get('HERMES_CONFIG')
+        try:
+            os.environ['HERMES_CONFIG'] = '/tmp/dynamic_hermes.yaml'
+            with patch.dict(sys.modules, {"yaml": fake_yaml}):
+                with patch("builtins.open", mock_open(read_data="")) as mock_file:
+                    providers, err = live_sync.fetch_hermes_config()
+                    self.assertIsNone(err)
+                    self.assertIn("dynamic_provider", providers)
+                    mock_file.assert_called_with('/tmp/dynamic_hermes.yaml', encoding='utf-8')
+        finally:
+            if old_config:
+                os.environ['HERMES_CONFIG'] = old_config
+            else:
+                os.environ.pop('HERMES_CONFIG', None)
+
+    def test_live_sync_omniroute_endpoint_reads_dynamic_env(self):
+        import live_sync
+        old_omni = os.environ.get('OMNIROUTE_HOME')
+        try:
+            os.environ['OMNIROUTE_HOME'] = '/tmp/dynamic_omni_home'
+            with patch.object(live_sync, '_read_env_file', return_value={'OMNIROUTE_API_KEY': 'sk-test'}) as mock_read:
+                ep = live_sync.omniroute_endpoint()
+                self.assertEqual(ep.get('api_key'), 'sk-test')
+                mock_read.assert_called_with('/tmp/dynamic_omni_home/.env')
+        finally:
+            if old_omni:
+                os.environ['OMNIROUTE_HOME'] = old_omni
+            else:
+                os.environ.pop('OMNIROUTE_HOME', None)
+
+    def test_hermes_gateway_reads_key_from_dynamic_env_path(self):
+        import hermes_gateway
+        from unittest.mock import mock_open
+        clean_env = {k: v for k, v in os.environ.items() if k not in hermes_gateway.KEY_NAMES}
+        clean_env['HERMES_HOME'] = '/tmp/dyn_hermes'
+        with patch.dict(os.environ, clean_env, clear=True):
+            with patch("builtins.open", mock_open(read_data="OMNIROUTE_API_KEY=test-key-123\n")) as mock_file:
+                key = hermes_gateway._key()
+                self.assertEqual(key, 'test-key-123')
+                mock_file.assert_called_with('/tmp/dyn_hermes/.env', encoding='utf-8', errors='replace')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
