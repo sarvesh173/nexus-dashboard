@@ -1575,29 +1575,42 @@ def get_live_providers():
             'source': 'config',
         })
 
+    # Prune against what the upstream catalogue and config actually contain.
+    # Known sets must be collected BEFORE applying the local visibility filter;
+    # otherwise, user-hidden providers and models would be absent from the known
+    # sets and pruned immediately on the next get_live_providers() call.
+    all_known_providers = {c['id'] for c in merged}
+    all_known_models = {
+        m.get('id')
+        for c in merged
+        for m in (c.get('models') or [])
+        if m.get('id')
+    }
+    all_known_models.update({
+        m.get('fullModel')
+        for c in merged
+        for m in (c.get('models') or [])
+        if m.get('fullModel')
+    })
+    if visibility is not None:
+        visibility.prune(all_known_providers, all_known_models)
+
     # Apply the local visibility layer. Upstream has no model-level
     # enable/disable, so this is the only place hide/show can take effect.
-    hidden_p = visibility.hidden_providers()
-    hidden_m = visibility.hidden_models()
-    if hidden_p or hidden_m:
-        for card in merged:
-            if card['id'] in hidden_p:
-                card['hidden'] = True
-            if hidden_m and card.get('models'):
-                card['models'] = [m for m in card['models']
-                                  if m.get('id') not in hidden_m
-                                  and m.get('fullModel') not in hidden_m]
-                card['model_count'] = len(card['models'])
-                card['total_models'] = card['model_count']
-        merged = [c for c in merged if not c.get('hidden')]
-
-    # Prune against what the catalogue actually contains. The hidden set was
-    # previously unioned into the "known" set, which made every hidden entry
-    # trivially known and therefore never prunable - prune() was a guaranteed
-    # no-op and hidden_store.json grew without bound.
-    visibility.prune({c['id'] for c in merged},
-                     {m.get('id') for c in merged
-                      for m in (c.get('models') or [])})
+    if visibility is not None:
+        hidden_p = visibility.hidden_providers()
+        hidden_m = visibility.hidden_models()
+        if hidden_p or hidden_m:
+            for card in merged:
+                if card['id'] in hidden_p:
+                    card['hidden'] = True
+                if hidden_m and card.get('models'):
+                    card['models'] = [m for m in card['models']
+                                      if m.get('id') not in hidden_m
+                                      and m.get('fullModel') not in hidden_m]
+                    card['model_count'] = len(card['models'])
+                    card['total_models'] = card['model_count']
+            merged = [c for c in merged if not c.get('hidden')]
 
     return merged
 
