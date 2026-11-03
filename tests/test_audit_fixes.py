@@ -781,6 +781,83 @@ class TestCatalogAbsenceMeansRetired(unittest.TestCase):
         self.assertEqual(reg['models']['vendor/model-x']['status'], 'WRONG_EP')
 
 
+class TestServerVisibilityPruning(unittest.TestCase):
+    """Regression test: get_live_providers() must not prune user-hidden providers/models.
+
+    Previously, server.py collected known providers and models AFTER applying the
+    local visibility filter. As a result, any provider or model hidden by the user
+    was absent from the 'known' set and was wiped from hidden_store.json immediately.
+    """
+
+    def test_hidden_providers_and_models_are_preserved(self):
+        import server
+        import visibility
+
+        fake_catalog = {
+            'providers': [
+                {
+                    'id': 'test-provider-a',
+                    'name': 'Test Provider A',
+                    'kind': 'direct',
+                    'model_count': 2,
+                    'models': [
+                        {'id': 'test-model-1', 'fullModel': 'test-provider-a/test-model-1'},
+                        {'id': 'test-model-2', 'fullModel': 'test-provider-a/test-model-2'},
+                    ],
+                },
+                {
+                    'id': 'test-provider-b',
+                    'name': 'Test Provider B',
+                    'kind': 'direct',
+                    'model_count': 1,
+                    'models': [
+                        {'id': 'test-model-3', 'fullModel': 'test-provider-b/test-model-3'},
+                    ],
+                },
+            ]
+        }
+
+        # Clear or save previous hidden state
+        orig_providers = set(visibility.hidden_providers())
+        orig_models = set(visibility.hidden_models())
+
+        try:
+            # Hide provider-a and model-3
+            visibility.set_hidden('providers', 'test-provider-a', True)
+            visibility.set_hidden('models', 'test-model-3', True)
+
+            # Also set a stale provider/model that does NOT exist upstream
+            visibility.set_hidden('providers', 'obsolete-provider', True)
+            visibility.set_hidden('models', 'obsolete-model', True)
+
+            with patch.object(server.hermes_gateway, 'catalog', return_value=fake_catalog), \
+                 patch.object(server, 'config_provider_map', return_value={}):
+                result = server.get_live_providers()
+
+            # Active upstream items that were hidden MUST still be hidden
+            self.assertIn('test-provider-a', visibility.hidden_providers())
+            self.assertIn('test-model-3', visibility.hidden_models())
+
+            # Obsolete items that are no longer upstream SHOULD be pruned
+            self.assertNotIn('obsolete-provider', visibility.hidden_providers())
+            self.assertNotIn('obsolete-model', visibility.hidden_models())
+
+            # The rendered result must have filtered out hidden provider and hidden model
+            returned_provider_ids = [c['id'] for c in result]
+            self.assertNotIn('test-provider-a', returned_provider_ids)
+            self.assertIn('test-provider-b', returned_provider_ids)
+
+            card_b = next(c for c in result if c['id'] == 'test-provider-b')
+            card_b_models = [m['id'] for m in card_b.get('models', [])]
+            self.assertNotIn('test-model-3', card_b_models)
+        finally:
+            # Clean up
+            visibility._write_locked({
+                'providers': sorted(orig_providers),
+                'models': sorted(orig_models),
+            })
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
