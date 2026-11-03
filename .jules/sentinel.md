@@ -29,3 +29,8 @@
 **Learning**: Unit tests in `tests/test_audit_fixes.py` used `patch("requests.get")` and `patch.object(model_health.requests, ...)` directly, which caused `ModuleNotFoundError` or `AttributeError` when `requests` was not installed in the environment (because `requests` is an optional dependency in the project and `model_health.requests` is `None`).
 **Action**: Patched `sys.modules` (`patch.dict("sys.modules", {"requests": fake_req})`) and target module attribute (`patch.object(model_health, "requests", mock_req)`), allowing the test suite to run completely offline without requiring optional third-party packages installed.
 **Fingerprint**: tests/test_audit_fixes.py:457 - ModuleNotFoundError: No module named 'requests'
+
+## 2026-11-03 - Collect known providers and models before visibility filtering
+**Learning**: In `server.py` (`get_live_providers`), provider and model IDs were collected for `visibility.prune()` after hidden entries were filtered out of `merged`. This caused user-hidden providers and models to appear absent from upstream, immediately pruning and deleting them from `hidden_store.json`.
+**Action**: Collected all known provider IDs and model IDs from the full upstream catalog and config definitions (`merged`) before applying `hidden_p` and `hidden_m` filters, ensuring legitimate hidden items are preserved while obsolete items are pruned. Added regression test `TestServerVisibilityPruning` in `tests/test_audit_fixes.py`.
+**Fingerprint**: server.py:1598 - LogicError: visibility.prune on post-filtered catalog
